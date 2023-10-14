@@ -142,6 +142,14 @@ pub enum Instruction {
     MemoryCopy,
     RefIsNull,
     MemoryFill,
+    I32TruncSatF32S,
+    I32TruncSatF32U,
+    I32TruncSatF64S,
+    I32TruncSatF64U,
+    I64TruncSatF32S,
+    I64TruncSatF32U,
+    I64TruncSatF64S,
+    I64TruncSatF64U,
 
     I32Load(MemArg),
     I64Load(MemArg),
@@ -433,6 +441,14 @@ impl Instruction {
             Instruction::TableCopy { .. } => Opcode::TableCopy,
             Instruction::TableInit { .. } => Opcode::TableInit,
             Instruction::BrTable(_) => Opcode::BrTable,
+            Instruction::I32TruncSatF32S => Opcode::I32TruncSatF32S,
+            Instruction::I32TruncSatF32U => Opcode::I32TruncSatF32U,
+            Instruction::I32TruncSatF64S => Opcode::I32TruncSatF64S,
+            Instruction::I32TruncSatF64U => Opcode::I32TruncSatF64U,
+            Instruction::I64TruncSatF32S => Opcode::I64TruncSatF32S,
+            Instruction::I64TruncSatF32U => Opcode::I64TruncSatF32U,
+            Instruction::I64TruncSatF64S => Opcode::I64TruncSatF64S,
+            Instruction::I64TruncSatF64U => Opcode::I64TruncSatF64U,
         }
     }
 }
@@ -575,6 +591,14 @@ impl fmt::Display for Instruction {
             | Instruction::MemoryGrow
             | Instruction::MemoryCopy
             | Instruction::RefIsNull
+            | Instruction::I32TruncSatF32S
+            | Instruction::I32TruncSatF32U
+            | Instruction::I32TruncSatF64S
+            | Instruction::I32TruncSatF64U
+            | Instruction::I64TruncSatF32S
+            | Instruction::I64TruncSatF32U
+            | Instruction::I64TruncSatF64S
+            | Instruction::I64TruncSatF64U
             | Instruction::MemoryFill => Ok(()),
 
             Instruction::I32Load(memarg)

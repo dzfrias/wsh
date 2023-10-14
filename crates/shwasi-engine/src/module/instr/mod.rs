@@ -237,6 +237,14 @@ impl InstrBuffer {
             | Instruction::I32ReinterpretF32
             | Instruction::I64ReinterpretF64
             | Instruction::F32ReinterpretI32
+            | Instruction::I32TruncSatF32S
+            | Instruction::I32TruncSatF32U
+            | Instruction::I32TruncSatF64S
+            | Instruction::I32TruncSatF64U
+            | Instruction::I64TruncSatF32S
+            | Instruction::I64TruncSatF32U
+            | Instruction::I64TruncSatF64S
+            | Instruction::I64TruncSatF64U
             | Instruction::F64ReinterpretI64
             | Instruction::MemorySize
             | Instruction::MemoryGrow
@@ -470,6 +478,14 @@ impl InstrBuffer {
             Opcode::MemoryCopy => Instruction::MemoryCopy,
             Opcode::RefIsNull => Instruction::RefIsNull,
             Opcode::MemoryFill => Instruction::MemoryFill,
+            Opcode::I32TruncSatF32S => Instruction::I32TruncSatF32S,
+            Opcode::I32TruncSatF32U => Instruction::I32TruncSatF32U,
+            Opcode::I32TruncSatF64S => Instruction::I32TruncSatF64S,
+            Opcode::I32TruncSatF64U => Instruction::I32TruncSatF64U,
+            Opcode::I64TruncSatF32S => Instruction::I64TruncSatF32S,
+            Opcode::I64TruncSatF32U => Instruction::I64TruncSatF32U,
+            Opcode::I64TruncSatF64S => Instruction::I64TruncSatF64S,
+            Opcode::I64TruncSatF64U => Instruction::I64TruncSatF64U,
 
             Opcode::Block => {
                 let block = &self.block_types[info.payload as usize];
