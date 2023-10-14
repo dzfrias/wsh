@@ -257,6 +257,8 @@ pub type MemIdx = u32;
 pub type TypeIdx = u32;
 pub type FuncIdx = u32;
 pub type TableIdx = u32;
+pub type DataIdx = u32;
+pub type ElemIdx = u32;
 
 /// A WebAssembly module.
 #[derive(Debug, Default, Clone)]

@@ -1,14 +1,4 @@
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub(super) enum OperandsType {
-    MemArg,
-    FourBytes,
-    EightBytes,
-    BlockType,
-    Empty,
-    RefType,
-    BrTable,
-    U64,
-}
+use std::fmt;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Opcode {
@@ -203,202 +193,6 @@ pub enum Opcode {
 }
 
 impl Opcode {
-    pub(super) fn operand_type(&self) -> OperandsType {
-        match self {
-            Opcode::Unreachable
-            | Opcode::Nop
-            | Opcode::Else
-            | Opcode::End
-            | Opcode::Return
-            | Opcode::Drop
-            | Opcode::Select
-            | Opcode::I32Eqz
-            | Opcode::I32Eq
-            | Opcode::I32Ne
-            | Opcode::I32LtS
-            | Opcode::I32LtU
-            | Opcode::I32GtS
-            | Opcode::I32GtU
-            | Opcode::I32LeS
-            | Opcode::I32LeU
-            | Opcode::I32GeS
-            | Opcode::I32GeU
-            | Opcode::I64Eqz
-            | Opcode::I64Eq
-            | Opcode::I64Ne
-            | Opcode::I64LtS
-            | Opcode::I64LtU
-            | Opcode::I64GtS
-            | Opcode::I64GtU
-            | Opcode::I64LeS
-            | Opcode::I64LeU
-            | Opcode::I64GeS
-            | Opcode::I64GeU
-            | Opcode::F32Eq
-            | Opcode::F32Ne
-            | Opcode::F32Lt
-            | Opcode::F32Gt
-            | Opcode::F32Le
-            | Opcode::F32Ge
-            | Opcode::F64Eq
-            | Opcode::F64Ne
-            | Opcode::F64Lt
-            | Opcode::F64Gt
-            | Opcode::F64Le
-            | Opcode::F64Ge
-            | Opcode::I32Clz
-            | Opcode::I32Ctz
-            | Opcode::I32Popcnt
-            | Opcode::I32Add
-            | Opcode::I32Sub
-            | Opcode::I32Mul
-            | Opcode::I32DivS
-            | Opcode::I32DivU
-            | Opcode::I32RemS
-            | Opcode::I32RemU
-            | Opcode::I32And
-            | Opcode::I32Or
-            | Opcode::I32Xor
-            | Opcode::I32Shl
-            | Opcode::I32ShrS
-            | Opcode::I32ShrU
-            | Opcode::I32Rotl
-            | Opcode::I32Rotr
-            | Opcode::I64Clz
-            | Opcode::I64Ctz
-            | Opcode::I64Popcnt
-            | Opcode::I64Add
-            | Opcode::I64Sub
-            | Opcode::I64Mul
-            | Opcode::I64DivS
-            | Opcode::I64DivU
-            | Opcode::I64RemS
-            | Opcode::I64RemU
-            | Opcode::I64And
-            | Opcode::I64Or
-            | Opcode::I64Xor
-            | Opcode::I64Shl
-            | Opcode::I64ShrS
-            | Opcode::I64ShrU
-            | Opcode::I64Rotl
-            | Opcode::I64Rotr
-            | Opcode::F32Abs
-            | Opcode::F32Neg
-            | Opcode::F32Ceil
-            | Opcode::F32Floor
-            | Opcode::F32Trunc
-            | Opcode::F32Nearest
-            | Opcode::F32Sqrt
-            | Opcode::F32Add
-            | Opcode::F32Sub
-            | Opcode::F32Mul
-            | Opcode::F32Div
-            | Opcode::F32Min
-            | Opcode::F32Max
-            | Opcode::F32Copysign
-            | Opcode::F64Abs
-            | Opcode::F64Neg
-            | Opcode::F64Ceil
-            | Opcode::F64Floor
-            | Opcode::F64Trunc
-            | Opcode::F64Nearest
-            | Opcode::F64Sqrt
-            | Opcode::F64Add
-            | Opcode::F64Sub
-            | Opcode::F64Mul
-            | Opcode::F64Div
-            | Opcode::F64Min
-            | Opcode::F64Max
-            | Opcode::F64Copysign
-            | Opcode::I32WrapI64
-            | Opcode::I32TruncF32S
-            | Opcode::I32TruncF32U
-            | Opcode::I32TruncF64S
-            | Opcode::I32TruncF64U
-            | Opcode::I64ExtendI32S
-            | Opcode::I64ExtendI32U
-            | Opcode::I64TruncF32S
-            | Opcode::I64TruncF32U
-            | Opcode::I64TruncF64S
-            | Opcode::I64TruncF64U
-            | Opcode::F32ConvertI32S
-            | Opcode::F32ConvertI32U
-            | Opcode::F32ConvertI64S
-            | Opcode::F32ConvertI64U
-            | Opcode::F32DemoteF64
-            | Opcode::F64ConvertI32S
-            | Opcode::F64ConvertI32U
-            | Opcode::F64ConvertI64S
-            | Opcode::F64ConvertI64U
-            | Opcode::F64PromoteF32
-            | Opcode::I32ReinterpretF32
-            | Opcode::I64ReinterpretF64
-            | Opcode::F32ReinterpretI32
-            | Opcode::F64ReinterpretI64
-            | Opcode::MemorySize
-            | Opcode::MemoryGrow
-            | Opcode::MemoryCopy
-            | Opcode::RefIsNull
-            | Opcode::MemoryFill => OperandsType::Empty,
-
-            Opcode::I32Load
-            | Opcode::I64Load
-            | Opcode::F32Load
-            | Opcode::F64Load
-            | Opcode::I32Load8S
-            | Opcode::I32Load8U
-            | Opcode::I32Load16S
-            | Opcode::I32Load16U
-            | Opcode::I64Load8S
-            | Opcode::I64Load8U
-            | Opcode::I64Load16S
-            | Opcode::I64Load16U
-            | Opcode::I64Load32S
-            | Opcode::I64Load32U
-            | Opcode::I32Store
-            | Opcode::I64Store
-            | Opcode::F32Store
-            | Opcode::F64Store
-            | Opcode::I32Store8
-            | Opcode::I32Store16
-            | Opcode::I64Store8
-            | Opcode::I64Store16
-            | Opcode::I64Store32 => OperandsType::MemArg,
-
-            Opcode::Block | Opcode::Loop | Opcode::If => OperandsType::BlockType,
-
-            Opcode::Br
-            | Opcode::BrIf
-            | Opcode::Call
-            | Opcode::LocalGet
-            | Opcode::LocalSet
-            | Opcode::LocalTee
-            | Opcode::GlobalGet
-            | Opcode::GlobalSet
-            | Opcode::DataDrop
-            | Opcode::ElemDrop
-            | Opcode::I32Const
-            | Opcode::F32Const
-            | Opcode::MemoryInit
-            | Opcode::RefFunc
-            | Opcode::TableGet
-            | Opcode::TableSet
-            | Opcode::TableGrow
-            | Opcode::TableSize
-            | Opcode::TableFill => OperandsType::FourBytes,
-
-            Opcode::RefNull => OperandsType::RefType,
-
-            Opcode::I64Const | Opcode::F64Const => OperandsType::U64,
-
-            Opcode::CallIndirect | Opcode::TableCopy | Opcode::TableInit => {
-                OperandsType::EightBytes
-            }
-
-            Opcode::BrTable => OperandsType::BrTable,
-        }
-    }
-
     pub fn try_from_byte(byte: u8) -> Option<Opcode> {
         Self::try_from_bytes(byte, 0)
     }
@@ -616,4 +410,201 @@ impl Opcode {
 
 pub fn is_prefix_byte(byte: u8) -> bool {
     byte == 0xfc
+}
+
+impl fmt::Display for Opcode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let to_write = match self {
+            Opcode::Unreachable => "unreachable",
+            Opcode::Nop => "nop",
+            Opcode::Block => "block",
+            Opcode::Loop => "loop",
+            Opcode::If => "if",
+            Opcode::Else => "else",
+            Opcode::End => "end",
+            Opcode::Br => "br",
+            Opcode::BrIf => "br_if",
+            Opcode::BrTable => "br_table",
+            Opcode::Return => "return",
+            Opcode::Call => "call",
+            Opcode::CallIndirect => "call_indirect",
+            Opcode::Drop => "drop",
+            // TODO: add SelectT
+            Opcode::Select => "select",
+            Opcode::LocalGet => "local.get",
+            Opcode::LocalSet => "local.set",
+            Opcode::LocalTee => "local_tee",
+            Opcode::GlobalGet => "global.get",
+            Opcode::GlobalSet => "global.set",
+            Opcode::I32Load => "i32.load",
+            Opcode::I64Load => "i64.load",
+            Opcode::F32Load => "f32.load",
+            Opcode::F64Load => "f64.load",
+            Opcode::I32Load8S => "i32.load8_s",
+            Opcode::I32Load8U => "i32.load8_u",
+            Opcode::I32Load16S => "i32.load16_s",
+            Opcode::I32Load16U => "i32.load16_u",
+            Opcode::I64Load8S => "i64.load8_s",
+            Opcode::I64Load8U => "i64.load8_u",
+            Opcode::I64Load16S => "i64.load16_s",
+            Opcode::I64Load16U => "i64.load16_u",
+            Opcode::I64Load32S => "i64.load32_s",
+            Opcode::I64Load32U => "i64.load32_u",
+            Opcode::I32Store => "i32.store",
+            Opcode::I64Store => "i64.store",
+            Opcode::F32Store => "f32.store",
+            Opcode::F64Store => "f64.store",
+            Opcode::I32Store8 => "i32.store8",
+            Opcode::I32Store16 => "i32.store16",
+            Opcode::I64Store8 => "i64.store8",
+            Opcode::I64Store16 => "i64.store16",
+            Opcode::I64Store32 => "i64.store32",
+            Opcode::MemorySize => "memory.size",
+            Opcode::MemoryGrow => "memory.grow",
+            Opcode::I32Const => "i32.const",
+            Opcode::I64Const => "i64.const",
+            Opcode::F32Const => "f32.const",
+            Opcode::F64Const => "f64.const",
+            Opcode::I32Eqz => "i32.eqz",
+            Opcode::I32Eq => "i32.eq",
+            Opcode::I32Ne => "i32.ne",
+            Opcode::I32LtS => "i32.lt_s",
+            Opcode::I32LtU => "i32.lt_u",
+            Opcode::I32GtS => "i32.gt_s",
+            Opcode::I32GtU => "i32.gt_u",
+            Opcode::I32LeS => "i32.le_s",
+            Opcode::I32LeU => "i32.le_u",
+            Opcode::I32GeS => "i32.ge_s",
+            Opcode::I32GeU => "i32.ge_u",
+            Opcode::I64Eqz => "i64.eqz",
+            Opcode::I64Eq => "i64.eq",
+            Opcode::I64Ne => "i64.ne",
+            Opcode::I64LtS => "i64.lt_s",
+            Opcode::I64LtU => "i64.lt_u",
+            Opcode::I64GtS => "i64.gt_s",
+            Opcode::I64GtU => "i64.gt_u",
+            Opcode::I64LeS => "i64.le_s",
+            Opcode::I64LeU => "i64.le_u",
+            Opcode::I64GeS => "i64.ge_s",
+            Opcode::I64GeU => "i64.ge_u",
+            Opcode::F32Eq => "f32.eq",
+            Opcode::F32Ne => "f32.ne",
+            Opcode::F32Lt => "f32.lt",
+            Opcode::F32Gt => "f32.gt",
+            Opcode::F32Le => "f32.le",
+            Opcode::F32Ge => "f32.ge",
+            Opcode::F64Eq => "f64.eq",
+            Opcode::F64Ne => "f64.ne",
+            Opcode::F64Lt => "f64.lt",
+            Opcode::F64Gt => "f64.gt",
+            Opcode::F64Le => "f64.le",
+            Opcode::F64Ge => "f64.ge",
+            Opcode::I32Clz => "i32.clz",
+            Opcode::I32Ctz => "i32.ctz",
+            Opcode::I32Popcnt => "i32.popcnt",
+            Opcode::I32Add => "i32.add",
+            Opcode::I32Sub => "i32.sub",
+            Opcode::I32Mul => "i32.mul",
+            Opcode::I32DivS => "i32.div_s",
+            Opcode::I32DivU => "i32.div_u",
+            Opcode::I32RemS => "i32.rem_s",
+            Opcode::I32RemU => "i32.rem_u",
+            Opcode::I32And => "i32.and",
+            Opcode::I32Or => "i32.or",
+            Opcode::I32Xor => "i32.xor",
+            Opcode::I32Shl => "i32.shl",
+            Opcode::I32ShrS => "i32.shr_s",
+            Opcode::I32ShrU => "i32.shr_u",
+            Opcode::I32Rotl => "i32.rotl",
+            Opcode::I32Rotr => "i32.rotr",
+            Opcode::I64Clz => "i64.clz",
+            Opcode::I64Ctz => "i64.ctz",
+            Opcode::I64Popcnt => "i64.popcnt",
+            Opcode::I64Add => "i64.add",
+            Opcode::I64Sub => "i64.sub",
+            Opcode::I64Mul => "i64.mul",
+            Opcode::I64DivS => "i64.div_s",
+            Opcode::I64DivU => "i64.div_u",
+            Opcode::I64RemS => "i64.rem_s",
+            Opcode::I64RemU => "i64.rem.u",
+            Opcode::I64And => "i64.and",
+            Opcode::I64Or => "i64.or",
+            Opcode::I64Xor => "i64.xor",
+            Opcode::I64Shl => "i64.shl",
+            Opcode::I64ShrS => "i64.shr_s",
+            Opcode::I64ShrU => "i64.shr_u",
+            Opcode::I64Rotl => "i64.rotl",
+            Opcode::I64Rotr => "i64.rotr",
+            Opcode::F32Abs => "f32.abs",
+            Opcode::F32Neg => "f32.neg",
+            Opcode::F32Ceil => "f32.ceil",
+            Opcode::F32Floor => "f32.floor",
+            Opcode::F32Trunc => "f32.trunc",
+            Opcode::F32Nearest => "f32.nearest",
+            Opcode::F32Sqrt => "f32.sqrt",
+            Opcode::F32Add => "f32.add",
+            Opcode::F32Sub => "f32.sub",
+            Opcode::F32Mul => "f32.mul",
+            Opcode::F32Div => "f32.div",
+            Opcode::F32Min => "f32.min",
+            Opcode::F32Max => "f32.max",
+            Opcode::F32Copysign => "f32.copysign",
+            Opcode::F64Abs => "f64.abs",
+            Opcode::F64Neg => "f64.neg",
+            Opcode::F64Ceil => "f64.ceil",
+            Opcode::F64Floor => "f64.floor",
+            Opcode::F64Trunc => "f64.trunc",
+            Opcode::F64Nearest => "f64.nearest",
+            Opcode::F64Sqrt => "f64.sqrt",
+            Opcode::F64Add => "f64.add",
+            Opcode::F64Sub => "f64.sub",
+            Opcode::F64Mul => "f64.mul",
+            Opcode::F64Div => "f64.div",
+            Opcode::F64Min => "f64.min",
+            Opcode::F64Max => "f64.max",
+            Opcode::F64Copysign => "f64.copysign",
+            Opcode::I32WrapI64 => "i32.wrap_i64",
+            Opcode::I32TruncF32S => "i32.trunc_sat_f32_s",
+            Opcode::I32TruncF32U => "i32.trunc_sat_f32_u",
+            Opcode::I32TruncF64S => "i32.trunc_sat_f64_s",
+            Opcode::I32TruncF64U => "i32.trunc_sat_f64_u",
+            Opcode::I64ExtendI32S => "i64.extend_i32_s",
+            Opcode::I64ExtendI32U => "i64.extend_i32_u",
+            Opcode::I64TruncF32S => "i64.trunc_sat_f32_s",
+            Opcode::I64TruncF32U => "i64.trunc_sat_f32_u",
+            Opcode::I64TruncF64S => "i64.trunc_sat_f64_s",
+            Opcode::I64TruncF64U => "i64.trunc_sat_f64_u",
+            Opcode::F32ConvertI32S => "f32.convert_i32_s",
+            Opcode::F32ConvertI32U => "f32.convert_i32_u",
+            Opcode::F32ConvertI64S => "f32.convert_i64_s",
+            Opcode::F32ConvertI64U => "f32.convert_i64_u",
+            Opcode::F32DemoteF64 => "f32.demote_f64",
+            Opcode::F64ConvertI32S => "f64.convert_i32_s",
+            Opcode::F64ConvertI32U => "f64.convert_i32_u",
+            Opcode::F64ConvertI64S => "f64.convert_i64_s",
+            Opcode::F64ConvertI64U => "f64.convert_i64_u",
+            Opcode::F64PromoteF32 => "f64.promote_f32",
+            Opcode::I32ReinterpretF32 => "i32.reinterpret_f32",
+            Opcode::I64ReinterpretF64 => "i64.reinterpret_f64",
+            Opcode::F32ReinterpretI32 => "f32.reinterpret_i32",
+            Opcode::F64ReinterpretI64 => "f64.reinterpret_i64",
+            Opcode::MemoryInit => "memory.init",
+            Opcode::DataDrop => "data.drop",
+            Opcode::MemoryCopy => "memory.copy",
+            Opcode::MemoryFill => "memory.fill",
+            Opcode::TableInit => "table.init",
+            Opcode::TableCopy => "table.copy",
+            Opcode::TableGet => "table.get",
+            Opcode::TableSet => "table.set",
+            Opcode::TableGrow => "table.grow",
+            Opcode::TableSize => "table.size",
+            Opcode::TableFill => "table.fill",
+            Opcode::ElemDrop => "elem.drop",
+            Opcode::RefNull => "ref.null",
+            Opcode::RefIsNull => "ref.is_null",
+            Opcode::RefFunc => "ref.func",
+        };
+
+        write!(f, "{to_write}")
+    }
 }

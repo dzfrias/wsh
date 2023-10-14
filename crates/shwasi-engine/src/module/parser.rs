@@ -9,7 +9,7 @@ use super::leb128;
 use crate::{
     is_prefix_byte, BlockType, BrTable, Code, Data, Element, ElementItems, ElementKind, Export,
     ExternalKind, FuncType, Function, Global, GlobalType, Import, ImportKind, InitExpr,
-    InstrBuffer, Limit, MemArg, Memory, Module, NumLocals, Opcode, Operands, RefType, TableType,
+    InstrBuffer, Instruction, Limit, MemArg, Memory, Module, NumLocals, Opcode, RefType, TableType,
     ValType,
 };
 
@@ -65,7 +65,6 @@ impl<'a> Parser<'a> {
         leb128::read_u64_leb128(&mut self.buf).context("failed to read leb128 u32")
     }
 
-    #[allow(dead_code)]
     fn read_s32_leb128(&mut self) -> Result<i32> {
         leb128::read_i32_leb128(&mut self.buf).context("failed to read leb128 s32")
     }
@@ -619,27 +618,12 @@ impl<'a> Parser<'a> {
             "init expr must end with an end instruction"
         );
         let instr = init_expr.get(0).unwrap();
-        let expr = match init_expr.opcode(instr) {
-            Opcode::I32Const => {
-                let n = init_expr.four_byte_operand(instr);
-                InitExpr::I32Const(n)
-            }
-            Opcode::I64Const => {
-                let n = init_expr.u64_operand(instr);
-                InitExpr::I64Const(n)
-            }
-            Opcode::F32Const => {
-                let n = init_expr.four_byte_operand(instr);
-                InitExpr::F32Const(n)
-            }
-            Opcode::F64Const => {
-                let operand = init_expr.u64_operand(instr);
-                InitExpr::F64Const(operand)
-            }
-            Opcode::GlobalGet => {
-                let index = init_expr.four_byte_operand(instr);
-                InitExpr::ConstGlobalGet(index)
-            }
+        let expr = match init_expr.instruction(instr) {
+            Instruction::I32Const(val) => InitExpr::I32Const(val),
+            Instruction::I64Const(val) => InitExpr::I64Const(val),
+            Instruction::F32Const(val) => InitExpr::F32Const(val),
+            Instruction::F64Const(val) => InitExpr::F64Const(val),
+            Instruction::GlobalGet { idx } => InitExpr::ConstGlobalGet(idx),
             _ => bail!("init expr instruction is not const-valid"),
         };
         Ok(expr)
@@ -711,73 +695,227 @@ impl<'a> Parser<'a> {
                 .read_opcode()
                 .context("error reading opcode in instructions")?;
 
-            let operands = match opcode {
-                Opcode::I32Load
-                | Opcode::I64Load
-                | Opcode::F32Load
-                | Opcode::F64Load
-                | Opcode::I32Load8S
-                | Opcode::I32Load8U
-                | Opcode::I32Load16S
-                | Opcode::I32Load16U
-                | Opcode::I64Load8S
-                | Opcode::I64Load8U
-                | Opcode::I64Load16S
-                | Opcode::I64Load16U
-                | Opcode::I64Load32S
-                | Opcode::I64Load32U
-                | Opcode::I32Store
-                | Opcode::I64Store
-                | Opcode::F32Store
-                | Opcode::F64Store
-                | Opcode::I32Store8
-                | Opcode::I32Store16
-                | Opcode::I64Store8
-                | Opcode::I64Store16
-                | Opcode::I64Store32 => Operands::MemArg(self.read_memarg()?),
+            let instr = match opcode {
+                Opcode::I32Load => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::I32Load(mem_arg)
+                }
+                Opcode::I64Load => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::I64Load(mem_arg)
+                }
+                Opcode::F32Load => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::F32Load(mem_arg)
+                }
+                Opcode::F64Load => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::F64Load(mem_arg)
+                }
+                Opcode::I32Load8S => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::I32Load8S(mem_arg)
+                }
+                Opcode::I32Load8U => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::I32Load8U(mem_arg)
+                }
+                Opcode::I32Load16S => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::I32Load16S(mem_arg)
+                }
+                Opcode::I32Load16U => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::I32Load16U(mem_arg)
+                }
+                Opcode::I64Load8S => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::I64Load8S(mem_arg)
+                }
+                Opcode::I64Load8U => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::I64Load8U(mem_arg)
+                }
+                Opcode::I64Load16S => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::I64Load16S(mem_arg)
+                }
+                Opcode::I64Load16U => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::I64Load16U(mem_arg)
+                }
+                Opcode::I64Load32S => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::I64Load32S(mem_arg)
+                }
+                Opcode::I64Load32U => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::I64Load32U(mem_arg)
+                }
+                Opcode::I32Store => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::I32Store(mem_arg)
+                }
+                Opcode::I64Store => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::I64Store(mem_arg)
+                }
+                Opcode::F32Store => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::F32Store(mem_arg)
+                }
+                Opcode::F64Store => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::F64Store(mem_arg)
+                }
+                Opcode::I32Store8 => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::I32Store8(mem_arg)
+                }
+                Opcode::I32Store16 => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::I32Store16(mem_arg)
+                }
+                Opcode::I64Store8 => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::I64Store8(mem_arg)
+                }
+                Opcode::I64Store16 => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::I64Store16(mem_arg)
+                }
+                Opcode::I64Store32 => {
+                    let mem_arg = self.read_memarg()?;
+                    Instruction::I64Store32(mem_arg)
+                }
 
-                Opcode::Br
-                | Opcode::BrIf
-                | Opcode::Call
-                | Opcode::LocalGet
-                | Opcode::LocalSet
-                | Opcode::LocalTee
-                | Opcode::GlobalGet
-                | Opcode::GlobalSet
-                | Opcode::DataDrop
-                | Opcode::ElemDrop
-                | Opcode::I32Const
-                | Opcode::F32Const
-                | Opcode::MemoryInit
-                | Opcode::RefFunc
-                | Opcode::TableGet
-                | Opcode::TableSet
-                | Opcode::TableGrow
-                | Opcode::TableSize
-                | Opcode::TableFill => Operands::FourBytes(self.read_u32_leb128()?),
+                Opcode::Br => {
+                    let depth = self.read_u32_leb128()?;
+                    Instruction::Br { depth }
+                }
+                Opcode::BrIf => {
+                    let depth = self.read_u32_leb128()?;
+                    Instruction::BrIf { depth }
+                }
+                Opcode::Call => {
+                    let func_idx = self.read_u32_leb128()?;
+                    Instruction::Call { func_idx }
+                }
+                Opcode::LocalGet => {
+                    let idx = self.read_u32_leb128()?;
+                    Instruction::LocalGet { idx }
+                }
+                Opcode::LocalSet => {
+                    let idx = self.read_u32_leb128()?;
+                    Instruction::LocalSet { idx }
+                }
+                Opcode::GlobalGet => {
+                    let idx = self.read_u32_leb128()?;
+                    Instruction::GlobalGet { idx }
+                }
+                Opcode::GlobalSet => {
+                    let idx = self.read_u32_leb128()?;
+                    Instruction::GlobalSet { idx }
+                }
+                Opcode::LocalTee => {
+                    let idx = self.read_u32_leb128()?;
+                    Instruction::LocalTee { idx }
+                }
 
-                Opcode::I64Const | Opcode::F64Const => Operands::U64(self.read_u64_leb128()?),
+                Opcode::DataDrop => {
+                    let data_idx = self.read_u32_leb128()?;
+                    Instruction::DataDrop { data_idx }
+                }
+                Opcode::ElemDrop => {
+                    let elem_idx = self.read_u32_leb128()?;
+                    Instruction::ElemDrop { elem_idx }
+                }
+                Opcode::I32Const => {
+                    let val = self.read_u32_leb128()?;
+                    Instruction::I32Const(val)
+                }
+                Opcode::F32Const => {
+                    let val = self.read_u32_leb128()?;
+                    Instruction::F32Const(val)
+                }
+                Opcode::MemoryInit => {
+                    let data_idx = self.read_u32_leb128()?;
+                    Instruction::MemoryInit { data_idx }
+                }
+                Opcode::RefFunc => {
+                    let func_idx = self.read_u32_leb128()?;
+                    Instruction::RefFunc { func_idx }
+                }
+                Opcode::TableGet => {
+                    let table = self.read_u32_leb128()?;
+                    Instruction::TableGet { table }
+                }
+                Opcode::TableSet => {
+                    let table = self.read_u32_leb128()?;
+                    Instruction::TableSet { table }
+                }
+                Opcode::TableGrow => {
+                    let table = self.read_u32_leb128()?;
+                    Instruction::TableGrow { table }
+                }
+                Opcode::TableSize => {
+                    let table = self.read_u32_leb128()?;
+                    Instruction::TableSize { table }
+                }
+                Opcode::TableFill => {
+                    let table = self.read_u32_leb128()?;
+                    Instruction::TableFill { table }
+                }
 
-                Opcode::CallIndirect | Opcode::TableCopy | Opcode::TableInit => {
+                Opcode::F64Const => Instruction::F64Const(self.read_u64_leb128()?),
+                Opcode::I64Const => Instruction::I64Const(self.read_u64_leb128()?),
+
+                Opcode::TableCopy => {
                     let b1 = self.read_u32_leb128()?;
                     let b2 = self.read_u32_leb128()?;
-                    Operands::EightBytes(b1, b2)
+                    Instruction::TableCopy {
+                        src_table: b1,
+                        dst_table: b2,
+                    }
                 }
-
+                Opcode::TableInit => {
+                    let b1 = self.read_u32_leb128()?;
+                    let b2 = self.read_u32_leb128()?;
+                    Instruction::TableInit {
+                        elem_idx: b1,
+                        table_idx: b2,
+                    }
+                }
+                Opcode::CallIndirect => {
+                    let type_idx = self.read_u32_leb128()?;
+                    let table_idx = self.read_u32_leb128()?;
+                    Instruction::CallIndirect {
+                        type_idx,
+                        table_idx,
+                    }
+                }
                 Opcode::RefNull => {
                     let reftype = self.read_reftype()?;
-                    Operands::RefType(reftype)
+                    Instruction::RefNull { ty: reftype }
                 }
-
-                Opcode::Block | Opcode::Loop | Opcode::If => {
+                Opcode::If => {
                     stack.push(opcode);
                     let block_type = self.read_blocktype()?;
-                    Operands::BlockType(block_type)
+                    Instruction::If(block_type)
                 }
-
+                Opcode::Block => {
+                    stack.push(opcode);
+                    let block_type = self.read_blocktype()?;
+                    Instruction::Block(block_type)
+                }
+                Opcode::Loop => {
+                    stack.push(opcode);
+                    let block_type = self.read_blocktype()?;
+                    Instruction::Loop(block_type)
+                }
                 Opcode::BrTable => {
                     let br_table = self.read_br_table()?;
-                    Operands::BrTable(br_table)
+                    Instruction::BrTable(br_table)
                 }
 
                 Opcode::End => {
@@ -786,154 +924,154 @@ impl<'a> Parser<'a> {
                             "returned early with end instruction, got buffer of size {}",
                             buffer.len()
                         );
-                        buffer.add_instr(Opcode::End, Operands::Empty);
+                        buffer.add_instr(Instruction::End);
                         return Ok(buffer);
                     }
                     stack.pop();
-                    Operands::Empty
+                    Instruction::End
                 }
 
                 Opcode::Else => {
                     ensure!(stack.last().is_some_and(|opcode| *opcode == Opcode::If));
-                    Operands::Empty
+                    Instruction::Else
                 }
 
-                Opcode::Unreachable
-                | Opcode::Nop
-                | Opcode::Return
-                | Opcode::Drop
-                | Opcode::Select
-                | Opcode::I32Eqz
-                | Opcode::I32Eq
-                | Opcode::I32Ne
-                | Opcode::I32LtS
-                | Opcode::I32LtU
-                | Opcode::I32GtS
-                | Opcode::I32GtU
-                | Opcode::I32LeS
-                | Opcode::I32LeU
-                | Opcode::I32GeS
-                | Opcode::I32GeU
-                | Opcode::I64Eqz
-                | Opcode::I64Eq
-                | Opcode::I64Ne
-                | Opcode::I64LtS
-                | Opcode::I64LtU
-                | Opcode::I64GtS
-                | Opcode::I64GtU
-                | Opcode::I64LeS
-                | Opcode::I64LeU
-                | Opcode::I64GeS
-                | Opcode::I64GeU
-                | Opcode::F32Eq
-                | Opcode::F32Ne
-                | Opcode::F32Lt
-                | Opcode::F32Gt
-                | Opcode::F32Le
-                | Opcode::F32Ge
-                | Opcode::F64Eq
-                | Opcode::F64Ne
-                | Opcode::F64Lt
-                | Opcode::F64Gt
-                | Opcode::F64Le
-                | Opcode::F64Ge
-                | Opcode::I32Clz
-                | Opcode::I32Ctz
-                | Opcode::I32Popcnt
-                | Opcode::I32Add
-                | Opcode::I32Sub
-                | Opcode::I32Mul
-                | Opcode::I32DivS
-                | Opcode::I32DivU
-                | Opcode::I32RemS
-                | Opcode::I32RemU
-                | Opcode::I32And
-                | Opcode::I32Or
-                | Opcode::I32Xor
-                | Opcode::I32Shl
-                | Opcode::I32ShrS
-                | Opcode::I32ShrU
-                | Opcode::I32Rotl
-                | Opcode::I32Rotr
-                | Opcode::I64Clz
-                | Opcode::I64Ctz
-                | Opcode::I64Popcnt
-                | Opcode::I64Add
-                | Opcode::I64Sub
-                | Opcode::I64Mul
-                | Opcode::I64DivS
-                | Opcode::I64DivU
-                | Opcode::I64RemS
-                | Opcode::I64RemU
-                | Opcode::I64And
-                | Opcode::I64Or
-                | Opcode::I64Xor
-                | Opcode::I64Shl
-                | Opcode::I64ShrS
-                | Opcode::I64ShrU
-                | Opcode::I64Rotl
-                | Opcode::I64Rotr
-                | Opcode::F32Abs
-                | Opcode::F32Neg
-                | Opcode::F32Ceil
-                | Opcode::F32Floor
-                | Opcode::F32Trunc
-                | Opcode::F32Nearest
-                | Opcode::F32Sqrt
-                | Opcode::F32Add
-                | Opcode::F32Sub
-                | Opcode::F32Mul
-                | Opcode::F32Div
-                | Opcode::F32Min
-                | Opcode::F32Max
-                | Opcode::F32Copysign
-                | Opcode::F64Abs
-                | Opcode::F64Neg
-                | Opcode::F64Ceil
-                | Opcode::F64Floor
-                | Opcode::F64Trunc
-                | Opcode::F64Nearest
-                | Opcode::F64Sqrt
-                | Opcode::F64Add
-                | Opcode::F64Sub
-                | Opcode::F64Mul
-                | Opcode::F64Div
-                | Opcode::F64Min
-                | Opcode::F64Max
-                | Opcode::F64Copysign
-                | Opcode::I32WrapI64
-                | Opcode::I32TruncF32S
-                | Opcode::I32TruncF32U
-                | Opcode::I32TruncF64S
-                | Opcode::I32TruncF64U
-                | Opcode::I64ExtendI32S
-                | Opcode::I64ExtendI32U
-                | Opcode::I64TruncF32S
-                | Opcode::I64TruncF32U
-                | Opcode::I64TruncF64S
-                | Opcode::I64TruncF64U
-                | Opcode::F32ConvertI32S
-                | Opcode::F32ConvertI32U
-                | Opcode::F32ConvertI64S
-                | Opcode::F32ConvertI64U
-                | Opcode::F32DemoteF64
-                | Opcode::F64ConvertI32S
-                | Opcode::F64ConvertI32U
-                | Opcode::F64ConvertI64S
-                | Opcode::F64ConvertI64U
-                | Opcode::F64PromoteF32
-                | Opcode::I32ReinterpretF32
-                | Opcode::I64ReinterpretF64
-                | Opcode::F32ReinterpretI32
-                | Opcode::F64ReinterpretI64
-                | Opcode::MemorySize
-                | Opcode::MemoryGrow
-                | Opcode::MemoryCopy
-                | Opcode::RefIsNull
-                | Opcode::MemoryFill => Operands::Empty,
+                Opcode::Unreachable => Instruction::Unreachable,
+                Opcode::Nop => Instruction::Nop,
+                Opcode::Return => Instruction::Return,
+                Opcode::Drop => Instruction::Drop,
+                Opcode::Select => Instruction::Select,
+                Opcode::I32Eqz => Instruction::I32Eqz,
+                Opcode::I32Eq => Instruction::I32Eq,
+                Opcode::I32Ne => Instruction::I32Ne,
+                Opcode::I32LtS => Instruction::I32LtS,
+                Opcode::I32LtU => Instruction::I32LtU,
+                Opcode::I32GtS => Instruction::I32GtS,
+                Opcode::I32GtU => Instruction::I32GtU,
+                Opcode::I32LeS => Instruction::I32LeS,
+                Opcode::I32LeU => Instruction::I32LeU,
+                Opcode::I32GeS => Instruction::I32GeS,
+                Opcode::I32GeU => Instruction::I32GeU,
+                Opcode::I64Eqz => Instruction::I64Eqz,
+                Opcode::I64Eq => Instruction::I64Eq,
+                Opcode::I64Ne => Instruction::I64Ne,
+                Opcode::I64LtS => Instruction::I64LtS,
+                Opcode::I64LtU => Instruction::I64LtU,
+                Opcode::I64GtS => Instruction::I64GtS,
+                Opcode::I64GtU => Instruction::I64GtU,
+                Opcode::I64LeS => Instruction::I64LeS,
+                Opcode::I64LeU => Instruction::I64LeU,
+                Opcode::I64GeS => Instruction::I64GeS,
+                Opcode::I64GeU => Instruction::I64GeU,
+                Opcode::F32Eq => Instruction::F32Eq,
+                Opcode::F32Ne => Instruction::F32Ne,
+                Opcode::F32Lt => Instruction::F32Lt,
+                Opcode::F32Gt => Instruction::F32Gt,
+                Opcode::F32Le => Instruction::F32Le,
+                Opcode::F32Ge => Instruction::F32Ge,
+                Opcode::F64Eq => Instruction::F64Eq,
+                Opcode::F64Ne => Instruction::F64Ne,
+                Opcode::F64Lt => Instruction::F64Lt,
+                Opcode::F64Gt => Instruction::F64Gt,
+                Opcode::F64Le => Instruction::F64Le,
+                Opcode::F64Ge => Instruction::F64Ge,
+                Opcode::I32Clz => Instruction::I32Clz,
+                Opcode::I32Ctz => Instruction::I32Ctz,
+                Opcode::I32Popcnt => Instruction::I32Popcnt,
+                Opcode::I32Add => Instruction::I32Add,
+                Opcode::I32Sub => Instruction::I32Sub,
+                Opcode::I32Mul => Instruction::I32Mul,
+                Opcode::I32DivS => Instruction::I32DivS,
+                Opcode::I32DivU => Instruction::I32DivU,
+                Opcode::I32RemS => Instruction::I32RemS,
+                Opcode::I32RemU => Instruction::I32RemU,
+                Opcode::I32And => Instruction::I32And,
+                Opcode::I32Or => Instruction::I32Or,
+                Opcode::I32Xor => Instruction::I32Xor,
+                Opcode::I32Shl => Instruction::I32Shl,
+                Opcode::I32ShrS => Instruction::I32ShrS,
+                Opcode::I32ShrU => Instruction::I32ShrU,
+                Opcode::I32Rotl => Instruction::I32Rotl,
+                Opcode::I32Rotr => Instruction::I32Rotr,
+                Opcode::I64Clz => Instruction::I64Clz,
+                Opcode::I64Ctz => Instruction::I64Ctz,
+                Opcode::I64Popcnt => Instruction::I64Popcnt,
+                Opcode::I64Add => Instruction::I64Add,
+                Opcode::I64Sub => Instruction::I64Sub,
+                Opcode::I64Mul => Instruction::I64Mul,
+                Opcode::I64DivS => Instruction::I64DivS,
+                Opcode::I64DivU => Instruction::I64DivU,
+                Opcode::I64RemS => Instruction::I64RemS,
+                Opcode::I64RemU => Instruction::I64RemU,
+                Opcode::I64And => Instruction::I64And,
+                Opcode::I64Or => Instruction::I64Or,
+                Opcode::I64Xor => Instruction::I64Xor,
+                Opcode::I64Shl => Instruction::I64Shl,
+                Opcode::I64ShrS => Instruction::I64ShrS,
+                Opcode::I64ShrU => Instruction::I64ShrU,
+                Opcode::I64Rotl => Instruction::I64Rotl,
+                Opcode::I64Rotr => Instruction::I64Rotr,
+                Opcode::F32Abs => Instruction::F32Abs,
+                Opcode::F32Neg => Instruction::F32Neg,
+                Opcode::F32Ceil => Instruction::F32Ceil,
+                Opcode::F32Floor => Instruction::F32Floor,
+                Opcode::F32Trunc => Instruction::F32Trunc,
+                Opcode::F32Nearest => Instruction::F32Nearest,
+                Opcode::F32Sqrt => Instruction::F32Sqrt,
+                Opcode::F32Add => Instruction::F32Add,
+                Opcode::F32Sub => Instruction::F32Sub,
+                Opcode::F32Mul => Instruction::F32Mul,
+                Opcode::F32Div => Instruction::F32Div,
+                Opcode::F32Min => Instruction::F32Min,
+                Opcode::F32Max => Instruction::F32Max,
+                Opcode::F32Copysign => Instruction::F32Copysign,
+                Opcode::F64Abs => Instruction::F64Abs,
+                Opcode::F64Neg => Instruction::F64Neg,
+                Opcode::F64Ceil => Instruction::F64Ceil,
+                Opcode::F64Floor => Instruction::F64Floor,
+                Opcode::F64Trunc => Instruction::F64Trunc,
+                Opcode::F64Nearest => Instruction::F64Nearest,
+                Opcode::F64Sqrt => Instruction::F64Sqrt,
+                Opcode::F64Add => Instruction::F64Add,
+                Opcode::F64Sub => Instruction::F64Sub,
+                Opcode::F64Mul => Instruction::F64Mul,
+                Opcode::F64Div => Instruction::F64Div,
+                Opcode::F64Min => Instruction::F64Min,
+                Opcode::F64Max => Instruction::F64Max,
+                Opcode::F64Copysign => Instruction::F64Copysign,
+                Opcode::I32WrapI64 => Instruction::I32WrapI64,
+                Opcode::I32TruncF32S => Instruction::I32TruncF32S,
+                Opcode::I32TruncF32U => Instruction::I32TruncF32U,
+                Opcode::I32TruncF64S => Instruction::I32TruncF64S,
+                Opcode::I32TruncF64U => Instruction::I32TruncF64U,
+                Opcode::I64ExtendI32S => Instruction::I64ExtendI32S,
+                Opcode::I64ExtendI32U => Instruction::I64ExtendI32U,
+                Opcode::I64TruncF32S => Instruction::I64TruncF32S,
+                Opcode::I64TruncF32U => Instruction::I64TruncF32U,
+                Opcode::I64TruncF64S => Instruction::I64TruncF64S,
+                Opcode::I64TruncF64U => Instruction::I64TruncF64U,
+                Opcode::F32ConvertI32S => Instruction::F32ConvertI32S,
+                Opcode::F32ConvertI32U => Instruction::F32ConvertI32U,
+                Opcode::F32ConvertI64S => Instruction::F32ConvertI64S,
+                Opcode::F32ConvertI64U => Instruction::F32ConvertI64U,
+                Opcode::F32DemoteF64 => Instruction::F32DemoteF64,
+                Opcode::F64ConvertI32S => Instruction::F64ConvertI32S,
+                Opcode::F64ConvertI32U => Instruction::F64ConvertI32U,
+                Opcode::F64ConvertI64S => Instruction::F64ConvertI64S,
+                Opcode::F64ConvertI64U => Instruction::F64ConvertI64U,
+                Opcode::F64PromoteF32 => Instruction::F64PromoteF32,
+                Opcode::I32ReinterpretF32 => Instruction::I32ReinterpretF32,
+                Opcode::I64ReinterpretF64 => Instruction::I64ReinterpretF64,
+                Opcode::F32ReinterpretI32 => Instruction::F32ReinterpretI32,
+                Opcode::F64ReinterpretI64 => Instruction::F64ReinterpretI64,
+                Opcode::MemorySize => Instruction::MemorySize,
+                Opcode::MemoryGrow => Instruction::MemoryGrow,
+                Opcode::MemoryCopy => Instruction::MemoryCopy,
+                Opcode::RefIsNull => Instruction::RefIsNull,
+                Opcode::MemoryFill => Instruction::MemoryFill,
             };
 
-            buffer.add_instr(opcode, operands);
+            buffer.add_instr(instr);
         }
 
         trace!("finished reading instrs, got {} instructions", buffer.len());

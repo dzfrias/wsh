@@ -25,7 +25,7 @@ fn main() -> Result<()> {
     let parser = Parser::new(&input);
     let module = parser.read_module()?;
 
-    println!("{module:?}");
+    println!("{}", module.codes[0].body);
 
     Ok(())
 }
