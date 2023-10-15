@@ -123,11 +123,12 @@
 
 use crate::{lexer::Token, writer::Writer};
 use logos::Logos;
+pub use writer::{WriteError, WriteErrorKind};
 
 mod lexer;
 mod writer;
 
-pub fn parse(input: &str) -> Vec<u8> {
+pub fn parse(input: &str) -> Result<Vec<u8>, WriteError> {
     let lexer = Token::lexer(&input);
     let writer = Writer::new(lexer);
     writer.write()

@@ -1,8 +1,11 @@
-use std::io::Write;
+mod error;
+
+use std::{borrow::Cow, io::Write};
 
 use byteorder::{LittleEndian, WriteBytesExt};
 use logos::Lexer;
 
+pub use self::error::*;
 use crate::lexer::Token;
 
 const MAGIC: u32 = 0x6d73_6100;
@@ -24,37 +27,37 @@ pub struct Writer<'src> {
 
 impl<'src> Writer<'src> {
     pub fn new(lexer: Lexer<'src, Token>) -> Self {
-        let mut w = Self {
+        Self {
             lexer,
             out: vec![],
             states: vec![],
-            token: Token::Rbrace,
-        };
-        w.advance();
-        w
+            token: Token::Eof,
+        }
     }
 
-    pub fn write(mut self) -> Vec<u8> {
+    pub fn write(mut self) -> Result<Vec<u8>, WriteError> {
+        // moves past initial Token::Eof
+        self.advance()?;
         while self.token != Token::Eof {
             match &self.token {
-                Token::Instruction(instr) => self.write_instr(&instr.clone()),
+                Token::Instruction(instr) => self.write_instr(&instr.clone())?,
                 Token::Integer(i) => self.write_u32(*i),
                 // TODO: no clone here, perhaps change tokenization to use Rc<str>
                 Token::String(s) => self.write_string(&s.clone()),
-                Token::Instrs => self.write_instrs(),
-                Token::Custom => self.write_section(0),
-                Token::Type => self.write_section(1),
-                Token::Import => self.write_section(2),
-                Token::Function => self.write_section(3),
-                Token::Table => self.write_section(4),
-                Token::Memory => self.write_section(5),
-                Token::Global => self.write_section(6),
-                Token::Export => self.write_section(7),
-                Token::Start => self.write_section(8),
-                Token::Element => self.write_section(9),
-                Token::Code => self.write_section(10),
-                Token::Data => self.write_section(11),
-                Token::DataCount => self.write_section(12),
+                Token::Instrs => self.write_instrs()?,
+                Token::Custom => self.write_section(0)?,
+                Token::Type => self.write_section(1)?,
+                Token::Import => self.write_section(2)?,
+                Token::Function => self.write_section(3)?,
+                Token::Table => self.write_section(4)?,
+                Token::Memory => self.write_section(5)?,
+                Token::Global => self.write_section(6)?,
+                Token::Export => self.write_section(7)?,
+                Token::Start => self.write_section(8)?,
+                Token::Element => self.write_section(9)?,
+                Token::Code => self.write_section(10)?,
+                Token::Data => self.write_section(11)?,
+                Token::DataCount => self.write_section(12)?,
                 Token::I32 => self.write_byte(0x7f),
                 Token::I64 => self.write_byte(0x7e),
                 Token::F32 => self.write_byte(0x7d),
@@ -67,9 +70,9 @@ impl<'src> Writer<'src> {
                 Token::ExternGlobal => self.write_byte(0x03),
                 Token::FuncForm => self.write_byte(0x60),
                 Token::Comma => {
-                    self.advance();
+                    self.advance()?;
                     let Some(State::Array { ref mut items, .. }) = self.states.last_mut() else {
-                        todo!("error");
+                        return Err(self.error(WriteErrorKind::UnexpectedToken(Token::Comma)));
                     };
                     // This is necessary because the actual number of items is always items + 1
                     // Since trailing commas are optional, there needs to be some way to count
@@ -96,17 +99,29 @@ impl<'src> Writer<'src> {
                         }
                         self.write_bytes(&contents);
                     }
-                    _ => todo!("error"),
-                },
-                Token::Lbrace => todo!("error"),
-                Token::Rbrace => match self.states.pop() {
-                    Some(State::Section(buf) | State::Instructions(buf)) => {
-                        let len = buf.len() as u32;
-                        self.write_u32(len);
-                        self.write_bytes(&buf);
+                    _ => {
+                        return Err(self.error_with_help(
+                            WriteErrorKind::UnexpectedToken(Token::Rbracket),
+                            "perhaps you meant to start a vector earlier?",
+                        ))
                     }
-                    _ => todo!("error"),
                 },
+                Token::Lbrace => {
+                    return Err(self.error(WriteErrorKind::UnexpectedToken(Token::Lbrace)))
+                }
+                Token::Rbrace => {
+                    match self.states.pop() {
+                        Some(State::Section(buf) | State::Instructions(buf)) => {
+                            let len = buf.len() as u32;
+                            self.write_u32(len);
+                            self.write_bytes(&buf);
+                        }
+                        _ => return Err(self.error_with_help(
+                            WriteErrorKind::UnexpectedToken(Token::Rbrace),
+                            "perhaps you meant to start a section or instruction sequence earlier?",
+                        )),
+                    }
+                }
                 Token::Magic => self.write_u32_raw(MAGIC),
                 Token::Version => self.write_u32_raw(1),
                 Token::True => self.write_byte(1),
@@ -115,25 +130,29 @@ impl<'src> Writer<'src> {
                 Token::Eof => unreachable!(),
             }
 
-            self.advance();
+            self.advance()?;
         }
 
-        self.out
+        Ok(self.out)
     }
 
-    fn write_section(&mut self, id: u8) {
+    fn write_section(&mut self, id: u8) -> Result<(), WriteError> {
         self.write_byte(id);
-        self.advance();
-        // TODO: error handling
-        assert_eq!(Token::Lbrace, self.token);
+        self.advance()?;
+        if self.token != Token::Lbrace {
+            return Err(self.error(WriteErrorKind::ExpectedToken(Token::Lbrace)));
+        }
         self.states.push(State::Section(vec![]));
+        Ok(())
     }
 
-    fn write_instrs(&mut self) {
-        self.advance();
-        // TODO: error handling
-        assert_eq!(Token::Lbrace, self.token);
+    fn write_instrs(&mut self) -> Result<(), WriteError> {
+        self.advance()?;
+        if self.token != Token::Lbrace {
+            return Err(self.error(WriteErrorKind::ExpectedToken(Token::Lbrace)));
+        }
         self.states.push(State::Instructions(vec![]));
+        Ok(())
     }
 
     fn write_byte(&mut self, b: u8) {
@@ -177,17 +196,40 @@ impl<'src> Writer<'src> {
         .expect("write should not fail")
     }
 
+    fn error(&self, kind: WriteErrorKind) -> WriteError {
+        WriteError {
+            kind,
+            span: self.lexer.span(),
+            help: None,
+        }
+    }
+
+    fn error_with_help(
+        &self,
+        kind: WriteErrorKind,
+        help: impl Into<Cow<'static, str>>,
+    ) -> WriteError {
+        WriteError {
+            help: Some(help.into()),
+            ..self.error(kind)
+        }
+    }
+
+    fn advance(&mut self) -> Result<(), WriteError> {
+        self.token = self
+            .lexer
+            .next()
+            .unwrap_or(Ok(Token::Eof))
+            .map_err(|_| self.error(WriteErrorKind::InvalidToken))?;
+        Ok(())
+    }
+
     fn write_string(&mut self, s: &str) {
         self.write_u32(s.len() as u32);
         self.write_bytes(s.as_bytes());
     }
 
-    fn advance(&mut self) {
-        // TODO: error handling
-        self.token = self.lexer.next().unwrap_or(Ok(Token::Eof)).unwrap();
-    }
-
-    fn write_instr(&mut self, s: &str) {
+    fn write_instr(&mut self, s: &str) -> Result<(), WriteError> {
         // for instructions that have a prefix byte (i.e. 0xfc)
         'prefix: {
             let idx = match s {
@@ -214,7 +256,7 @@ impl<'src> Writer<'src> {
 
             self.write_byte(0xfc);
             self.write_u32(idx);
-            return;
+            return Ok(());
         }
 
         let byte = match s {
@@ -394,8 +436,10 @@ impl<'src> Writer<'src> {
             "ref.func" => 0xd2,
             "memory.size" => 0x3f,
             "memory.grow" => 0x40,
-            instr => todo!("error, got instr {instr}"),
+            _ => return Err(self.error(WriteErrorKind::UnknownInstruction(s.to_owned()))),
         };
         self.write_byte(byte);
+
+        Ok(())
     }
 }
