@@ -213,7 +213,7 @@ impl<'src> Writer<'src> {
             };
 
             self.write_byte(0xfc);
-            self.write_u32_raw(idx);
+            self.write_u32(idx);
         }
 
         let byte = match s {
