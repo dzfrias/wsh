@@ -1,5 +1,8 @@
 #![allow(non_upper_case_globals)]
 
+use std::fmt;
+
+use itertools::Itertools;
 use num_enum::TryFromPrimitive;
 
 mod instr;
@@ -218,8 +221,6 @@ pub struct Code {
 /// A data segment.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Data<'a> {
-    /// The index into memory of the data.
-    pub index: MemIdx,
     /// The offset of the data in memory.
     pub offset: Option<InitExpr>,
     /// The actual data.
@@ -274,4 +275,186 @@ pub struct Module<'a> {
     pub codes: Vec<Code>,
     pub datas: Vec<Data<'a>>,
     pub data_count: Option<u32>,
+}
+
+impl fmt::Display for ValType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ValType::I32 => f.write_str("i32"),
+            ValType::I64 => f.write_str("i64"),
+            ValType::F32 => f.write_str("f32"),
+            ValType::F64 => f.write_str("f64"),
+            ValType::Func => f.write_str("funcref"),
+            ValType::Extern => f.write_str("externref"),
+        }
+    }
+}
+
+impl fmt::Display for RefType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RefType::Func => f.write_str("funcref"),
+            RefType::Extern => f.write_str("externref"),
+        }
+    }
+}
+
+impl fmt::Display for Limit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}..", self.initial)?;
+        if let Some(max) = self.max {
+            write!(f, "{max}")?;
+        }
+
+        Ok(())
+    }
+}
+
+impl fmt::Display for ImportKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ImportKind::Function(idx) => write!(f, "func {idx}"),
+            ImportKind::Table(table) => write!(f, "{table}"),
+            ImportKind::Memory(mem) => write!(f, "{mem}"),
+            ImportKind::Global(global) => write!(f, "{global}"),
+        }
+    }
+}
+
+impl fmt::Display for TableType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "table {} {}", self.limit, self.elem_type)
+    }
+}
+
+impl fmt::Display for GlobalType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "global ")?;
+        if self.mutable {
+            write!(f, "mut ")?;
+        }
+        write!(f, "{}", self.content_type)
+    }
+}
+
+impl fmt::Display for Memory {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "memory {}", self.limit)
+    }
+}
+
+impl fmt::Display for Function {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "func ({})", self.index)
+    }
+}
+
+impl fmt::Display for Global {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {}", self.kind, self.init)
+    }
+}
+
+impl fmt::Display for InitExpr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            InitExpr::I32Const(val) => write!(f, "i32.const {val}"),
+            InitExpr::I64Const(val) => write!(f, "i64.const {val}"),
+            InitExpr::F32Const(val) => write!(f, "f32.const {val}"),
+            InitExpr::F64Const(val) => write!(f, "f64.const {val}"),
+            InitExpr::ConstGlobalGet(idx) => write!(f, "global.get {idx}"),
+        }
+    }
+}
+
+impl fmt::Display for Export<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "export \"{}\" {} ({})",
+            self.field, self.kind, self.external_idx
+        )
+    }
+}
+
+impl fmt::Display for ExternalKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ExternalKind::Function => write!(f, "func"),
+            ExternalKind::Table => write!(f, "table"),
+            ExternalKind::Memory => write!(f, "memory"),
+            ExternalKind::Global => write!(f, "global"),
+        }
+    }
+}
+
+impl fmt::Display for Import<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "import \"{}\" \"{}\" ({})",
+            self.module, self.field, self.kind
+        )
+    }
+}
+
+impl fmt::Display for Element {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "element {} ({}) {}", self.elems, self.types, self.kind)
+    }
+}
+
+impl fmt::Display for ElementItems {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ElementItems::Functions(funcs) => write!(f, "functions [{}]", funcs.iter().join(", ")),
+            ElementItems::Elems(elems) => write!(f, "elems [{}]", elems.iter().join(", ")),
+        }
+    }
+}
+
+impl fmt::Display for ElementKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ElementKind::Passive => write!(f, "passive"),
+            ElementKind::Declarative => write!(f, "declarative"),
+            ElementKind::Active { tbl_idx, offset } => {
+                write!(f, "active (table {tbl_idx}, offset {offset})")
+            }
+        }
+    }
+}
+
+impl fmt::Display for Code {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "locals: [{}]", self.locals.iter().join(", "))?;
+
+        write!(f, "{}", self.body)
+    }
+}
+
+impl fmt::Display for NumLocals {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} ({})", self.locals_type, self.num)
+    }
+}
+
+impl fmt::Display for Data<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "data")?;
+
+        if let Some(init) = self.offset {
+            write!(f, " at {init}")?;
+        }
+
+        write!(f, ": bytes: {:?}", self.data)
+    }
+}
+
+impl fmt::Display for FuncType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let params = self.0.iter().join(" ");
+        let results = self.1.iter().join(" ");
+        write!(f, "({params}) -> ({results})")
+    }
 }

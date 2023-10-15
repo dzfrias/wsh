@@ -1,0 +1,24 @@
+magic
+version
+
+type {
+  [
+    form.func 1 (params) i32 1 (result) i32,
+  ]
+}
+
+function {
+  [0]
+}
+
+code {
+  [
+    instrs {
+      [] (locals)
+      i32.const 10
+      i32.const 20
+      i32.add
+      return
+    },
+  ]
+}

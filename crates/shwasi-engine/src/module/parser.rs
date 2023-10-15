@@ -1,4 +1,4 @@
-use std::io::Cursor;
+use std::{fmt, io::Cursor};
 
 use anyhow::{bail, ensure, Context, Result};
 use byteorder::{LittleEndian, ReadBytesExt};
@@ -103,6 +103,7 @@ impl<'a> Parser<'a> {
     fn read_sections(&mut self) -> Result<()> {
         trace!("began reading sections");
 
+        let mut last_section = SectionCode::Custom;
         while self.offset() < self.bufsize as u64 {
             let section_code: SectionCode =
                 self.read_u8()?.try_into().context("invalid section code")?;
@@ -158,6 +159,13 @@ impl<'a> Parser<'a> {
                 SectionCode::DataCount => {}
             }
 
+            if section_code != SectionCode::Custom {
+                if section_code < last_section {
+                    bail!("the {section_code} section is out of order");
+                }
+
+                last_section = section_code;
+            }
             ensure!(self.offset() == end, "did not finish reading section");
         }
 
@@ -511,17 +519,17 @@ impl<'a> Parser<'a> {
             } else {
                 None
             };
+            ensure!(
+                mem_idx == 0,
+                "memory index should be 0, multi-memories is not supported"
+            );
 
             let data_size = self.read_u32_leb128()?;
             let data = self
                 .slice(data_size as usize)
                 .context("error reading data")?;
 
-            let data = Data {
-                index: mem_idx,
-                offset: init,
-                data,
-            };
+            let data = Data { offset: init, data };
             trace!("got data segment {data:?}");
             self.module.datas.push(data);
         }
@@ -1064,6 +1072,7 @@ impl<'a> Parser<'a> {
                 Opcode::I64ReinterpretF64 => Instruction::I64ReinterpretF64,
                 Opcode::F32ReinterpretI32 => Instruction::F32ReinterpretI32,
                 Opcode::F64ReinterpretI64 => Instruction::F64ReinterpretI64,
+                // FIX: consume placeholder byte
                 Opcode::MemorySize => Instruction::MemorySize,
                 Opcode::MemoryGrow => Instruction::MemoryGrow,
                 Opcode::MemoryCopy => Instruction::MemoryCopy,
@@ -1103,4 +1112,25 @@ enum SectionCode {
     Code = 10,
     Data = 11,
     DataCount = 12,
+}
+
+impl fmt::Display for SectionCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let to_write = match self {
+            SectionCode::Custom => "custom",
+            SectionCode::Type => "type",
+            SectionCode::Import => "import",
+            SectionCode::Function => "function",
+            SectionCode::Table => "table",
+            SectionCode::Memory => "memory",
+            SectionCode::Global => "global",
+            SectionCode::Export => "export",
+            SectionCode::Start => "start",
+            SectionCode::Elem => "element",
+            SectionCode::Code => "code",
+            SectionCode::Data => "data",
+            SectionCode::DataCount => "data count",
+        };
+        f.write_str(to_write)
+    }
 }
