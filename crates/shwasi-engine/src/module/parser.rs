@@ -64,8 +64,8 @@ impl<'a> Parser<'a> {
         wasm_leb128::read_u64_leb128(&mut self.buf).context("failed to read leb128 u32")
     }
 
-    fn read_s32_leb128(&mut self) -> Result<i32> {
-        wasm_leb128::read_i32_leb128(&mut self.buf).context("failed to read leb128 s32")
+    fn read_s33_leb128(&mut self) -> Result<i64> {
+        wasm_leb128::read_s33_leb128(&mut self.buf).context("failed to read leb128 s32")
     }
 
     fn slice(&mut self, n: usize) -> Result<&'a [u8]> {
@@ -671,8 +671,7 @@ impl<'a> Parser<'a> {
             return Ok(BlockType::Type(valtype));
         }
 
-        // TODO: read s33
-        let idx = self.read_s32_leb128()?;
+        let idx = self.read_s33_leb128()?;
         Ok(BlockType::FuncType(
             idx.try_into().context("invalid function index")?,
         ))

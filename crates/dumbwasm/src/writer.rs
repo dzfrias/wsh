@@ -153,7 +153,7 @@ impl<'src> Writer<'src> {
             ) => wasm_leb128::write_u32_leb128(buf, b),
             None => wasm_leb128::write_u32_leb128(&mut self.out, b),
         }
-        .expect("write should not fail")
+        .expect("write should not fail");
     }
 
     fn write_bytes(&mut self, bytes: &[u8]) {
