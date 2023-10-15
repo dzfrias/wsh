@@ -1,0 +1,10 @@
+[package]
+name = "wasm-leb128"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+byteorder = "1.5.0"
+
+[lints]
+workspace = true

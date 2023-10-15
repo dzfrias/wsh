@@ -1,0 +1,29 @@
+magic
+version
+
+type {
+  ;; Syntax sugar for writing WebAssembly vectors
+  [
+    form.func 1 (params) i32 1 (result) i32,
+  ]
+}
+
+function {
+  ;; Equivalent to writing `[0]`! The square brackets automatically count up
+  ;; the number of items!
+  1 (number of funcs)
+  0 (index)
+}
+
+code {
+  [
+    ;; this function returns 10 + 20
+    instrs {
+      [] (number of locals)
+      i32.const 10
+      i32.const 20
+      i32.add
+      return
+    },
+  ]
+}

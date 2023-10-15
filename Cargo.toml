@@ -12,6 +12,8 @@ tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 [workspace]
 members = [
     "crates/shwasi-engine",
+    "crates/dumbwasm",
+    "crates/wasm-leb128",
 ]
 
 [workspace.lints.clippy]

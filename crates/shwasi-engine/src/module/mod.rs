@@ -3,7 +3,6 @@
 use num_enum::TryFromPrimitive;
 
 mod instr;
-mod leb128;
 mod parser;
 
 pub use instr::*;

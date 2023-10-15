@@ -5,7 +5,6 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use num_enum::TryFromPrimitive;
 use tracing::trace;
 
-use super::leb128;
 use crate::{
     is_prefix_byte, BlockType, BrTable, Code, Data, Element, ElementItems, ElementKind, Export,
     ExternalKind, FuncType, Function, Global, GlobalType, Import, ImportKind, InitExpr,
@@ -58,15 +57,15 @@ impl<'a> Parser<'a> {
     }
 
     fn read_u32_leb128(&mut self) -> Result<u32> {
-        leb128::read_u32_leb128(&mut self.buf).context("failed to read leb128 u32")
+        wasm_leb128::read_u32_leb128(&mut self.buf).context("failed to read leb128 u32")
     }
 
     fn read_u64_leb128(&mut self) -> Result<u64> {
-        leb128::read_u64_leb128(&mut self.buf).context("failed to read leb128 u32")
+        wasm_leb128::read_u64_leb128(&mut self.buf).context("failed to read leb128 u32")
     }
 
     fn read_s32_leb128(&mut self) -> Result<i32> {
-        leb128::read_i32_leb128(&mut self.buf).context("failed to read leb128 s32")
+        wasm_leb128::read_i32_leb128(&mut self.buf).context("failed to read leb128 s32")
     }
 
     fn slice(&mut self, n: usize) -> Result<&'a [u8]> {

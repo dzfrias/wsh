@@ -1,0 +1,15 @@
+[package]
+name = "dumbwasm"
+version = "0.1.0"
+edition = "2021"
+
+[lints]
+workspace = true
+
+[dependencies]
+wasm-leb128 = { path = "../wasm-leb128" }
+logos = "0.13.0"
+snailquote = "0.3.1"
+anyhow = "1.0.75"
+byteorder = "1.5.0"
+clap = { version = "4.4.6", features = ["derive"] }
