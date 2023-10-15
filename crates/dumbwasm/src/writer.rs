@@ -214,6 +214,7 @@ impl<'src> Writer<'src> {
 
             self.write_byte(0xfc);
             self.write_u32(idx);
+            return;
         }
 
         let byte = match s {
@@ -391,7 +392,9 @@ impl<'src> Writer<'src> {
             "ref.null" => 0xd0,
             "ref.is_null" => 0xd1,
             "ref.func" => 0xd2,
-            _ => todo!("error"),
+            "memory.size" => 0x3f,
+            "memory.grow" => 0x40,
+            instr => todo!("error, got instr {instr}"),
         };
         self.write_byte(byte);
     }

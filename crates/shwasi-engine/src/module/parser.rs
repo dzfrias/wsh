@@ -647,10 +647,11 @@ impl<'a> Parser<'a> {
         let byte = self.read_u8()?;
         if is_prefix_byte(byte) {
             let sub_value = self.read_u32_leb128()?;
-            return Opcode::try_from_bytes(byte, sub_value).context("unknown opcode");
+            return Opcode::try_from_bytes(byte, sub_value)
+                .with_context(|| format!("unknown opcode, {byte:#x}"));
         }
 
-        Opcode::try_from_byte(byte).context("unkown opcode")
+        Opcode::try_from_byte(byte).with_context(|| format!("unknown opcode, {byte:#x}"))
     }
 
     fn read_memarg(&mut self) -> Result<MemArg> {
@@ -848,6 +849,8 @@ impl<'a> Parser<'a> {
                 }
                 Opcode::MemoryInit => {
                     let data_idx = self.read_u32_leb128()?;
+                    let placeholder = self.read_u8()?;
+                    ensure!(placeholder == 0x00, "placeholder byte must be 0x00");
                     Instruction::MemoryInit { data_idx }
                 }
                 Opcode::RefFunc => {
@@ -942,6 +945,31 @@ impl<'a> Parser<'a> {
                 Opcode::Else => {
                     ensure!(stack.last().is_some_and(|opcode| *opcode == Opcode::If));
                     Instruction::Else
+                }
+
+                Opcode::MemorySize => {
+                    let placeholder = self.read_u8()?;
+                    ensure!(placeholder == 0x00, "placeholder byte must be 0x00");
+                    Instruction::MemorySize
+                }
+                Opcode::MemoryGrow => {
+                    let placeholder = self.read_u8()?;
+                    ensure!(placeholder == 0x00, "placeholder byte must be 0x00");
+                    Instruction::MemoryGrow
+                }
+                Opcode::MemoryFill => {
+                    let placeholder = self.read_u8()?;
+                    ensure!(placeholder == 0x00, "placeholder byte must be 0x00");
+                    Instruction::MemoryFill
+                }
+                Opcode::MemoryCopy => {
+                    let placeholder1 = self.read_u8()?;
+                    let placeholder2 = self.read_u8()?;
+                    ensure!(
+                        placeholder1 == 0x00 && placeholder2 == 0x00,
+                        "placeholder bytes must be 0x00"
+                    );
+                    Instruction::MemoryCopy
                 }
 
                 Opcode::Unreachable => Instruction::Unreachable,
@@ -1072,12 +1100,7 @@ impl<'a> Parser<'a> {
                 Opcode::I64ReinterpretF64 => Instruction::I64ReinterpretF64,
                 Opcode::F32ReinterpretI32 => Instruction::F32ReinterpretI32,
                 Opcode::F64ReinterpretI64 => Instruction::F64ReinterpretI64,
-                // FIX: consume placeholder byte
-                Opcode::MemorySize => Instruction::MemorySize,
-                Opcode::MemoryGrow => Instruction::MemoryGrow,
-                Opcode::MemoryCopy => Instruction::MemoryCopy,
                 Opcode::RefIsNull => Instruction::RefIsNull,
-                Opcode::MemoryFill => Instruction::MemoryFill,
                 Opcode::I32TruncSatF32S => Instruction::I32TruncSatF32S,
                 Opcode::I32TruncSatF32U => Instruction::I32TruncSatF32U,
                 Opcode::I32TruncSatF64S => Instruction::I32TruncSatF64S,

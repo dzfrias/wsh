@@ -409,6 +409,8 @@ impl Opcode {
             0xd0 => O::RefNull,
             0xd1 => O::RefIsNull,
             0xd2 => O::RefFunc,
+            0x3f => O::MemorySize,
+            0x40 => O::MemoryGrow,
             _ => return None,
         };
 

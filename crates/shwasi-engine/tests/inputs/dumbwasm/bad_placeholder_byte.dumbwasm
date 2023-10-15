@@ -1,0 +1,22 @@
+magic
+version
+
+type {
+  [
+    form.func 0 (params) 0 (result)
+  ]
+}
+
+function {
+  [0]
+}
+
+code {
+  [
+    instrs {
+      [] (locals)
+      ;; placeholder byte should never be 0x01
+      memory.size b0x01
+    }
+  ]
+}
