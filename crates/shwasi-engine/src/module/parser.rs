@@ -663,6 +663,7 @@ impl<'a> Parser<'a> {
             return Ok(BlockType::Type(valtype));
         }
 
+        // TODO: read s33
         let idx = self.read_s32_leb128()?;
         Ok(BlockType::FuncType(
             idx.try_into().context("invalid function index")?,
@@ -1069,6 +1070,14 @@ impl<'a> Parser<'a> {
                 Opcode::MemoryCopy => Instruction::MemoryCopy,
                 Opcode::RefIsNull => Instruction::RefIsNull,
                 Opcode::MemoryFill => Instruction::MemoryFill,
+                Opcode::I32TruncSatF32S => Instruction::I32TruncSatF32S,
+                Opcode::I32TruncSatF32U => Instruction::I32TruncSatF32U,
+                Opcode::I32TruncSatF64S => Instruction::I32TruncSatF64S,
+                Opcode::I32TruncSatF64U => Instruction::I32TruncSatF64U,
+                Opcode::I64TruncSatF32S => Instruction::I64TruncSatF32S,
+                Opcode::I64TruncSatF32U => Instruction::I64TruncSatF32U,
+                Opcode::I64TruncSatF64S => Instruction::I64TruncSatF64S,
+                Opcode::I64TruncSatF64U => Instruction::I64TruncSatF64U,
             };
 
             buffer.add_instr(instr);
