@@ -49,3 +49,17 @@ fn bad_version() {
     let err = result.unwrap_err();
     assert_display_snapshot!(err.root_cause(), @"bad version: 276856960");
 }
+
+#[test]
+fn read_overflow() {
+    let result = Parser::new(READ_OVERFLOW).read_module();
+    let err = result.unwrap_err();
+    assert_display_snapshot!(err.root_cause(), @"leb128 integer too long");
+}
+
+#[test]
+fn signed_overflow() {
+    let result = Parser::new(SIGNED_OVERFLOW).read_module();
+    let err = result.unwrap_err();
+    assert_display_snapshot!(err.root_cause(), @"leb128 integer too long");
+}

@@ -278,6 +278,7 @@ name = "wasm-leb128"
 version = "0.1.0"
 dependencies = [
  "byteorder",
+ "thiserror",
 ]
 
 [[package]]
