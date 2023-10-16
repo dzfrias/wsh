@@ -8,9 +8,10 @@ use std::{
 
 use anyhow::{Context, Result};
 use clap::Parser;
+use console::StyledObject;
 use dumbwasm::{parse, WriteError};
 
-use crate::cli::Cli;
+use crate::cli::{Cli, Color};
 
 fn main() -> Result<()> {
     let args = Cli::parse();
@@ -20,12 +21,14 @@ fn main() -> Result<()> {
     let out = match parse(&input) {
         Ok(buf) => buf,
         Err(err) => {
-            print_err(&input, err);
+            print_err(&input, err, &args);
             process::exit(1);
         }
     };
-    let mut out_file = File::create(&format!("{}.wasm", stem.to_string_lossy()))
-        .context("error creating out file")?;
+    let out_file_path = args
+        .out
+        .unwrap_or_else(|| format!("{}.wasm", stem.to_string_lossy()).into());
+    let mut out_file = File::create(&out_file_path).context("error creating out file")?;
     out_file
         .write_all(&out)
         .context("error writing buffer to out file")?;
@@ -33,12 +36,20 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn print_line(line: &str, num: usize) {
-    eprintln!("{} {line}", console::style(format!("{}| ", num)).blue());
+fn print_line(line: &str, num: usize, args: &Cli) {
+    eprintln!("{} {line}", style(format!("{}| ", num), args).blue());
 }
 
-fn print_err(src: &str, err: WriteError) {
-    eprintln!("{}: {}\n", console::style("error").red().bold(), err.kind);
+fn style<D>(input: D, args: &Cli) -> StyledObject<D> {
+    match args.color {
+        Color::Never => console::style(input).force_styling(false),
+        Color::Auto => console::style(input),
+        Color::Always => console::style(input).force_styling(true),
+    }
+}
+
+fn print_err(src: &str, err: WriteError, args: &Cli) {
+    eprintln!("{}: {}\n", style("error", args).red().bold(), err.kind);
 
     let mut current_pos = 0;
     let mut after_print = 0;
@@ -47,20 +58,20 @@ fn print_err(src: &str, err: WriteError) {
             current_pos += line.len() + 1;
 
             if current_pos + line.len() >= err.span.start {
-                print_line(line, i + 1);
+                print_line(line, i + 1, args);
             }
             continue;
         }
 
         if after_print > 0 && after_print <= 2 {
-            print_line(line, i + 1);
+            print_line(line, i + 1, args);
             after_print += 1;
             continue;
         } else if after_print > 2 {
             break;
         }
 
-        print_line(line, i + 1);
+        print_line(line, i + 1, args);
         let padding = (err.span.start + 2) - current_pos;
         let underlines = std::iter::repeat('^')
             .take(err.span.len())
@@ -69,13 +80,13 @@ fn print_err(src: &str, err: WriteError) {
             " {x}{:1$}{underlines}",
             "",
             padding,
-            x = console::style("•").red().bold(),
-            underlines = console::style(underlines).red().bold(),
+            x = style("•", args).red().bold(),
+            underlines = style(underlines, args).red().bold(),
         );
         after_print = 1;
     }
 
     if let Some(help) = err.help {
-        eprintln!("\n{}: {help}", console::style("help").cyan().bold())
+        eprintln!("\n{}: {help}", style("help", args).cyan().bold())
     }
 }
