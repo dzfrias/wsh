@@ -214,3 +214,23 @@ where
 {
     write_s64_leb128(out, value)
 }
+
+#[inline]
+pub fn write_f32_leb128<W>(out: &mut W, value: f32) -> io::Result<usize>
+where
+    W: io::Write,
+{
+    let bits = value.to_bits();
+    out.write_all(&bits.to_le_bytes())?;
+    Ok(4)
+}
+
+#[inline]
+pub fn write_f64_leb128<W>(out: &mut W, value: f64) -> io::Result<usize>
+where
+    W: io::Write,
+{
+    let bits = value.to_bits();
+    out.write_all(&bits.to_le_bytes())?;
+    Ok(8)
+}

@@ -1,7 +1,7 @@
 mod error;
 mod instructions;
 
-use std::{borrow::Cow, io::Write};
+use std::{borrow::Cow, io::Write, rc::Rc};
 
 use byteorder::{LittleEndian, WriteBytesExt};
 use logos::Lexer;
@@ -17,6 +17,22 @@ enum State {
     Section(Vec<u8>),
     Array { contents: Vec<u8>, items: u32 },
     Instructions(Vec<u8>),
+}
+
+macro_rules! write_method {
+    ($name:ident($numtype:ty): $write_name:ident) => {
+        fn $name(&mut self, b: $numtype) {
+            match self.states.last_mut() {
+                Some(
+                    State::Section(buf)
+                    | State::Instructions(buf)
+                    | State::Array { contents: buf, .. },
+                ) => wasm_leb128::$write_name(buf, b),
+                None => wasm_leb128::$write_name(&mut self.out, b),
+            }
+            .expect("write should not fail");
+        }
+    };
 }
 
 #[derive(Debug)]
@@ -42,10 +58,16 @@ impl<'src> Writer<'src> {
         self.advance()?;
         while self.token != Token::Eof {
             match &self.token {
-                Token::Instruction(instr) => self.write_instr(&instr.clone())?,
-                Token::Integer(i) => self.write_u32(*i),
-                // TODO: no clone here, perhaps change tokenization to use Rc<str>
-                Token::String(s) => self.write_string(&s.clone()),
+                Token::Instruction(instr) => self.write_instr(&Rc::clone(instr))?,
+                Token::Integer(i) => {
+                    self.write_int(&Rc::clone(i))?;
+                    continue;
+                }
+                Token::Float(f) => {
+                    self.write_float(&Rc::clone(f))?;
+                    continue;
+                }
+                Token::String(s) => self.write_string(&Rc::clone(s)),
                 Token::Instrs => self.write_instrs()?,
                 Token::Custom => self.write_section(0)?,
                 Token::Type => self.write_section(1)?,
@@ -128,7 +150,18 @@ impl<'src> Writer<'src> {
                 Token::Version => self.write_u32_raw(1),
                 Token::True => self.write_byte(1),
                 Token::False => self.write_byte(0),
-                Token::Byte(byte) => self.write_byte(*byte),
+                Token::U32 | Token::U8 | Token::S32 | Token::S33 | Token::U64 | Token::S64 => {
+                    return Err(self.error_with_help(
+                        WriteErrorKind::UnexpectedToken(self.token.clone()),
+                        "number types are only valid in type indicators (i.e. 10<u32>)",
+                    ))
+                }
+                Token::Langle => {
+                    return Err(self.error(WriteErrorKind::UnexpectedToken(Token::Langle)))
+                }
+                Token::Rangle => {
+                    return Err(self.error(WriteErrorKind::UnexpectedToken(Token::Rangle)))
+                }
                 Token::Eof => unreachable!(),
             }
 
@@ -167,15 +200,13 @@ impl<'src> Writer<'src> {
         }
     }
 
-    fn write_u32(&mut self, b: u32) {
-        match self.states.last_mut() {
-            Some(
-                State::Section(buf) | State::Instructions(buf) | State::Array { contents: buf, .. },
-            ) => wasm_leb128::write_u32_leb128(buf, b),
-            None => wasm_leb128::write_u32_leb128(&mut self.out, b),
-        }
-        .expect("write should not fail");
-    }
+    write_method!(write_u32(u32): write_u32_leb128);
+    write_method!(write_u64(u64): write_u64_leb128);
+    write_method!(write_s32(i32): write_s32_leb128);
+    write_method!(write_s64(i64): write_s64_leb128);
+    write_method!(write_s33(i64): write_s33_leb128);
+    write_method!(write_f32(f32): write_f32_leb128);
+    write_method!(write_f64(f64): write_f64_leb128);
 
     fn write_bytes(&mut self, bytes: &[u8]) {
         match self.states.last_mut() {
@@ -229,6 +260,93 @@ impl<'src> Writer<'src> {
     fn write_string(&mut self, s: &str) {
         self.write_u32(s.len() as u32);
         self.write_bytes(s.as_bytes());
+    }
+
+    fn write_int(&mut self, i: &str) -> Result<(), WriteError> {
+        self.advance()?;
+        if self.token != Token::Langle {
+            if i.chars().next().unwrap() == '-' {
+                let parsed = i.parse().expect("should not lex invalid int");
+                self.write_s32(parsed);
+            } else {
+                let parsed = i.parse().expect("should not lex invalid int");
+                self.write_u32(parsed);
+            }
+            return Ok(());
+        }
+        self.advance()?;
+        match self.token {
+            Token::U8 => {
+                let parsed = i.parse().expect("should not lex invalid int");
+                self.write_byte(parsed);
+            }
+            Token::U32 => {
+                let parsed = i.parse().expect("should not lex invalid int");
+                self.write_u32(parsed);
+            }
+            Token::U64 => {
+                let parsed = i.parse().expect("should not lex invalid int");
+                self.write_u64(parsed);
+            }
+            Token::S32 => {
+                let parsed = i.parse().expect("should not lex invalid int");
+                self.write_s32(parsed);
+            }
+            Token::S33 => {
+                let parsed = i.parse().expect("should not lex invalid int");
+                self.write_s33(parsed);
+            }
+            Token::S64 => {
+                let parsed = i.parse().expect("should not lex invalid int");
+                self.write_s64(parsed);
+            }
+            _ => {
+                return Err(self.error_with_help(
+                    WriteErrorKind::UnexpectedToken(self.token.clone()),
+                    "only integer type tokens are allowed here!",
+                ));
+            }
+        }
+        self.advance()?;
+        if self.token != Token::Rangle {
+            return Err(self.error(WriteErrorKind::ExpectedToken(Token::Rangle)));
+        }
+        self.advance()?;
+
+        Ok(())
+    }
+
+    fn write_float(&mut self, f: &str) -> Result<(), WriteError> {
+        self.advance()?;
+        if self.token != Token::Langle {
+            let parsed = f.parse().expect("should not lex invalid float");
+            self.write_f32(parsed);
+            return Ok(());
+        }
+        self.advance()?;
+        match self.token {
+            Token::F32 => {
+                let parsed = f.parse().expect("should not lex invalid float");
+                self.write_f32(parsed);
+            }
+            Token::F64 => {
+                let parsed = f.parse().expect("should not lex invalid float");
+                self.write_f64(parsed);
+            }
+            _ => {
+                return Err(self.error_with_help(
+                    WriteErrorKind::UnexpectedToken(self.token.clone()),
+                    "only float type tokens are allowed here!",
+                ));
+            }
+        }
+        self.advance()?;
+        if self.token != Token::Rangle {
+            return Err(self.error(WriteErrorKind::ExpectedToken(Token::Rangle)));
+        }
+        self.advance()?;
+
+        Ok(())
     }
 
     fn write_instr(&mut self, s: &str) -> Result<(), WriteError> {
