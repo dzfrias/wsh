@@ -1,0 +1,11 @@
+---
+source: crates/dumbwasm/tests/tests.rs
+expression: "String::from_utf8_lossy(&out.stderr)"
+---
+error: unexpected token: `Rbracket`
+
+1|  i32 i32 ]
+ •          ^
+
+help: perhaps you meant to start a vector earlier?
+

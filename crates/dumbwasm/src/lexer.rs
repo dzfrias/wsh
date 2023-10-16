@@ -39,7 +39,7 @@ pub enum Token {
     #[regex(r"0x[0-9a-fA-F]+", hex)]
     #[regex(r"0b[0-1]+", binary_to_decimal)]
     Integer(Rc<str>),
-    #[regex(r"-?[0-9]+.[0-9]+", |lex| Rc::from(lex.slice()))]
+    #[regex(r"-?[0-9]+\.[0-9]+", |lex| Rc::from(lex.slice()))]
     Float(Rc<str>),
 
     #[token("instrs")]

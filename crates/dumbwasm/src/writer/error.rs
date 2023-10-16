@@ -14,6 +14,12 @@ pub enum WriteErrorKind {
     UnknownInstruction(String),
     #[error("invalid token")]
     InvalidToken,
+    #[error("unclosed array")]
+    UnclosedArray,
+    #[error("unclosed section")]
+    UnclosedSection,
+    #[error("unclosed instrs")]
+    UnclosedInstrs,
 }
 
 #[derive(Debug, Error)]

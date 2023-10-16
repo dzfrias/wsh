@@ -1,0 +1,11 @@
+---
+source: crates/dumbwasm/tests/tests.rs
+expression: "String::from_utf8_lossy(&out.stderr)"
+---
+error: unexpected token: `F32`
+
+1|  23<f32>
+ •     ^^^
+
+help: only integer type tokens are allowed here!
+

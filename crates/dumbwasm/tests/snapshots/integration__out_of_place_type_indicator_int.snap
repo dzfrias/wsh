@@ -1,0 +1,11 @@
+---
+source: crates/dumbwasm/tests/tests.rs
+expression: "String::from_utf8_lossy(&out.stderr)"
+---
+error: unexpected token: `U8`
+
+1|  10.1<u8>
+ •       ^^
+
+help: only float type tokens are allowed here!
+

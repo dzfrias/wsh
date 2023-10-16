@@ -1,0 +1,11 @@
+---
+source: crates/dumbwasm/tests/tests.rs
+expression: "String::from_utf8_lossy(&out.stderr)"
+---
+error: unknown instruction: `i32.cons`
+
+1|  i32.cons 10
+ •  ^^^^^^^^
+
+help: perhaps you meant: `i32.const`
+

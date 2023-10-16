@@ -13,20 +13,26 @@ use crate::lexer::Token;
 const MAGIC: u32 = 0x6d73_6100;
 
 #[derive(Debug)]
-enum State {
+enum StateKind {
     Section(Vec<u8>),
     Array { contents: Vec<u8>, items: u32 },
     Instructions(Vec<u8>),
 }
 
+#[derive(Debug)]
+struct State {
+    kind: StateKind,
+    opener_offset: usize,
+}
+
 macro_rules! write_method {
     ($name:ident($numtype:ty): $write_name:ident) => {
         fn $name(&mut self, b: $numtype) {
-            match self.states.last_mut() {
+            match self.current_state() {
                 Some(
-                    State::Section(buf)
-                    | State::Instructions(buf)
-                    | State::Array { contents: buf, .. },
+                    StateKind::Section(buf)
+                    | StateKind::Instructions(buf)
+                    | StateKind::Array { contents: buf, .. },
                 ) => wasm_leb128::$write_name(buf, b),
                 None => wasm_leb128::$write_name(&mut self.out, b),
             }
@@ -95,7 +101,8 @@ impl<'src> Writer<'src> {
                 Token::FuncForm => self.write_byte(0x60),
                 Token::Comma => {
                     self.advance()?;
-                    let Some(State::Array { ref mut items, .. }) = self.states.last_mut() else {
+                    let current_is_rbracket = self.token == Token::Rbracket;
+                    let Some(StateKind::Array { ref mut items, .. }) = self.current_state() else {
                         return Err(self.error(WriteErrorKind::UnexpectedToken(Token::Comma)));
                     };
                     // This is necessary because the actual number of items is always items + 1
@@ -103,19 +110,19 @@ impl<'src> Writer<'src> {
                     // the correct number in both scenarios. The `+ 1` accounts for the comma
                     // skipped on this line. With no trailing comma, the `+ 1` accounts for the
                     // last item they did not use a comma for.
-                    if self.token != Token::Rbracket {
+                    if !current_is_rbracket {
                         *items += 1;
                     }
                     continue;
                 }
                 Token::Lbracket => {
-                    self.states.push(State::Array {
+                    self.push_state(StateKind::Array {
                         contents: vec![],
                         items: 0,
                     });
                 }
-                Token::Rbracket => match self.states.pop() {
-                    Some(State::Array { contents, items }) => {
+                Token::Rbracket => match self.states.pop().map(|state| state.kind) {
+                    Some(StateKind::Array { contents, items }) => {
                         if contents.is_empty() {
                             self.write_u32(0);
                         } else {
@@ -134,8 +141,8 @@ impl<'src> Writer<'src> {
                     return Err(self.error(WriteErrorKind::UnexpectedToken(Token::Lbrace)))
                 }
                 Token::Rbrace => {
-                    match self.states.pop() {
-                        Some(State::Section(buf) | State::Instructions(buf)) => {
+                    match self.states.pop().map(|state| state.kind) {
+                        Some(StateKind::Section(buf) | StateKind::Instructions(buf)) => {
                             let len = buf.len() as u32;
                             self.write_u32(len);
                             self.write_bytes(&buf);
@@ -168,7 +175,32 @@ impl<'src> Writer<'src> {
             self.advance()?;
         }
 
+        if let Some(state) = self.states.last() {
+            let pos = state.opener_offset;
+            let kind = match state.kind {
+                StateKind::Array { .. } => WriteErrorKind::UnclosedArray,
+                StateKind::Section(_) => WriteErrorKind::UnclosedSection,
+                StateKind::Instructions(_) => WriteErrorKind::UnclosedInstrs,
+            };
+            return Err(WriteError {
+                kind,
+                span: pos..pos + 1,
+                help: None,
+            });
+        }
+
         Ok(self.out)
+    }
+
+    fn current_state(&mut self) -> Option<&mut StateKind> {
+        self.states.last_mut().map(|state| &mut state.kind)
+    }
+
+    fn push_state(&mut self, kind: StateKind) {
+        self.states.push(State {
+            kind,
+            opener_offset: self.lexer.span().start,
+        })
     }
 
     fn write_section(&mut self, id: u8) -> Result<(), WriteError> {
@@ -177,7 +209,7 @@ impl<'src> Writer<'src> {
         if self.token != Token::Lbrace {
             return Err(self.error(WriteErrorKind::ExpectedToken(Token::Lbrace)));
         }
-        self.states.push(State::Section(vec![]));
+        self.push_state(StateKind::Section(vec![]));
         Ok(())
     }
 
@@ -186,16 +218,16 @@ impl<'src> Writer<'src> {
         if self.token != Token::Lbrace {
             return Err(self.error(WriteErrorKind::ExpectedToken(Token::Lbrace)));
         }
-        self.states.push(State::Instructions(vec![]));
+        self.push_state(StateKind::Instructions(vec![]));
         Ok(())
     }
 
     fn write_byte(&mut self, b: u8) {
-        match self.states.last_mut() {
-            Some(State::Section(buf)) | Some(State::Instructions(buf)) => {
+        match self.current_state() {
+            Some(StateKind::Section(buf))
+            | Some(StateKind::Instructions(buf) | StateKind::Array { contents: buf, .. }) => {
                 buf.push(b);
             }
-            Some(State::Array { contents, .. }) => contents.push(b),
             None => self.out.push(b),
         }
     }
@@ -209,9 +241,11 @@ impl<'src> Writer<'src> {
     write_method!(write_f64(f64): write_f64_leb128);
 
     fn write_bytes(&mut self, bytes: &[u8]) {
-        match self.states.last_mut() {
+        match self.current_state() {
             Some(
-                State::Section(buf) | State::Instructions(buf) | State::Array { contents: buf, .. },
+                StateKind::Section(buf)
+                | StateKind::Instructions(buf)
+                | StateKind::Array { contents: buf, .. },
             ) => buf.write_all(bytes),
             None => self.out.write_all(bytes),
         }
@@ -219,11 +253,11 @@ impl<'src> Writer<'src> {
     }
 
     fn write_u32_raw(&mut self, b: u32) {
-        match self.states.last_mut() {
-            Some(State::Section(buf)) | Some(State::Instructions(buf)) => {
+        match self.current_state() {
+            Some(StateKind::Section(buf)) | Some(StateKind::Instructions(buf)) => {
                 buf.write_u32::<LittleEndian>(b)
             }
-            Some(State::Array { contents, .. }) => contents.write_u32::<LittleEndian>(b),
+            Some(StateKind::Array { contents, .. }) => contents.write_u32::<LittleEndian>(b),
             None => self.out.write_u32::<LittleEndian>(b),
         }
         .expect("write should not fail")

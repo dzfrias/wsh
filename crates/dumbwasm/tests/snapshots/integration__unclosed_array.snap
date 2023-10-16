@@ -1,0 +1,9 @@
+---
+source: crates/dumbwasm/tests/tests.rs
+expression: "String::from_utf8_lossy(&out.stderr)"
+---
+error: unclosed array
+
+1|  i32 [0, 1
+ •      ^
+
