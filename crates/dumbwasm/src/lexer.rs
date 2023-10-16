@@ -25,8 +25,11 @@ fn parse_string(lex: &mut Lexer<Token>) -> Option<Rc<str>> {
 }
 
 #[derive(Logos, Debug, PartialEq, Clone)]
+// whitespace
 #[logos(skip r"[ \t\n\f]+")]
-#[logos(skip r"\([\w\s]+\)")]
+// annotations
+#[logos(skip r"\([^)]+\)")]
+// comments
 #[logos(skip r";;.*")]
 pub enum Token {
     #[regex(r"[_a-z][_a-z0-9\.]*", |lex| Rc::from(lex.slice()))]
@@ -201,5 +204,11 @@ mod tests {
             Token::Integer("3555".into()),
             lexer.next().expect("should lex something").unwrap()
         );
+    }
+
+    #[test]
+    fn annotations_with_arbitrary_characters() {
+        let mut lexer = Token::lexer("(1239----...&&&)");
+        assert!(lexer.next().is_none());
     }
 }
