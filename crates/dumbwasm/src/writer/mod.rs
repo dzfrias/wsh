@@ -94,8 +94,8 @@ impl<'src> Writer<'src> {
                 Token::F64 => self.write_byte(0x7c),
                 Token::Funcref => self.write_byte(0x70),
                 Token::Externref => self.write_byte(0x6f),
-                Token::ExternFunc => self.write_byte(0x00),
-                Token::ExternTable => self.write_byte(0x01),
+                Token::ExternFunc | Token::False => self.write_byte(0x00),
+                Token::ExternTable | Token::True => self.write_byte(0x01),
                 Token::ExternMem => self.write_byte(0x02),
                 Token::ExternGlobal => self.write_byte(0x03),
                 Token::FuncForm => self.write_byte(0x60),
@@ -155,8 +155,6 @@ impl<'src> Writer<'src> {
                 }
                 Token::Magic => self.write_u32_raw(MAGIC),
                 Token::Version => self.write_u32_raw(1),
-                Token::True => self.write_byte(1),
-                Token::False => self.write_byte(0),
                 Token::U32 | Token::U8 | Token::S32 | Token::S33 | Token::U64 | Token::S64 => {
                     return Err(self.error_with_help(
                         WriteErrorKind::UnexpectedToken(self.token.clone()),
@@ -200,7 +198,7 @@ impl<'src> Writer<'src> {
         self.states.push(State {
             kind,
             opener_offset: self.lexer.span().start,
-        })
+        });
     }
 
     fn write_section(&mut self, id: u8) -> Result<(), WriteError> {
@@ -224,8 +222,11 @@ impl<'src> Writer<'src> {
 
     fn write_byte(&mut self, b: u8) {
         match self.current_state() {
-            Some(StateKind::Section(buf))
-            | Some(StateKind::Instructions(buf) | StateKind::Array { contents: buf, .. }) => {
+            Some(
+                StateKind::Section(buf)
+                | StateKind::Instructions(buf)
+                | StateKind::Array { contents: buf, .. },
+            ) => {
                 buf.push(b);
             }
             None => self.out.push(b),
@@ -249,18 +250,18 @@ impl<'src> Writer<'src> {
             ) => buf.write_all(bytes),
             None => self.out.write_all(bytes),
         }
-        .expect("write should not fail")
+        .expect("write should not fail");
     }
 
     fn write_u32_raw(&mut self, b: u32) {
         match self.current_state() {
-            Some(StateKind::Section(buf)) | Some(StateKind::Instructions(buf)) => {
+            Some(StateKind::Section(buf) | StateKind::Instructions(buf)) => {
                 buf.write_u32::<LittleEndian>(b)
             }
             Some(StateKind::Array { contents, .. }) => contents.write_u32::<LittleEndian>(b),
             None => self.out.write_u32::<LittleEndian>(b),
         }
-        .expect("write should not fail")
+        .expect("write should not fail");
     }
 
     fn error(&self, kind: WriteErrorKind) -> WriteError {
@@ -287,7 +288,7 @@ impl<'src> Writer<'src> {
             .lexer
             .next()
             .unwrap_or(Ok(Token::Eof))
-            .map_err(|_| self.error(WriteErrorKind::InvalidToken))?;
+            .map_err(|_err| self.error(WriteErrorKind::InvalidToken))?;
         Ok(())
     }
 
@@ -299,7 +300,7 @@ impl<'src> Writer<'src> {
     fn write_int(&mut self, i: &str) -> Result<(), WriteError> {
         self.advance()?;
         if self.token != Token::Langle {
-            if i.chars().next().unwrap() == '-' {
+            if i.starts_with('-') {
                 let parsed = i.parse().expect("should not lex invalid int");
                 self.write_s32(parsed);
             } else {
@@ -392,26 +393,25 @@ impl<'src> Writer<'src> {
         }
 
         let Some(byte) = INSTRUCTIONS.get(s) else {
-            return Err(
-                if let Some(most_similar) = INSTRUCTIONS
-                    .keys()
-                    .chain(KEYWORDS)
-                    .map(|instr| (strsim::normalized_damerau_levenshtein(s, instr), instr))
-                    .filter(|instr| instr.0 > 0.5)
-                    .max_by(|a, b| {
-                        a.0.partial_cmp(&b.0)
-                            .expect("edit distance should never be invalid")
-                    })
-                    .map(|instr| instr.1)
-                {
-                    self.error_with_help(
-                        WriteErrorKind::UnknownKeyword(s.to_owned()),
-                        format!("perhaps you meant: `{most_similar}`"),
-                    )
-                } else {
-                    self.error(WriteErrorKind::UnknownKeyword(s.to_owned()))
-                },
-            );
+            return Err(INSTRUCTIONS
+                .keys()
+                .chain(KEYWORDS)
+                .map(|instr| (strsim::normalized_damerau_levenshtein(s, instr), instr))
+                .filter(|instr| instr.0 > 0.5)
+                .max_by(|a, b| {
+                    a.0.partial_cmp(&b.0)
+                        .expect("edit distance should never be invalid")
+                })
+                .map_or_else(
+                    || self.error(WriteErrorKind::UnknownKeyword(s.to_owned())),
+                    |instr| {
+                        let most_similar = instr.1;
+                        self.error_with_help(
+                            WriteErrorKind::UnknownKeyword(s.to_owned()),
+                            format!("perhaps you meant: `{most_similar}`"),
+                        )
+                    },
+                ));
         };
         self.write_byte(*byte);
 

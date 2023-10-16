@@ -28,7 +28,7 @@ fn main() -> Result<()> {
     let out_file_path = args
         .out
         .unwrap_or_else(|| format!("{}.wasm", stem.to_string_lossy()).into());
-    let mut out_file = File::create(&out_file_path).context("error creating out file")?;
+    let mut out_file = File::create(out_file_path).context("error creating out file")?;
     out_file
         .write_all(&out)
         .context("error writing buffer to out file")?;
@@ -73,9 +73,7 @@ fn print_err(src: &str, err: WriteError, args: &Cli) {
 
         print_line(line, i + 1, args);
         let padding = (err.span.start + 2) - current_pos;
-        let underlines = std::iter::repeat('^')
-            .take(err.span.len())
-            .collect::<String>();
+        let underlines = "^".repeat(err.span.len());
         eprintln!(
             " {x}{:1$}{underlines}",
             "",
@@ -87,6 +85,6 @@ fn print_err(src: &str, err: WriteError, args: &Cli) {
     }
 
     if let Some(help) = err.help {
-        eprintln!("\n{}: {help}", style("help", args).cyan().bold())
+        eprintln!("\n{}: {help}", style("help", args).cyan().bold());
     }
 }

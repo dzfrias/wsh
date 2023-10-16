@@ -129,7 +129,7 @@ mod lexer;
 mod writer;
 
 pub fn parse(input: &str) -> Result<Vec<u8>, WriteError> {
-    let lexer = Token::lexer(&input);
+    let lexer = Token::lexer(input);
     let writer = Writer::new(lexer);
     writer.write()
 }
