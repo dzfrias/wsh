@@ -15,8 +15,8 @@ use crate::cli::{Cli, Color};
 
 fn main() -> Result<()> {
     let args = Cli::parse();
-    let input = fs::read_to_string(&args.input).context("error reading input file to string")?;
-    let stem = args.input.file_stem().expect("should have file stem");
+    let input = fs::read_to_string(&args.file).context("error reading input file to string")?;
+    let stem = args.file.file_stem().expect("should have file stem");
 
     let out = match parse(&input) {
         Ok(buf) => buf,

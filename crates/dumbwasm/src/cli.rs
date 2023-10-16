@@ -3,9 +3,10 @@ use std::path::PathBuf;
 use clap::{Parser, ValueEnum};
 
 #[derive(Debug, Parser)]
+#[command(author, version, about, long_about)]
 pub struct Cli {
     /// The input file to generate WebAssembly from.
-    pub input: PathBuf,
+    pub file: PathBuf,
 
     /// This flag changes the out file of the WebAssembly generated.
     #[arg(short, value_name = "PATH")]
