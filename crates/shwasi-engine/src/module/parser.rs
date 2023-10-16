@@ -188,7 +188,7 @@ impl<'a> Parser<'a> {
 
             let params = {
                 let num_params = self.read_u32_leb128()?;
-                let mut params = Vec::with_capacity(num_params as usize);
+                let mut params = vec![];
                 for _ in 0..num_params {
                     let valtype = self.read_type().context("error reading type result")?;
                     params.push(valtype);
@@ -198,7 +198,7 @@ impl<'a> Parser<'a> {
 
             let results = {
                 let num_results = self.read_u32_leb128()?;
-                let mut results = Vec::with_capacity(num_results as usize);
+                let mut results = vec![];
                 for _ in 0..num_results {
                     let valtype = self.read_type().context("error reading type result")?;
                     results.push(valtype);
@@ -422,13 +422,13 @@ impl<'a> Parser<'a> {
 
             let num_items = self.read_u32_leb128()?;
             let items = if !has_exprs {
-                let mut functions = Vec::with_capacity(num_items as usize);
+                let mut functions = vec![];
                 for _ in 0..num_items {
                     functions.push(self.read_u32_leb128()?);
                 }
                 ElementItems::Functions(functions)
             } else {
-                let mut elems = Vec::with_capacity(num_items as usize);
+                let mut elems = vec![];
                 for _ in 0..num_items {
                     elems.push(
                         self.read_init_expr()
@@ -463,7 +463,7 @@ impl<'a> Parser<'a> {
             let body_size = self.read_u32_leb128()?;
             let end_offset = self.offset() + body_size as u64;
             let local_decls = self.read_u32_leb128()?;
-            let mut locals = Vec::with_capacity(local_decls as usize);
+            let mut locals = vec![];
             for _ in 0..local_decls {
                 let type_count = self.read_u32_leb128()?;
                 let valtype = self.read_type().context("error reading local type")?;
@@ -679,7 +679,7 @@ impl<'a> Parser<'a> {
 
     fn read_br_table(&mut self) -> Result<BrTable> {
         let num_targets = self.read_u32_leb128()?;
-        let mut targets = Vec::with_capacity(num_targets as usize);
+        let mut targets = vec![];
 
         for _ in 0..num_targets {
             let depth = self.read_u32_leb128()?;
