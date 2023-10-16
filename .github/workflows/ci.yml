@@ -39,6 +39,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Install Rust
         uses: dtolnay/rust-toolchain@nightly
+      - run: rustup component add rustfmt
       - run: cargo fmt --check --all
 
   clippy:
@@ -48,4 +49,5 @@ jobs:
       - uses: actions/checkout@v3
       - name: Install Rust
         uses: dtolnay/rust-toolchain@nightly
+      - run: rustup component add clippy
       - run: cargo clippy --workspace
