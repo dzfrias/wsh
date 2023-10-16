@@ -111,6 +111,10 @@ impl<'a> Parser<'a> {
             let end = self.offset() + size as u64;
             ensure!(end <= self.bufsize as u64, "section extends past end");
 
+            ensure!(
+                last_section != section_code,
+                "duplicate section: {section_code}"
+            );
             match section_code {
                 SectionCode::Custom => {
                     trace!("began reading custom section");
@@ -1118,7 +1122,7 @@ impl<'a> Parser<'a> {
     }
 }
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, PartialOrd, Eq, Ord, TryFromPrimitive)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, TryFromPrimitive)]
 #[repr(u8)]
 enum SectionCode {
     Custom = 0,
@@ -1154,5 +1158,37 @@ impl fmt::Display for SectionCode {
             SectionCode::DataCount => "data count",
         };
         f.write_str(to_write)
+    }
+}
+
+impl PartialOrd for SectionCode {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.section_ord().cmp(&other.section_ord()))
+    }
+}
+
+impl Ord for SectionCode {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}
+
+impl SectionCode {
+    fn section_ord(&self) -> u8 {
+        match self {
+            SectionCode::Custom => 0,
+            SectionCode::Function => 1,
+            SectionCode::Import => 2,
+            SectionCode::Type => 3,
+            SectionCode::Table => 4,
+            SectionCode::Memory => 5,
+            SectionCode::Global => 6,
+            SectionCode::Export => 7,
+            SectionCode::Start => 8,
+            SectionCode::Elem => 9,
+            SectionCode::DataCount => 10,
+            SectionCode::Code => 11,
+            SectionCode::Data => 12,
+        }
     }
 }

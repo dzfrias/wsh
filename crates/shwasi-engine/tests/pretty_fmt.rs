@@ -30,6 +30,7 @@ pub fn pretty_fmt(module: &Module) -> String {
     }
 
     pretty_fmt_all!(s, module, elements);
+    pretty_fmt_all!(s, module, datas);
     pretty_fmt_all!(s, module, codes);
 
     if let Some(data_count) = module.data_count {

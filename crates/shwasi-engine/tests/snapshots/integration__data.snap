@@ -1,0 +1,11 @@
+---
+source: crates/shwasi-engine/tests/tests.rs
+expression: pretty_fmt(&module)
+---
+datas
+---
+0: data at i32.const 10: bytes: [0, 1, 2, 3, 4]
+1: data: bytes: [0, 1, 2, 3, 4]
+2: data at i32.const 10: bytes: [0, 1, 2, 3, 4]
+
+

@@ -1,0 +1,8 @@
+magic
+version
+
+global {
+  [
+    i32 true (mutable) i32.const 10,
+  ]
+}

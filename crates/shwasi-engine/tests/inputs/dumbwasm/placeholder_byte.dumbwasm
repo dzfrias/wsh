@@ -1,14 +1,14 @@
 magic
 version
 
+function {
+  [0]
+}
+
 type {
   [
     form.func 0 (params) 0 (result)
   ]
-}
-
-function {
-  [0]
 }
 
 code {
@@ -16,11 +16,11 @@ code {
     ;; the b0x00's are placeholder bytes
     instrs {
       [] (locals)
-      memory.size b0x00
-      memory.grow b0x00
-      memory.init 0 (data idx) b0x00
-      memory.copy b0x00 b0x00
-      memory.fill b0x00
+      memory.size 0x00
+      memory.grow 0x00
+      memory.init 0 (data idx) 0x00
+      memory.copy 0x00 0x00
+      memory.fill 0x00
     }
   ]
 }

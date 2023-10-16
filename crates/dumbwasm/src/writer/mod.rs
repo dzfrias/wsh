@@ -392,16 +392,25 @@ impl<'src> Writer<'src> {
         }
 
         let Some(byte) = INSTRUCTIONS.get(s) else {
-            let most_similar = INSTRUCTIONS
-                .keys()
-                .map(|instr| (strsim::damerau_levenshtein(s, instr), instr))
-                .min_by_key(|instr| instr.0)
-                .expect("should have more than zero instructions")
-                .1;
-            return Err(self.error_with_help(
-                WriteErrorKind::UnknownInstruction(s.to_owned()),
-                format!("perhaps you meant: `{most_similar}`"),
-            ));
+            return Err(
+                if let Some(most_similar) = INSTRUCTIONS
+                    .keys()
+                    .map(|instr| (strsim::normalized_damerau_levenshtein(s, instr), instr))
+                    .filter(|instr| instr.0 > 0.5)
+                    .max_by(|a, b| {
+                        a.0.partial_cmp(&b.0)
+                            .expect("edit distance should never be invalid")
+                    })
+                    .map(|instr| instr.1)
+                {
+                    self.error_with_help(
+                        WriteErrorKind::UnknownInstruction(s.to_owned()),
+                        format!("perhaps you meant: `{most_similar}`"),
+                    )
+                } else {
+                    self.error(WriteErrorKind::UnknownInstruction(s.to_owned()))
+                },
+            );
         };
         self.write_byte(*byte);
 

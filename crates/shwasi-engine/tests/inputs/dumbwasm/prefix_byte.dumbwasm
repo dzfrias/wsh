@@ -1,0 +1,25 @@
+magic
+version
+
+function {
+  [0]
+}
+
+
+type {
+  [
+    form.func [] []
+  ]
+}
+
+code {
+  [
+    instrs {
+      [] (locals)
+      elem.drop 0
+      i32.trunc_sat_f32_s
+      i32.trunc_sat_f32_u
+      i64.trunc_sat_f64_s
+    }
+  ]
+}

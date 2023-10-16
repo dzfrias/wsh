@@ -63,3 +63,54 @@ fn signed_overflow() {
     let err = result.unwrap_err();
     assert_display_snapshot!(err.root_cause(), @"leb128 integer too long");
 }
+
+#[test]
+fn prefix_byte() {
+    let module = Parser::new(PREFIX_BYTE).read_module().unwrap();
+    assert_snapshot!(pretty_fmt(&module));
+}
+
+#[test]
+fn globals() {
+    let module = Parser::new(GLOBALS).read_module().unwrap();
+    assert_snapshot!(pretty_fmt(&module));
+}
+
+#[test]
+fn bad_init_expr() {
+    let result = Parser::new(BAD_INIT_EXPR).read_module();
+    let err = result.unwrap_err();
+    assert_display_snapshot!(err.root_cause(), @"init expr can only have two instructions");
+}
+
+#[test]
+fn data() {
+    let module = Parser::new(DATA).read_module().unwrap();
+    assert_snapshot!(pretty_fmt(&module));
+}
+
+#[test]
+fn init_expr_wrong_instr() {
+    let result = Parser::new(INIT_EXPR_WRONG_INSTR).read_module();
+    let err = result.unwrap_err();
+    assert_display_snapshot!(err.root_cause(), @"init expr instruction is not const-valid");
+}
+
+#[test]
+fn bad_data_count() {
+    let result = Parser::new(BAD_DATA_COUNT).read_module();
+    let err = result.unwrap_err();
+    assert_display_snapshot!(err.root_cause(), @"data count section does not match amount of data segments");
+}
+
+#[test]
+fn data_count() {
+    let module = Parser::new(DATA_COUNT).read_module().unwrap();
+    assert_snapshot!(pretty_fmt(&module));
+}
+#[test]
+fn duplicate_sections() {
+    let result = Parser::new(DUPLICATE_SECTIONS).read_module();
+    let err = result.unwrap_err();
+    assert_display_snapshot!(err.root_cause(), @"duplicate section: function");
+}

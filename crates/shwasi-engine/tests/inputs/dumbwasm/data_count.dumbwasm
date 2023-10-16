@@ -1,0 +1,12 @@
+magic
+version
+
+datacount {
+  1
+}
+
+data {
+  [
+    0 (active) i32.const 0 end [],
+  ]
+}
