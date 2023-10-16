@@ -2,6 +2,51 @@ use std::rc::Rc;
 
 use logos::{self, Lexer, Logos};
 
+pub static KEYWORDS: &[&str] = &[
+    "instrs",
+    "custom",
+    "type",
+    "import",
+    "function",
+    "table",
+    "memory",
+    "global",
+    "export",
+    "start",
+    "element",
+    "code",
+    "data",
+    "datacount",
+    "i32",
+    "i64",
+    "f32",
+    "f64",
+    "funcref",
+    "externref",
+    "form.func",
+    "extern.func",
+    "extern.table",
+    "extern.mem",
+    "extern.global",
+    "magic",
+    "version",
+    "true",
+    "false",
+    ",",
+    "{",
+    "}",
+    "[",
+    "]",
+    "<",
+    ">",
+    "u8",
+    "u32",
+    "u64",
+    "s32",
+    "s33",
+    "s64",
+];
+
 fn hex(lex: &mut Lexer<Token>) -> Rc<str> {
     let hex_str = lex
         .slice()

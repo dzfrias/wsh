@@ -8,7 +8,7 @@ use logos::Lexer;
 
 pub use self::error::*;
 use self::instructions::{ARITH_PREFIX_INSTRUCTIONS, INSTRUCTIONS};
-use crate::lexer::Token;
+use crate::lexer::{Token, KEYWORDS};
 
 const MAGIC: u32 = 0x6d73_6100;
 
@@ -395,6 +395,7 @@ impl<'src> Writer<'src> {
             return Err(
                 if let Some(most_similar) = INSTRUCTIONS
                     .keys()
+                    .chain(KEYWORDS)
                     .map(|instr| (strsim::normalized_damerau_levenshtein(s, instr), instr))
                     .filter(|instr| instr.0 > 0.5)
                     .max_by(|a, b| {
@@ -404,11 +405,11 @@ impl<'src> Writer<'src> {
                     .map(|instr| instr.1)
                 {
                     self.error_with_help(
-                        WriteErrorKind::UnknownInstruction(s.to_owned()),
+                        WriteErrorKind::UnknownKeyword(s.to_owned()),
                         format!("perhaps you meant: `{most_similar}`"),
                     )
                 } else {
-                    self.error(WriteErrorKind::UnknownInstruction(s.to_owned()))
+                    self.error(WriteErrorKind::UnknownKeyword(s.to_owned()))
                 },
             );
         };

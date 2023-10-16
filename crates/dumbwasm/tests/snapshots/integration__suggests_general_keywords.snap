@@ -1,0 +1,11 @@
+---
+source: crates/dumbwasm/tests/tests.rs
+expression: "String::from_utf8_lossy(&out.stderr)"
+---
+error: unknown keyword: `inst`
+
+1|  inst
+ •  ^^^^
+
+help: perhaps you meant: `instrs`
+

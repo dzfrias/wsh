@@ -10,8 +10,8 @@ pub enum WriteErrorKind {
     UnexpectedToken(Token),
     #[error("expected token: `{0:?}`")]
     ExpectedToken(Token),
-    #[error("unknown instruction: `{0}`")]
-    UnknownInstruction(String),
+    #[error("unknown keyword: `{0}`")]
+    UnknownKeyword(String),
     #[error("invalid token")]
     InvalidToken,
     #[error("unclosed array")]
