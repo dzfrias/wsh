@@ -2,8 +2,10 @@
 // https://doc.rust-lang.org/stable/nightly-rustc/src/rustc_serialize/leb128.rs.html and
 // https://docs.rs/wasmparser/latest/src/wasmparser/binary_reader.rs.html#415
 
-use std::io;
+mod ext;
 
+pub use self::ext::*;
+use std::io;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -21,7 +23,7 @@ macro_rules! impl_read_unsigned_leb128 {
         #[inline]
         pub fn $fn_name<T>(decoder: &mut T) -> ::std::result::Result<$int_ty, $crate::Error>
         where
-            T: ::std::io::Read,
+            T: ::std::io::Read + ?Sized,
         {
             use ::byteorder::ReadBytesExt;
 
@@ -61,7 +63,7 @@ macro_rules! impl_read_signed_leb128 {
         #[inline]
         pub fn $fn_name<T>(decoder: &mut T) -> ::std::result::Result<$int_ty, $crate::Error>
         where
-            T: ::std::io::Read,
+            T: ::std::io::Read + ?Sized,
         {
             use ::byteorder::ReadBytesExt;
 
@@ -114,7 +116,7 @@ macro_rules! impl_write_unsigned_leb128 {
         #[inline]
         pub fn $fn_name<W>(out: &mut W, mut value: $int_ty) -> ::std::io::Result<usize>
         where
-            W: ::std::io::Write,
+            W: ::std::io::Write + ?Sized,
         {
             let mut written = 0;
             loop {
@@ -143,7 +145,7 @@ macro_rules! impl_write_signed_leb128 {
         #[inline]
         pub fn $fn_name<W>(out: &mut W, mut value: $int_ty) -> ::std::io::Result<usize>
         where
-            W: ::std::io::Write,
+            W: ::std::io::Write + ?Sized,
         {
             let mut written = 0;
             loop {
@@ -176,7 +178,7 @@ impl_write_signed_leb128!(write_s128_leb128, i128);
 
 pub fn read_s33_leb128<T>(decoder: &mut T) -> std::result::Result<i64, Error>
 where
-    T: io::Read,
+    T: io::Read + ?Sized,
 {
     use byteorder::ReadBytesExt;
 
@@ -210,7 +212,7 @@ where
 #[inline]
 pub fn write_s33_leb128<W>(out: &mut W, value: i64) -> io::Result<usize>
 where
-    W: io::Write,
+    W: io::Write + ?Sized,
 {
     write_s64_leb128(out, value)
 }
@@ -218,7 +220,7 @@ where
 #[inline]
 pub fn write_f32_leb128<W>(out: &mut W, value: f32) -> io::Result<usize>
 where
-    W: io::Write,
+    W: io::Write + ?Sized,
 {
     let bits = value.to_bits();
     out.write_all(&bits.to_le_bytes())?;
@@ -228,7 +230,7 @@ where
 #[inline]
 pub fn write_f64_leb128<W>(out: &mut W, value: f64) -> io::Result<usize>
 where
-    W: io::Write,
+    W: io::Write + ?Sized,
 {
     let bits = value.to_bits();
     out.write_all(&bits.to_le_bytes())?;
