@@ -559,8 +559,8 @@ impl<'a> Parser<'a> {
         let reftype = self.read_reftype().context("error reading table reftype")?;
         let flags = self.read_u8()?;
         let has_max = match flags {
-            0x00 => true,
-            0x01 => false,
+            0x01 => true,
+            0x00 => false,
             _ => bail!("invalid table flag, only supports max flag"),
         };
 

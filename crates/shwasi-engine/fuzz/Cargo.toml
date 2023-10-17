@@ -9,6 +9,7 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
+wasm-smith = "0.12.21"
 
 [dependencies.shwasi-engine]
 path = ".."
@@ -23,5 +24,11 @@ debug = 1
 [[bin]]
 name = "parse"
 path = "fuzz_targets/parse.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "module"
+path = "fuzz_targets/module.rs"
 test = false
 doc = false

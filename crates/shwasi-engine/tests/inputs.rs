@@ -14,3 +14,4 @@ pub const INIT_EXPR_WRONG_INSTR: &[u8] = include_bytes!("./inputs/init_expr_wron
 pub const BAD_DATA_COUNT: &[u8] = include_bytes!("./inputs/bad_data_count.wasm");
 pub const DATA_COUNT: &[u8] = include_bytes!("./inputs/data_count.wasm");
 pub const DUPLICATE_SECTIONS: &[u8] = include_bytes!("./inputs/duplicate_sections.wasm");
+pub const IMPORT_TABLE: &[u8] = include_bytes!("./inputs/import_table.wasm");

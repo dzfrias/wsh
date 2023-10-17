@@ -108,9 +108,16 @@ fn data_count() {
     let module = Parser::new(DATA_COUNT).read_module().unwrap();
     assert_snapshot!(pretty_fmt(&module));
 }
+
 #[test]
 fn duplicate_sections() {
     let result = Parser::new(DUPLICATE_SECTIONS).read_module();
     let err = result.unwrap_err();
     assert_display_snapshot!(err.root_cause(), @"duplicate section: function");
+}
+
+#[test]
+fn import_table() {
+    let module = Parser::new(IMPORT_TABLE).read_module().unwrap();
+    assert_snapshot!(pretty_fmt(&module));
 }
