@@ -74,10 +74,6 @@ impl<'a> Parser<'a> {
         wasm_leb128::read_s64_leb128(&mut self.buf).context("failed to read leb128 u32")
     }
 
-    fn read_s33_leb128(&mut self) -> Result<i64> {
-        wasm_leb128::read_s33_leb128(&mut self.buf).context("failed to read leb128 s32")
-    }
-
     fn slice(&mut self, n: usize) -> Result<&'a [u8]> {
         let buf = *self.buf.get_ref();
         let offset = self.offset() as usize;
@@ -677,19 +673,15 @@ impl<'a> Parser<'a> {
     }
 
     fn read_blocktype(&mut self) -> Result<BlockType> {
-        let byte = self.read_u8()?;
-
-        if byte == 0x40 {
+        let ty = self.read_s32_leb128()?;
+        if ty == -0x40 {
             return Ok(BlockType::Empty);
         }
-        if let Ok(valtype) = ValType::try_from_primitive(byte) {
+        if let Ok(valtype) = ValType::try_from_primitive((ty & 0xff) as u8) {
             return Ok(BlockType::Type(valtype));
         }
 
-        let idx = self.read_s33_leb128()?;
-        Ok(BlockType::FuncType(
-            idx.try_into().context("invalid function index")?,
-        ))
+        Ok(BlockType::FuncType(unsafe { std::mem::transmute(ty) }))
     }
 
     fn read_br_table(&mut self) -> Result<BrTable> {

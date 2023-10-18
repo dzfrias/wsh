@@ -163,3 +163,9 @@ fn elems() {
     let module = Parser::new(ELEMS).read_module().unwrap();
     assert_snapshot!(pretty_fmt(&module));
 }
+
+#[test]
+fn block_function() {
+    let module = Parser::new(BLOCK_FUNCTION).read_module().unwrap();
+    assert_snapshot!(pretty_fmt(&module));
+}

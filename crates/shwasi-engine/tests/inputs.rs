@@ -22,3 +22,4 @@ pub const F32_INIT_EXPR: &[u8] = include_bytes!("./inputs/f32_init_expr.wasm");
 pub const F64_CONST: &[u8] = include_bytes!("./inputs/f64_const.wasm");
 pub const BAD_I32: &[u8] = include_bytes!("./inputs/bad_i32.wasm");
 pub const ELEMS: &[u8] = include_bytes!("./inputs/elems.wasm");
+pub const BLOCK_FUNCTION: &[u8] = include_bytes!("./inputs/block_function.wasm");
