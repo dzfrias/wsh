@@ -31,6 +31,7 @@ jobs:
         uses: dtolnay/rust-toolchain@nightly
       - run: cargo install cargo-fuzz
       - run: cargo fuzz run parse --fuzz-dir ./crates/shwasi-engine/fuzz -- -max_total_time=60
+      - run: cargo fuzz run module --fuzz-dir ./crates/shwasi-engine/fuzz -- -max_total_time=60
 
   checkfmt:
     name: checkfmt
