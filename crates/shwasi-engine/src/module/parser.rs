@@ -9,7 +9,7 @@ use crate::{
     is_prefix_byte, BlockType, BrTable, Code, Data, Element, ElementItems, ElementKind, Export,
     ExternalKind, FuncType, Function, Global, GlobalType, Import, ImportKind, InitExpr,
     InstrBuffer, Instruction, Limit, MemArg, Memory, Module, NumLocals, Opcode, RefType, TableType,
-    ValType,
+    ValType, F32, F64,
 };
 
 const MAGIC_VALUE: u32 = 0x6d73_6100;
@@ -50,6 +50,12 @@ impl<'a> Parser<'a> {
         self.buf
             .read_u32::<LittleEndian>()
             .context("failed to read u32")
+    }
+
+    fn read_u64(&mut self) -> Result<u64> {
+        self.buf
+            .read_u64::<LittleEndian>()
+            .context("failed to read u64")
     }
 
     fn read_u8(&mut self) -> Result<u8> {
@@ -847,8 +853,8 @@ impl<'a> Parser<'a> {
                     Instruction::I32Const(val)
                 }
                 Opcode::F32Const => {
-                    let val = self.read_u32_leb128()?;
-                    Instruction::F32Const(val)
+                    let val = self.read_u32()?;
+                    Instruction::F32Const(F32::new(val))
                 }
                 Opcode::MemoryInit => {
                     let data_idx = self.read_u32_leb128()?;
@@ -881,7 +887,7 @@ impl<'a> Parser<'a> {
                     Instruction::TableFill { table }
                 }
 
-                Opcode::F64Const => Instruction::F64Const(self.read_u64_leb128()?),
+                Opcode::F64Const => Instruction::F64Const(F64::new(self.read_u64()?)),
                 Opcode::I64Const => Instruction::I64Const(self.read_u64_leb128()?),
 
                 Opcode::TableCopy => {

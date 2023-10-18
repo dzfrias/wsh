@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{
     BlockType, BrTable, DataIdx, ElemIdx, FuncIdx, MemArg, Opcode, RefType, TableIdx, TypeIdx,
-    ValType,
+    ValType, F32, F64,
 };
 
 #[derive(Debug)]
@@ -209,7 +209,7 @@ pub enum Instruction {
         elem_idx: ElemIdx,
     },
     I32Const(u32),
-    F32Const(u32),
+    F32Const(F32),
     MemoryInit {
         data_idx: DataIdx,
     },
@@ -235,7 +235,7 @@ pub enum Instruction {
         ty: RefType,
     },
     I64Const(u64),
-    F64Const(u64),
+    F64Const(F64),
     CallIndirect {
         type_idx: TypeIdx,
         table_idx: TableIdx,
@@ -663,8 +663,14 @@ impl fmt::Display for Instruction {
             | Instruction::TableSize { table: idx }
             | Instruction::TableFill { table: idx }
             | Instruction::GlobalSet { idx }
-            | Instruction::I32Const(idx)
-            | Instruction::F32Const(idx) => {
+            | Instruction::I32Const(idx) => {
+                write!(f, " {idx}")
+            }
+
+            Instruction::F32Const(idx) => {
+                write!(f, " {idx}")
+            }
+            Instruction::F64Const(idx) => {
                 write!(f, " {idx}")
             }
 
@@ -676,7 +682,7 @@ impl fmt::Display for Instruction {
                 write!(f, " {write}")
             }
 
-            Instruction::I64Const(val) | Instruction::F64Const(val) => write!(f, " {val}"),
+            Instruction::I64Const(val) => write!(f, " {val}"),
 
             Instruction::CallIndirect {
                 type_idx,

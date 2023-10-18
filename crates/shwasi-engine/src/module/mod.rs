@@ -235,11 +235,49 @@ pub enum InitExpr {
     /// A constant i64.
     I64Const(u64),
     /// A constant f32.
-    F32Const(u32),
+    F32Const(F32),
     /// A constant i64.
-    F64Const(u64),
+    F64Const(F64),
     /// The index of a global.
     ConstGlobalGet(u32),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Hash, PartialOrd)]
+pub struct F32(u32);
+
+impl F32 {
+    pub fn new(val: u32) -> Self {
+        Self(val)
+    }
+
+    pub fn raw(&self) -> u32 {
+        self.0
+    }
+}
+
+impl fmt::Display for F32 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", f32::from_bits(self.0))
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Hash, PartialOrd)]
+pub struct F64(u64);
+
+impl fmt::Display for F64 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", f64::from_bits(self.0))
+    }
+}
+
+impl F64 {
+    pub fn new(val: u64) -> Self {
+        Self(val)
+    }
+
+    pub fn raw(&self) -> u64 {
+        self.0
+    }
 }
 
 /// Represents the number of locals of a given type.

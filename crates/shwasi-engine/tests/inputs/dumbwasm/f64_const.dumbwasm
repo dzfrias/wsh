@@ -1,0 +1,8 @@
+magic
+version
+
+global {
+  [
+    f64 true (mutable) f64.const 10.0<f64> end,
+  ]
+}

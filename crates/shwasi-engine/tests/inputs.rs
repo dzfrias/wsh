@@ -18,3 +18,5 @@ pub const IMPORT_TABLE: &[u8] = include_bytes!("./inputs/import_table.wasm");
 pub const IMPORT_SECTION_ORDER: &[u8] = include_bytes!("./inputs/import_section_order.wasm");
 pub const COMPLEX_INIT: &[u8] = include_bytes!("./inputs/complex_init.wasm");
 pub const CODE_AND_TYPES: &[u8] = include_bytes!("./inputs/code_and_types.wasm");
+pub const F32_INIT_EXPR: &[u8] = include_bytes!("./inputs/f32_init_expr.wasm");
+pub const F64_CONST: &[u8] = include_bytes!("./inputs/f64_const.wasm");

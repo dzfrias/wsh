@@ -7,7 +7,7 @@ use num_enum::TryFromPrimitive;
 
 pub use self::instruction::Instruction;
 pub use self::opcode::{is_prefix_byte, Opcode};
-use crate::{RefType, ValType};
+use crate::{RefType, ValType, F32, F64};
 
 #[derive(Debug, Clone, Copy, Default, Hash)]
 pub struct InstrHandle(u32);
@@ -309,7 +309,6 @@ impl InstrBuffer {
             | Instruction::DataDrop { data_idx: n }
             | Instruction::ElemDrop { elem_idx: n }
             | Instruction::I32Const(n)
-            | Instruction::F32Const(n)
             | Instruction::MemoryInit { data_idx: n }
             | Instruction::RefFunc { func_idx: n }
             | Instruction::TableGet { table: n }
@@ -318,9 +317,15 @@ impl InstrBuffer {
             | Instruction::TableSize { table: n }
             | Instruction::TableFill { table: n } => n,
 
+            Instruction::F32Const(n) => n.raw(),
+            Instruction::F64Const(n) => {
+                self.u64s.push(n.raw());
+                self.u64s.len() as u32 - 1
+            }
+
             Instruction::RefNull { ty } => ty as u32,
 
-            Instruction::I64Const(n) | Instruction::F64Const(n) => {
+            Instruction::I64Const(n) => {
                 self.u64s.push(n);
                 self.u64s.len() as u32 - 1
             }
@@ -634,7 +639,7 @@ impl InstrBuffer {
                 elem_idx: info.payload,
             },
             Opcode::I32Const => Instruction::I32Const(info.payload),
-            Opcode::F32Const => Instruction::F32Const(info.payload),
+            Opcode::F32Const => Instruction::F32Const(F32::new(info.payload)),
             Opcode::MemoryInit => Instruction::MemoryInit {
                 data_idx: info.payload,
             },
@@ -670,7 +675,7 @@ impl InstrBuffer {
             }
             Opcode::F64Const => {
                 let f64 = self.u64s[info.payload as usize];
-                Instruction::F64Const(f64)
+                Instruction::F64Const(F64::new(f64))
             }
             Opcode::TableInit => {
                 let (elem_idx, table_idx) = self.eight_bytes[info.payload as usize];
