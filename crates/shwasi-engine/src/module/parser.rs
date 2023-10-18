@@ -460,7 +460,7 @@ impl<'a> Parser<'a> {
         let function_bodies = self.read_u32_leb128()?;
         trace!("found {function_bodies} function bodies");
         ensure!(
-            function_bodies as usize == self.module.types.len(),
+            function_bodies as usize == self.module.functions.len(),
             "should have the same amount of function bodies as types"
         );
         for _ in 0..function_bodies {

@@ -133,3 +133,9 @@ fn complex_init() {
     let module = Parser::new(COMPLEX_INIT).read_module().unwrap();
     assert_snapshot!(pretty_fmt(&module));
 }
+
+#[test]
+fn code_and_types() {
+    let module = Parser::new(CODE_AND_TYPES).read_module().unwrap();
+    assert_snapshot!(pretty_fmt(&module));
+}
