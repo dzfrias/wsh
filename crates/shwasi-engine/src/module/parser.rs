@@ -1177,9 +1177,9 @@ impl SectionCode {
     fn section_ord(&self) -> u8 {
         match self {
             SectionCode::Custom => 0,
-            SectionCode::Function => 1,
+            SectionCode::Type => 1,
             SectionCode::Import => 2,
-            SectionCode::Type => 3,
+            SectionCode::Function => 3,
             SectionCode::Table => 4,
             SectionCode::Memory => 5,
             SectionCode::Global => 6,

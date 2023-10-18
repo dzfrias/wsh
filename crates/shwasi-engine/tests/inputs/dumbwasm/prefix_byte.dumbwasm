@@ -1,15 +1,14 @@
 magic
 version
 
-function {
-  [0]
-}
-
-
 type {
   [
     form.func [] []
   ]
+}
+
+function {
+  [0]
 }
 
 code {

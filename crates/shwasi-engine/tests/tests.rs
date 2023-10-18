@@ -121,3 +121,9 @@ fn import_table() {
     let module = Parser::new(IMPORT_TABLE).read_module().unwrap();
     assert_snapshot!(pretty_fmt(&module));
 }
+
+#[test]
+fn import_section_order() {
+    let module = Parser::new(IMPORT_SECTION_ORDER).read_module().unwrap();
+    assert_snapshot!(pretty_fmt(&module));
+}

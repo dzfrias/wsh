@@ -1,14 +1,14 @@
 magic
 version
 
-function {
-  [0]
-}
-
 type {
   [
     form.func 1 (params) i32 1 (result) i32,
   ]
+}
+
+function {
+  [0]
 }
 
 code {

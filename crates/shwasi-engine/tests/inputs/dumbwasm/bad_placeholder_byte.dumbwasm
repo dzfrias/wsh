@@ -1,14 +1,14 @@
 magic
 version
 
-function {
-  [0]
-}
-
 type {
   [
     form.func 0 (params) 0 (result)
   ]
+}
+
+function {
+  [0]
 }
 
 code {
