@@ -143,3 +143,5 @@ dumbwasm_test!(
 );
 
 dumbwasm_test_failing!(suggests_general_keywords, "inst");
+
+dumbwasm_test!(call_indirect, "call_indirect", [0x11]);

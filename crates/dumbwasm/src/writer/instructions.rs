@@ -34,6 +34,7 @@ pub static INSTRUCTIONS: phf::Map<&'static str, u8> = phf_map! {
     "br_table" => 0x0e,
     "return" => 0x0f,
     "call" => 0x10,
+    "call_indirect" => 0x11,
     "drop" => 0x1a,
     "select" => 0x1b,
     "local.get" => 0x20,
