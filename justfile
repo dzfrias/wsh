@@ -9,13 +9,13 @@ alias b := build
 alias mkt := mktest
 alias rev := review
 
-default: build check test
+default: build check test fmt
 
 check:
-  cargo clippy --all
+  cargo clippy --workspace
 
 test:
-  cargo nextest run --all
+  cargo nextest run --workspace
 
 build *ARGS:
   cargo build {{ARGS}}
@@ -38,11 +38,23 @@ mktest NAME KIND="good":
   echo "pub const {{uppercase(NAME)}}: &[u8] = include_bytes!(\"./inputs/{{NAME}}.wasm\");" >> ../inputs.rs
   echo created test, {{NAME}}.dumbwasm!
   if [[ {{KIND}} == "good" ]]; then
-    printf "\n#[test]\nfn {{NAME}}() {\n    let module = Parser::new({{uppercase(NAME)}}).read_module().unwrap();\n    assert_snapshot!(pretty_fmt(&module));\n}" >> ../tests.rs
+    printf "\n\n#[test]\nfn {{NAME}}() {\n    let module = Parser::new({{uppercase(NAME)}}).read_module().unwrap();\n    assert_snapshot!(pretty_fmt(&module));\n}" >> ../tests.rs
   else
-    printf "\n#[test]\nfn {{NAME}}() {\n    let result = Parser::new({{uppercase(NAME)}}).read_module();\n    let err = result.unwrap_err();\n    assert_display_snapshot!(err.root_cause(), @\"\");\n}" >> ../tests.rs
+    printf "\n\n#[test]\nfn {{NAME}}() {\n    let result = Parser::new({{uppercase(NAME)}}).read_module();\n    let err = result.unwrap_err();\n    assert_display_snapshot!(err.root_cause(), @\"\");\n}" >> ../tests.rs
   fi
   $EDITOR ./dumbwasm/{{NAME}}.dumbwasm
+
+crash NAME:
+  #!/bin/bash
+  set -euo pipefail
+  mv ./crates/shwasi-engine/crash.wasm ./crates/shwasi-engine/tests/inputs/{{NAME}}.wasm
+  cd ./crates/shwasi-engine/tests/inputs
+  echo "pub const {{uppercase(NAME)}}: &[u8] = include_bytes!(\"./inputs/{{NAME}}.wasm\");" >> ../inputs.rs
+  printf "\n\n#[test]\nfn {{NAME}}() {\n    let module = Parser::new({{uppercase(NAME)}}).read_module().unwrap();\n    assert_snapshot!(pretty_fmt(&module));\n}" >> ../tests.rs
+  echo "created crash test, {{NAME}}.wasm!"
+
+fmt *ARGS:
+  cargo fmt {{ARGS}}
 
 review:
   @cargo insta review
