@@ -96,6 +96,20 @@ impl InstrBuffer {
         }
     }
 
+    pub fn last(&self) -> Option<InstrHandle> {
+        if self.is_empty() {
+            return None;
+        }
+        Some(InstrHandle(self.len() as u32 - 1))
+    }
+
+    pub fn first(&self) -> Option<InstrHandle> {
+        if self.is_empty() {
+            return None;
+        }
+        Some(InstrHandle(0))
+    }
+
     pub fn get(&self, n: usize) -> Option<InstrHandle> {
         if n >= self.len() {
             return None;

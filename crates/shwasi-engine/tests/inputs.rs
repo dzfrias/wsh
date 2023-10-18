@@ -16,3 +16,4 @@ pub const DATA_COUNT: &[u8] = include_bytes!("./inputs/data_count.wasm");
 pub const DUPLICATE_SECTIONS: &[u8] = include_bytes!("./inputs/duplicate_sections.wasm");
 pub const IMPORT_TABLE: &[u8] = include_bytes!("./inputs/import_table.wasm");
 pub const IMPORT_SECTION_ORDER: &[u8] = include_bytes!("./inputs/import_section_order.wasm");
+pub const COMPLEX_INIT: &[u8] = include_bytes!("./inputs/complex_init.wasm");

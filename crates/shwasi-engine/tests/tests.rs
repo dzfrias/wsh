@@ -80,7 +80,7 @@ fn globals() {
 fn bad_init_expr() {
     let result = Parser::new(BAD_INIT_EXPR).read_module();
     let err = result.unwrap_err();
-    assert_display_snapshot!(err.root_cause(), @"init expr can only have two instructions");
+    assert_display_snapshot!(err.root_cause(), @"init expr can must have 2+ instructions");
 }
 
 #[test]
@@ -125,5 +125,11 @@ fn import_table() {
 #[test]
 fn import_section_order() {
     let module = Parser::new(IMPORT_SECTION_ORDER).read_module().unwrap();
+    assert_snapshot!(pretty_fmt(&module));
+}
+
+#[test]
+fn complex_init() {
+    let module = Parser::new(COMPLEX_INIT).read_module().unwrap();
     assert_snapshot!(pretty_fmt(&module));
 }

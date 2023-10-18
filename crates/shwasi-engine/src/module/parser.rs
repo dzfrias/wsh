@@ -620,15 +620,15 @@ impl<'a> Parser<'a> {
             .read_instrs(self.bufsize as u64)
             .context("error reading init instructions")?;
         ensure!(
-            init_expr.len() == 2,
-            "init expr can only have two instructions"
+            init_expr.len() >= 2,
+            "init expr can must have 2+ instructions"
         );
-        let last = init_expr.get(1).unwrap();
+        let last = init_expr.last().unwrap();
         ensure!(
             init_expr.opcode(last) == Opcode::End,
             "init expr must end with an end instruction"
         );
-        let instr = init_expr.get(0).unwrap();
+        let instr = init_expr.first().unwrap();
         let expr = match init_expr.instruction(instr) {
             Instruction::I32Const(val) => InitExpr::I32Const(val),
             Instruction::I64Const(val) => InitExpr::I64Const(val),
