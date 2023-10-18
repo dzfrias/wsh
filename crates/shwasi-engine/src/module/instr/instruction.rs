@@ -208,7 +208,7 @@ pub enum Instruction {
     ElemDrop {
         elem_idx: ElemIdx,
     },
-    I32Const(u32),
+    I32Const(i32),
     F32Const(F32),
     MemoryInit {
         data_idx: DataIdx,
@@ -234,7 +234,7 @@ pub enum Instruction {
     RefNull {
         ty: RefType,
     },
-    I64Const(u64),
+    I64Const(i64),
     F64Const(F64),
     CallIndirect {
         type_idx: TypeIdx,
@@ -662,10 +662,10 @@ impl fmt::Display for Instruction {
             | Instruction::TableGrow { table: idx }
             | Instruction::TableSize { table: idx }
             | Instruction::TableFill { table: idx }
-            | Instruction::GlobalSet { idx }
-            | Instruction::I32Const(idx) => {
+            | Instruction::GlobalSet { idx } => {
                 write!(f, " {idx}")
             }
+            Instruction::I32Const(idx) => write!(f, " {idx}"),
 
             Instruction::F32Const(idx) => {
                 write!(f, " {idx}")

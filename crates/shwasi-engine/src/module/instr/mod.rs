@@ -308,7 +308,6 @@ impl InstrBuffer {
             | Instruction::GlobalSet { idx: n }
             | Instruction::DataDrop { data_idx: n }
             | Instruction::ElemDrop { elem_idx: n }
-            | Instruction::I32Const(n)
             | Instruction::MemoryInit { data_idx: n }
             | Instruction::RefFunc { func_idx: n }
             | Instruction::TableGet { table: n }
@@ -325,8 +324,12 @@ impl InstrBuffer {
 
             Instruction::RefNull { ty } => ty as u32,
 
+            // SAFETY: an u32 can be interpreted as an i32, just as long
+            // as the u32 is only being used as an encoding key (which it is)
+            Instruction::I32Const(n) => unsafe { std::mem::transmute(n) },
             Instruction::I64Const(n) => {
-                self.u64s.push(n);
+                // SAFETY: same as above
+                self.u64s.push(unsafe { std::mem::transmute(n) });
                 self.u64s.len() as u32 - 1
             }
 
@@ -638,7 +641,8 @@ impl InstrBuffer {
             Opcode::ElemDrop => Instruction::ElemDrop {
                 elem_idx: info.payload,
             },
-            Opcode::I32Const => Instruction::I32Const(info.payload),
+            // SAFETY: the u32 can be easily decoded back into an i32
+            Opcode::I32Const => Instruction::I32Const(unsafe { std::mem::transmute(info.payload) }),
             Opcode::F32Const => Instruction::F32Const(F32::new(info.payload)),
             Opcode::MemoryInit => Instruction::MemoryInit {
                 data_idx: info.payload,
@@ -669,9 +673,10 @@ impl InstrBuffer {
                     table_idx,
                 }
             }
+            // SAFETY: the u64 can be easily decoded back into an i64
             Opcode::I64Const => {
                 let i64 = self.u64s[info.payload as usize];
-                Instruction::I64Const(i64)
+                Instruction::I64Const(unsafe { std::mem::transmute(i64) })
             }
             Opcode::F64Const => {
                 let f64 = self.u64s[info.payload as usize];

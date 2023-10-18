@@ -231,9 +231,9 @@ pub struct Data<'a> {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum InitExpr {
     /// A constant i32.
-    I32Const(u32),
+    I32Const(i32),
     /// A constant i64.
-    I64Const(u64),
+    I64Const(i64),
     /// A constant f32.
     F32Const(F32),
     /// A constant i64.

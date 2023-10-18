@@ -66,8 +66,12 @@ impl<'a> Parser<'a> {
         wasm_leb128::read_u32_leb128(&mut self.buf).context("failed to read leb128 u32")
     }
 
-    fn read_u64_leb128(&mut self) -> Result<u64> {
-        wasm_leb128::read_u64_leb128(&mut self.buf).context("failed to read leb128 u32")
+    fn read_s32_leb128(&mut self) -> Result<i32> {
+        wasm_leb128::read_s32_leb128(&mut self.buf).context("failed to read leb128 u32")
+    }
+
+    fn read_s64_leb128(&mut self) -> Result<i64> {
+        wasm_leb128::read_s64_leb128(&mut self.buf).context("failed to read leb128 u32")
     }
 
     fn read_s33_leb128(&mut self) -> Result<i64> {
@@ -849,7 +853,7 @@ impl<'a> Parser<'a> {
                     Instruction::ElemDrop { elem_idx }
                 }
                 Opcode::I32Const => {
-                    let val = self.read_u32_leb128()?;
+                    let val = self.read_s32_leb128()?;
                     Instruction::I32Const(val)
                 }
                 Opcode::F32Const => {
@@ -888,7 +892,7 @@ impl<'a> Parser<'a> {
                 }
 
                 Opcode::F64Const => Instruction::F64Const(F64::new(self.read_u64()?)),
-                Opcode::I64Const => Instruction::I64Const(self.read_u64_leb128()?),
+                Opcode::I64Const => Instruction::I64Const(self.read_s64_leb128()?),
 
                 Opcode::TableCopy => {
                     let b1 = self.read_u32_leb128()?;

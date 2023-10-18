@@ -139,13 +139,21 @@ fn code_and_types() {
     let module = Parser::new(CODE_AND_TYPES).read_module().unwrap();
     assert_snapshot!(pretty_fmt(&module));
 }
+
 #[test]
 fn f32_init_expr() {
     let module = Parser::new(F32_INIT_EXPR).read_module().unwrap();
     assert_snapshot!(pretty_fmt(&module));
 }
+
 #[test]
 fn f64_const() {
     let module = Parser::new(F64_CONST).read_module().unwrap();
+    assert_snapshot!(pretty_fmt(&module));
+}
+
+#[test]
+fn bad_i32() {
+    let module = Parser::new(BAD_I32).read_module().unwrap();
     assert_snapshot!(pretty_fmt(&module));
 }
