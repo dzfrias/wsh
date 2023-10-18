@@ -418,14 +418,15 @@ impl<'a> Parser<'a> {
             let has_exprs = flags & EXPRS != 0;
 
             let ty = if flags & (PASSIVE | EXPLICIT_IDX) != 0 {
-                let ty = self
-                    .read_reftype()
-                    .context("error reading element val type")?;
                 if has_exprs {
-                    ty
+                    self.read_reftype()
+                        .context("error reading element val type")?
                 } else {
+                    let ty = self
+                        .read_external_kind()
+                        .context("error reading element external kind")?;
                     ensure!(
-                        ty == RefType::Func,
+                        ty == ExternalKind::Function,
                         "only func refs are allowed in elements"
                     );
                     RefType::Func

@@ -1,6 +1,6 @@
 #![no_main]
 
-use std::{env, fs};
+use std::fs;
 
 use libfuzzer_sys::{
     arbitrary::{self, Arbitrary},
@@ -27,7 +27,6 @@ fuzz_target!(|data: ConfiguredModule<ShwasiConfig>| {
     let parser = Parser::new(&bytes);
     if let Err(err) = parser.read_module() {
         eprintln!("failed on {bytes:?}\nwith module {:#?}", data.module);
-        eprintln!("{:?}", env::current_dir());
         fs::write("./crash.wasm", &bytes).unwrap();
         panic!("parser should not fail on valid modules: {err:?}");
     }

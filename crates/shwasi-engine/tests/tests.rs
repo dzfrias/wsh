@@ -157,3 +157,9 @@ fn bad_i32() {
     let module = Parser::new(BAD_I32).read_module().unwrap();
     assert_snapshot!(pretty_fmt(&module));
 }
+
+#[test]
+fn elems() {
+    let module = Parser::new(ELEMS).read_module().unwrap();
+    assert_snapshot!(pretty_fmt(&module));
+}
