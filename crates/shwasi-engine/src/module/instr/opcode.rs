@@ -252,6 +252,7 @@ impl Opcode {
             0x0e => O::BrTable,
             0x0f => O::Return,
             0x10 => O::Call,
+            0x11 => O::CallIndirect,
             0x1a => O::Drop,
             0x1b => O::Select,
             0x20 => O::LocalGet,

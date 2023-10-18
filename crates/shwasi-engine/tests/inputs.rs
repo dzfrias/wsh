@@ -24,3 +24,4 @@ pub const BAD_I32: &[u8] = include_bytes!("./inputs/bad_i32.wasm");
 pub const ELEMS: &[u8] = include_bytes!("./inputs/elems.wasm");
 pub const BLOCK_FUNCTION: &[u8] = include_bytes!("./inputs/block_function.wasm");
 pub const SIGN_EXTEND: &[u8] = include_bytes!("./inputs/sign_extend.wasm");
+pub const CALL_INDIRECT: &[u8] = include_bytes!("./inputs/call_indirect.wasm");

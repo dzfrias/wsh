@@ -175,3 +175,9 @@ fn sign_extend() {
     let module = Parser::new(SIGN_EXTEND).read_module().unwrap();
     assert_snapshot!(pretty_fmt(&module));
 }
+
+#[test]
+fn call_indirect() {
+    let module = Parser::new(CALL_INDIRECT).read_module().unwrap();
+    assert_snapshot!(pretty_fmt(&module));
+}
