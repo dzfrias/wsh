@@ -169,3 +169,9 @@ fn block_function() {
     let module = Parser::new(BLOCK_FUNCTION).read_module().unwrap();
     assert_snapshot!(pretty_fmt(&module));
 }
+
+#[test]
+fn sign_extend() {
+    let module = Parser::new(SIGN_EXTEND).read_module().unwrap();
+    assert_snapshot!(pretty_fmt(&module));
+}

@@ -150,6 +150,11 @@ pub enum Instruction {
     I64TruncSatF32U,
     I64TruncSatF64S,
     I64TruncSatF64U,
+    I32Extend8S,
+    I32Extend16S,
+    I64Extend8S,
+    I64Extend16S,
+    I64Extend32S,
 
     I32Load(MemArg),
     I64Load(MemArg),
@@ -449,6 +454,11 @@ impl Instruction {
             Instruction::I64TruncSatF32U => Opcode::I64TruncSatF32U,
             Instruction::I64TruncSatF64S => Opcode::I64TruncSatF64S,
             Instruction::I64TruncSatF64U => Opcode::I64TruncSatF64U,
+            Instruction::I32Extend8S => Opcode::I32Extend8S,
+            Instruction::I32Extend16S => Opcode::I32Extend16S,
+            Instruction::I64Extend8S => Opcode::I64Extend8S,
+            Instruction::I64Extend16S => Opcode::I64Extend16S,
+            Instruction::I64Extend32S => Opcode::I64Extend32S,
         }
     }
 }
@@ -599,7 +609,12 @@ impl fmt::Display for Instruction {
             | Instruction::I64TruncSatF32U
             | Instruction::I64TruncSatF64S
             | Instruction::I64TruncSatF64U
-            | Instruction::MemoryFill => Ok(()),
+            | Instruction::MemoryFill
+            | Instruction::I32Extend8S
+            | Instruction::I32Extend16S
+            | Instruction::I64Extend8S
+            | Instruction::I64Extend16S
+            | Instruction::I64Extend32S => Ok(()),
 
             Instruction::I32Load(memarg)
             | Instruction::I64Load(memarg)

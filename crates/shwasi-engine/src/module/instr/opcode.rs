@@ -198,6 +198,11 @@ pub enum Opcode {
     RefNull,
     RefIsNull,
     RefFunc,
+    I32Extend8S,
+    I32Extend16S,
+    I64Extend8S,
+    I64Extend16S,
+    I64Extend32S,
 }
 
 impl Opcode {
@@ -411,6 +416,11 @@ impl Opcode {
             0xd2 => O::RefFunc,
             0x3f => O::MemorySize,
             0x40 => O::MemoryGrow,
+            0xC0 => O::I32Extend8S,
+            0xC1 => O::I32Extend16S,
+            0xC2 => O::I64Extend8S,
+            0xC3 => O::I64Extend16S,
+            0xC4 => O::I64Extend32S,
             _ => return None,
         };
 
@@ -621,6 +631,11 @@ impl fmt::Display for Opcode {
             Opcode::I64TruncSatF32U => "i64.trunc_sat_f32_u",
             Opcode::I64TruncSatF64S => "i64.trunc_sat_f64_s",
             Opcode::I64TruncSatF64U => "i64.trunc_sat_f64_u",
+            Opcode::I32Extend8S => "i32.extend8_s",
+            Opcode::I32Extend16S => "i32.extend16_s",
+            Opcode::I64Extend8S => "i64.extend8_s",
+            Opcode::I64Extend16S => "i64.extend16_s",
+            Opcode::I64Extend32S => "i64.extend32_s",
         };
 
         write!(f, "{to_write}")

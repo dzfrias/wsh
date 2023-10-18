@@ -1115,6 +1115,11 @@ impl<'a> Parser<'a> {
                 Opcode::I64TruncSatF32U => Instruction::I64TruncSatF32U,
                 Opcode::I64TruncSatF64S => Instruction::I64TruncSatF64S,
                 Opcode::I64TruncSatF64U => Instruction::I64TruncSatF64U,
+                Opcode::I32Extend8S => Instruction::I32Extend8S,
+                Opcode::I32Extend16S => Instruction::I32Extend16S,
+                Opcode::I64Extend8S => Instruction::I64Extend8S,
+                Opcode::I64Extend16S => Instruction::I64Extend16S,
+                Opcode::I64Extend32S => Instruction::I64Extend32S,
             };
 
             buffer.add_instr(instr);

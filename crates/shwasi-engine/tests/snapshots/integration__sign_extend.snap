@@ -1,0 +1,21 @@
+---
+source: crates/shwasi-engine/tests/tests.rs
+expression: pretty_fmt(&module)
+---
+types
+---
+0: () -> (i32)
+
+functions
+---
+0: func (0)
+
+codes
+---
+0: locals: []
+call 0
+i32.extend8_s
+end
+
+
+

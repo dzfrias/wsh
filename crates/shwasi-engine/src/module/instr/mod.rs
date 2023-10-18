@@ -264,7 +264,12 @@ impl InstrBuffer {
             | Instruction::MemoryGrow
             | Instruction::MemoryCopy
             | Instruction::RefIsNull
-            | Instruction::MemoryFill => 0,
+            | Instruction::MemoryFill
+            | Instruction::I32Extend8S
+            | Instruction::I32Extend16S
+            | Instruction::I64Extend8S
+            | Instruction::I64Extend16S
+            | Instruction::I64Extend32S => 0,
 
             Instruction::I32Load(n)
             | Instruction::I64Load(n)
@@ -700,6 +705,11 @@ impl InstrBuffer {
                 let ty = RefType::try_from_primitive(info.payload as u8).unwrap();
                 Instruction::RefNull { ty }
             }
+            Opcode::I32Extend8S => Instruction::I32Extend8S,
+            Opcode::I32Extend16S => Instruction::I32Extend16S,
+            Opcode::I64Extend8S => Instruction::I64Extend8S,
+            Opcode::I64Extend16S => Instruction::I64Extend16S,
+            Opcode::I64Extend32S => Instruction::I64Extend32S,
         }
     }
 
