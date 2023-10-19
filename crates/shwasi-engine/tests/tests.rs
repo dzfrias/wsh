@@ -93,7 +93,7 @@ fn data() {
 fn init_expr_wrong_instr() {
     let result = Parser::new(INIT_EXPR_WRONG_INSTR).read_module();
     let err = result.unwrap_err();
-    assert_display_snapshot!(err.root_cause(), @"init expr instruction is not const-valid");
+    assert_display_snapshot!(err.root_cause(), @"init expr instruction `i32.add` is not const-valid");
 }
 
 #[test]
