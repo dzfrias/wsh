@@ -1,6 +1,7 @@
 use std::{fmt, io::Cursor, str};
 
 use anyhow::{bail, ensure, Context, Result};
+use bitflags::bitflags;
 use byteorder::{LittleEndian, ReadBytesExt};
 use num_enum::TryFromPrimitive;
 use tracing::trace;
@@ -401,25 +402,21 @@ impl<'a> Parser<'a> {
         let elems = self.read_u32_leb128()?;
         trace!("found {elems} elements");
         for _ in 0..elems {
-            let flags = self.read_u32_leb128()?;
-            const PASSIVE: u32 = 0x1;
-            // Explicit index into the table that the element initializes
-            const EXPLICIT_IDX: u32 = 0x2;
-            // Determines how the elements are initialized, with init
-            const EXPRS: u32 = 0x4;
-            ensure!(flags <= 7, "invalid flags: {flags:#b}");
+            let flags_raw = self.read_u32_leb128()?;
+            let flags = SegmentFlags::from_bits(flags_raw)
+                .context("error reading element segment flags")?;
 
-            let kind = if flags & PASSIVE != 0 {
+            let kind = if flags.intersects(SegmentFlags::PASSIVE) {
                 // The kind isn't passive, so it is either declarative or active. If it has an
                 // explicit index, it is declarative.
-                if flags & EXPLICIT_IDX != 0 {
+                if flags.intersects(SegmentFlags::EXPLICIT_IDX) {
                     ElementKind::Declarative
                 } else {
                     ElementKind::Passive
                 }
             } else {
                 // The table that will be initialized
-                let table_idx = if flags & EXPLICIT_IDX == 0 {
+                let table_idx = if !flags.intersects(SegmentFlags::EXPLICIT_IDX) {
                     0
                 } else {
                     self.read_u32_leb128()?
@@ -433,9 +430,9 @@ impl<'a> Parser<'a> {
                 }
             };
 
-            let has_exprs = flags & EXPRS != 0;
+            let has_exprs = flags.intersects(SegmentFlags::EXPRS);
 
-            let ty = if flags & (PASSIVE | EXPLICIT_IDX) != 0 {
+            let ty = if flags.intersects(SegmentFlags::PASSIVE | SegmentFlags::EXPLICIT_IDX) {
                 if has_exprs {
                     self.read_reftype()
                         .context("error reading element val type")?
@@ -536,21 +533,20 @@ impl<'a> Parser<'a> {
             );
         }
         for _ in 0..data_segments {
-            const PASSIVE: u32 = 0x1;
-            const EXPLICIT_IDX: u32 = 0x2;
-
-            let flags = self.read_u32_leb128()?;
+            let flags_raw = self.read_u32_leb128()?;
             ensure!(
-                flags < 3,
+                flags_raw < 3,
                 "only passive and explicit index flags are valid in data section"
             );
+            let flags =
+                SegmentFlags::from_bits(flags_raw).context("error reading data segment flags")?;
 
-            let mem_idx = if flags & EXPLICIT_IDX == EXPLICIT_IDX {
+            let mem_idx = if flags.intersects(SegmentFlags::EXPLICIT_IDX) {
                 self.read_u32_leb128()?
             } else {
                 0
             };
-            let init = if flags & PASSIVE == 0 {
+            let init = if !flags.intersects(SegmentFlags::PASSIVE) {
                 Some(
                     self.read_init_expr()
                         .context("error reading init expr in data segment")?,
@@ -1240,5 +1236,14 @@ impl SectionCode {
             SectionCode::Code => 11,
             SectionCode::Data => 12,
         }
+    }
+}
+
+bitflags! {
+    #[derive(Debug)]
+    struct SegmentFlags: u32 {
+        const PASSIVE = 0x01;
+        const EXPLICIT_IDX = 0x02;
+        const EXPRS = 0x04;
     }
 }
