@@ -1,4 +1,4 @@
-use std::{fmt, io::Cursor};
+use std::{fmt, io::Cursor, str};
 
 use anyhow::{bail, ensure, Context, Result};
 use byteorder::{LittleEndian, ReadBytesExt};
@@ -17,8 +17,10 @@ const VERSION: u32 = 1;
 
 #[derive(Debug)]
 pub struct Parser<'a> {
+    // A cursor into the input buffer
     buf: Cursor<&'a [u8]>,
     bufsize: usize,
+    // The output module (this is mutated as we parse)
     module: Module<'a>,
 }
 
@@ -41,6 +43,11 @@ impl<'a> Parser<'a> {
 
         self.read_sections()
             .with_context(|| format!("error at offset {}", self.bufsize))?;
+        ensure!(
+            self.offset() == self.bufsize as u64,
+            "did not finish reading module, still have {} bytes to read",
+            self.bufsize as u64 - self.offset()
+        );
 
         trace!("finished reading module");
         Ok(self.module)
@@ -74,7 +81,9 @@ impl<'a> Parser<'a> {
         wasm_leb128::read_s64_leb128(&mut self.buf).context("failed to read leb128 u32")
     }
 
+    // Advance a parser n bytes, returning the slice that was advanced over
     fn slice(&mut self, n: usize) -> Result<&'a [u8]> {
+        // Get a reference to the underlying buffer
         let buf = *self.buf.get_ref();
         let offset = self.offset() as usize;
         ensure!(
@@ -83,7 +92,9 @@ impl<'a> Parser<'a> {
             self.bufsize,
             offset + n
         );
+        // Slice to get data with a lifetime of 'a
         let slice = &buf[offset..offset + n];
+        // Advance the buffer by our slice
         self.buf.set_position((offset + n) as u64);
         Ok(slice)
     }
@@ -97,9 +108,9 @@ impl<'a> Parser<'a> {
 
         let contents = self.slice(len as usize)?;
         let s =
-            std::str::from_utf8(contents).context("bytes contained invalid UTF-8 when reading str");
-        trace!("finished reading str");
-        s
+            str::from_utf8(contents).context("bytes contained invalid UTF-8 when reading str")?;
+        trace!("finished reading str, got {s}");
+        Ok(s)
     }
 
     fn offset(&self) -> u64 {
@@ -109,6 +120,8 @@ impl<'a> Parser<'a> {
     fn read_sections(&mut self) -> Result<()> {
         trace!("began reading sections");
 
+        // The last section that was read. Used to ensure sections are in order and that duplicate
+        // sections are not present.
         let mut last_section = SectionCode::Custom;
         while self.offset() < self.bufsize as u64 {
             let section_code: SectionCode =
@@ -187,9 +200,9 @@ impl<'a> Parser<'a> {
         trace!("began reading type section");
 
         let signatures = self.read_u32_leb128()?;
-
         trace!("found {signatures} signatures");
         for _ in 0..signatures {
+            // Functions are the only type form accepted as of right now
             let form = self.read_u8()?;
             ensure!(
                 form == 0x60,
@@ -240,6 +253,7 @@ impl<'a> Parser<'a> {
 
             let import_kind = match external_kind {
                 ExternalKind::Function => {
+                    // Index of the type of the imported function
                     let idx = self.read_u32_leb128()?;
                     ImportKind::Function(idx)
                 }
@@ -275,6 +289,7 @@ impl<'a> Parser<'a> {
 
         let signatures = self.read_u32_leb128()?;
         for _ in 0..signatures {
+            // Type index
             let index = self.read_u32_leb128()?;
             let function = Function { index };
             trace!("read function that points to type index: {index}");
@@ -352,6 +367,7 @@ impl<'a> Parser<'a> {
             let kind = self
                 .read_external_kind()
                 .context("error reading external kind of export")?;
+            // Index of the exported item -- corresponds to the external kind
             let index = self.read_u32_leb128()?;
 
             let export = Export {
@@ -371,6 +387,7 @@ impl<'a> Parser<'a> {
     fn read_start_section(&mut self) -> Result<()> {
         trace!("began reading start section");
 
+        // Function index
         let index = self.read_u32_leb128()?;
         self.module.start = Some(index);
 
@@ -386,17 +403,22 @@ impl<'a> Parser<'a> {
         for _ in 0..elems {
             let flags = self.read_u32_leb128()?;
             const PASSIVE: u32 = 0x1;
+            // Explicit index into the table that the element initializes
             const EXPLICIT_IDX: u32 = 0x2;
+            // Determines how the elements are initialized, with init
             const EXPRS: u32 = 0x4;
             ensure!(flags <= 7, "invalid flags: {flags:#b}");
 
             let kind = if flags & PASSIVE != 0 {
+                // The kind isn't passive, so it is either declarative or active. If it has an
+                // explicit index, it is declarative.
                 if flags & EXPLICIT_IDX != 0 {
                     ElementKind::Declarative
                 } else {
                     ElementKind::Passive
                 }
             } else {
+                // The table that will be initialized
                 let table_idx = if flags & EXPLICIT_IDX == 0 {
                     0
                 } else {
@@ -418,6 +440,8 @@ impl<'a> Parser<'a> {
                     self.read_reftype()
                         .context("error reading element val type")?
                 } else {
+                    // When there are no exprs, the type is implicit. This could even be a check
+                    // for the 0x00 byte, but it can also be treated as an external kind.
                     let ty = self
                         .read_external_kind()
                         .context("error reading element external kind")?;
@@ -428,6 +452,7 @@ impl<'a> Parser<'a> {
                     RefType::Func
                 }
             } else {
+                // No explicit reftype
                 RefType::Func
             };
 
@@ -472,10 +497,13 @@ impl<'a> Parser<'a> {
         );
         for _ in 0..function_bodies {
             let body_size = self.read_u32_leb128()?;
+            // By the end of this function, we should hit this offset exactly.
             let end_offset = self.offset() + body_size as u64;
+            // Number of local declarations
             let local_decls = self.read_u32_leb128()?;
             let mut locals = vec![];
             for _ in 0..local_decls {
+                // Number of locals of this type
                 let type_count = self.read_u32_leb128()?;
                 let valtype = self.read_type().context("error reading local type")?;
                 locals.push(NumLocals {
@@ -536,6 +564,7 @@ impl<'a> Parser<'a> {
             );
 
             let data_size = self.read_u32_leb128()?;
+            // Get the raw data following the data initialization
             let data = self
                 .slice(data_size as usize)
                 .context("error reading data")?;
@@ -564,6 +593,7 @@ impl<'a> Parser<'a> {
 
     fn read_table_type(&mut self) -> Result<TableType> {
         let reftype = self.read_reftype().context("error reading table reftype")?;
+        // Flags can only contain the max flag, which denotes if the limit has a maximum.
         let flags = self.read_u8()?;
         let has_max = match flags {
             0x01 => true,
@@ -623,6 +653,9 @@ impl<'a> Parser<'a> {
     }
 
     fn read_init_expr(&mut self) -> Result<InitExpr> {
+        // We just pass bufsize as the end offset of the init expr, since we aren't always given
+        // the size. However, `read_instrs` will stop reading when it reaches and unmatched `end`
+        // instruction.
         let init_expr = self
             .read_instrs(self.bufsize as u64)
             .context("error reading init instructions")?;
@@ -630,6 +663,8 @@ impl<'a> Parser<'a> {
             init_expr.len() >= 2,
             "init expr can must have 2+ instructions"
         );
+        // This is just a sanity check to make sure we didn't read until the end of the buffer (the
+        // only other case when `read_instrs` would stop).
         let last = init_expr.last().unwrap();
         ensure!(
             init_expr.opcode(last) == Opcode::End,
@@ -642,7 +677,7 @@ impl<'a> Parser<'a> {
             Instruction::F32Const(val) => InitExpr::F32Const(val),
             Instruction::F64Const(val) => InitExpr::F64Const(val),
             Instruction::GlobalGet { idx } => InitExpr::ConstGlobalGet(idx),
-            _ => bail!("init expr instruction is not const-valid"),
+            instr => bail!("init expr instruction `{instr}` is not const-valid"),
         };
         Ok(expr)
     }
@@ -656,6 +691,7 @@ impl<'a> Parser<'a> {
 
     fn read_opcode(&mut self) -> Result<Opcode> {
         let byte = self.read_u8()?;
+        // Some opcodes have a prefix byte
         if is_prefix_byte(byte) {
             let sub_value = self.read_u32_leb128()?;
             return Opcode::try_from_bytes(byte, sub_value)
@@ -681,6 +717,7 @@ impl<'a> Parser<'a> {
             return Ok(BlockType::Type(valtype));
         }
 
+        // SAFETY: This value is just an i32, so it is safe to re-interpret it as a u32
         Ok(BlockType::FuncType(unsafe { std::mem::transmute(ty) }))
     }
 
@@ -1122,6 +1159,7 @@ impl<'a> Parser<'a> {
                 Opcode::I64Extend32S => Instruction::I64Extend32S,
             };
 
+            trace!("read instruction: `{instr}`");
             buffer.add_instr(instr);
         }
 
@@ -1130,6 +1168,8 @@ impl<'a> Parser<'a> {
     }
 }
 
+/// A WebAssembly section. The u8 interpretation indicates its section number, but it `Ord` is
+/// based on section ordering.
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, TryFromPrimitive)]
 #[repr(u8)]
 enum SectionCode {
@@ -1182,6 +1222,8 @@ impl Ord for SectionCode {
 }
 
 impl SectionCode {
+    /// A number corresponding to the correct ordering of sections, which doesn't match up with the
+    /// u8 representation.
     fn section_ord(&self) -> u8 {
         match self {
             SectionCode::Custom => 0,
