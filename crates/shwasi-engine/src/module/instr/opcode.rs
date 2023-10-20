@@ -206,10 +206,12 @@ pub enum Opcode {
 }
 
 impl Opcode {
+    #[inline]
     pub fn try_from_byte(byte: u8) -> Option<Opcode> {
         Self::try_from_bytes(byte, 0)
     }
 
+    #[inline]
     pub fn try_from_bytes(prefix: u8, value: u32) -> Option<Opcode> {
         use Opcode as O;
 
@@ -429,6 +431,7 @@ impl Opcode {
     }
 }
 
+#[inline]
 pub fn is_prefix_byte(byte: u8) -> bool {
     byte == 0xfc
 }
