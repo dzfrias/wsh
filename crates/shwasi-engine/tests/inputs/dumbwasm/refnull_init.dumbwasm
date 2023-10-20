@@ -1,0 +1,9 @@
+magic
+version
+
+global {
+  [
+    i32 true (mutable) ref.null funcref end,
+    i32 true (mutable) ref.func 0 end,
+  ]
+}

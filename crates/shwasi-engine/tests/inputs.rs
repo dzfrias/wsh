@@ -25,3 +25,4 @@ pub const ELEMS: &[u8] = include_bytes!("./inputs/elems.wasm");
 pub const BLOCK_FUNCTION: &[u8] = include_bytes!("./inputs/block_function.wasm");
 pub const SIGN_EXTEND: &[u8] = include_bytes!("./inputs/sign_extend.wasm");
 pub const CALL_INDIRECT: &[u8] = include_bytes!("./inputs/call_indirect.wasm");
+pub const REFNULL_INIT: &[u8] = include_bytes!("./inputs/refnull_init.wasm");

@@ -181,3 +181,10 @@ fn call_indirect() {
     let module = Parser::new(CALL_INDIRECT).read_module().unwrap();
     assert_snapshot!(pretty_fmt(&module));
 }
+
+
+#[test]
+fn refnull_init() {
+    let module = Parser::new(REFNULL_INIT).read_module().unwrap();
+    assert_snapshot!(pretty_fmt(&module));
+}

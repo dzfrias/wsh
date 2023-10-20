@@ -680,6 +680,8 @@ impl<'a> Parser<'a> {
             Instruction::F32Const(val) => InitExpr::F32Const(val),
             Instruction::F64Const(val) => InitExpr::F64Const(val),
             Instruction::GlobalGet { idx } => InitExpr::ConstGlobalGet(idx),
+            Instruction::RefNull { ty } => InitExpr::RefNull(ty),
+            Instruction::RefFunc { func_idx } => InitExpr::RefFunc(func_idx),
             instr => bail!("init expr instruction `{instr}` is not const-valid"),
         };
         Ok(expr)

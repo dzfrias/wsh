@@ -240,6 +240,10 @@ pub enum InitExpr {
     F64Const(F64),
     /// The index of a global.
     ConstGlobalGet(u32),
+    /// A null ref.
+    RefNull(RefType),
+    /// A function reference.
+    RefFunc(FuncIdx),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Hash, PartialOrd)]
@@ -401,6 +405,8 @@ impl fmt::Display for InitExpr {
             InitExpr::F32Const(val) => write!(f, "f32.const {val}"),
             InitExpr::F64Const(val) => write!(f, "f64.const {val}"),
             InitExpr::ConstGlobalGet(idx) => write!(f, "global.get {idx}"),
+            InitExpr::RefNull(reftype) => write!(f, "ref.null {reftype}"),
+            InitExpr::RefFunc(idx) => write!(f, "ref.func {idx}"),
         }
     }
 }
