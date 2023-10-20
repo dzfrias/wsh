@@ -6,7 +6,7 @@ use byteorder::{LittleEndian, ReadBytesExt};
 use num_enum::TryFromPrimitive;
 use tracing::trace;
 
-use crate::{
+use crate::module::{
     is_prefix_byte, BlockType, BrTable, Code, Data, Element, ElementItems, ElementKind, Export,
     ExternalKind, FuncType, Function, Global, GlobalType, Import, ImportKind, InitExpr,
     InstrBuffer, Instruction, Limit, MemArg, Memory, Module, NumLocals, Opcode, RefType, TableType,

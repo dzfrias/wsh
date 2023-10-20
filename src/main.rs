@@ -4,12 +4,21 @@ use std::fs;
 
 use anyhow::{Context, Result};
 use clap::Parser as CliParser;
-use shwasi_engine::Parser;
+use shwasi_engine::module::Parser;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 use crate::cli::Cli;
 
+#[cfg(feature = "dhat-heap")]
+#[global_allocator]
+static ALLOC: dhat::Alloc = dhat::Alloc;
+
 fn main() -> Result<()> {
+    // Heap profiler setup
+    #[cfg(feature = "dhat-heap")]
+    let _profiler = dhat::Profiler::new_heap();
+
+    // Logging setup
     let fmt_layer = fmt::layer();
     let filter_layer = EnvFilter::try_from_default_env()
         .or_else(|_| EnvFilter::try_new("info"))

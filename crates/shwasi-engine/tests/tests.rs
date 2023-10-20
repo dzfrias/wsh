@@ -2,7 +2,7 @@ mod inputs;
 mod pretty_fmt;
 
 use insta::{assert_display_snapshot, assert_snapshot};
-use shwasi_engine::Parser;
+use shwasi_engine::module::Parser;
 
 use crate::{inputs::*, pretty_fmt::pretty_fmt};
 

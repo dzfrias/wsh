@@ -1,13 +1,13 @@
 mod instruction;
 mod opcode;
 
-use std::fmt;
+use std::{fmt, mem};
 
 use num_enum::TryFromPrimitive;
 
 pub use self::instruction::Instruction;
 pub use self::opcode::{is_prefix_byte, Opcode};
-use crate::{RefType, ValType, F32, F64};
+use crate::module::{RefType, ValType, F32, F64};
 
 #[derive(Debug, Clone, Copy, Default, Hash)]
 pub struct InstrHandle(u32);
@@ -15,11 +15,7 @@ pub struct InstrHandle(u32);
 #[derive(Debug, Clone, Default)]
 pub struct InstrBuffer {
     infos: Vec<InstrInfo>,
-    mem_args: Vec<MemArg>,
-    block_types: Vec<BlockType>,
     br_tables: Vec<BrTable>,
-    eight_bytes: Vec<(u32, u32)>,
-    u64s: Vec<u64>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -43,7 +39,7 @@ pub struct Instrs {
 #[derive(Debug, Clone)]
 struct InstrInfo {
     opcode: Opcode,
-    payload: u32,
+    payload: u64,
 }
 
 #[derive(Debug)]
@@ -69,11 +65,7 @@ impl InstrBuffer {
     pub fn new() -> Self {
         Self {
             infos: vec![],
-            mem_args: vec![],
-            block_types: vec![],
-            eight_bytes: vec![],
             br_tables: vec![],
-            u64s: vec![],
         }
     }
 
@@ -293,15 +285,11 @@ impl InstrBuffer {
             | Instruction::I32Store16(n)
             | Instruction::I64Store8(n)
             | Instruction::I64Store16(n)
-            | Instruction::I64Store32(n) => {
-                self.mem_args.push(n);
-                self.mem_args.len() as u32 - 1
-            }
+            | Instruction::I64Store32(n) => unsafe { mem::transmute(n) },
 
-            Instruction::Block(block) | Instruction::Loop(block) | Instruction::If(block) => {
-                self.block_types.push(block);
-                self.block_types.len() as u32 - 1
-            }
+            Instruction::Block(block) | Instruction::Loop(block) | Instruction::If(block) => unsafe {
+                mem::transmute(block)
+            },
 
             Instruction::Br { depth: n }
             | Instruction::BrIf { depth: n }
@@ -319,24 +307,17 @@ impl InstrBuffer {
             | Instruction::TableSet { table: n }
             | Instruction::TableGrow { table: n }
             | Instruction::TableSize { table: n }
-            | Instruction::TableFill { table: n } => n,
+            | Instruction::TableFill { table: n } => n as u64,
 
-            Instruction::F32Const(n) => n.raw(),
-            Instruction::F64Const(n) => {
-                self.u64s.push(n.raw());
-                self.u64s.len() as u32 - 1
-            }
+            Instruction::F32Const(n) => n.raw() as u64,
+            Instruction::F64Const(n) => n.raw(),
 
-            Instruction::RefNull { ty } => ty as u32,
+            Instruction::RefNull { ty } => ty as u64,
 
             // SAFETY: an u32 can be interpreted as an i32, just as long
             // as the u32 is only being used as an encoding key (which it is)
-            Instruction::I32Const(n) => unsafe { std::mem::transmute(n) },
-            Instruction::I64Const(n) => {
-                // SAFETY: same as above
-                self.u64s.push(unsafe { std::mem::transmute(n) });
-                self.u64s.len() as u32 - 1
-            }
+            Instruction::I32Const(n) => (unsafe { std::mem::transmute::<_, u32>(n) }) as u64,
+            Instruction::I64Const(n) => unsafe { std::mem::transmute(n) },
 
             Instruction::CallIndirect {
                 type_idx: b1,
@@ -349,14 +330,11 @@ impl InstrBuffer {
             | Instruction::TableInit {
                 elem_idx: b1,
                 table_idx: b2,
-            } => {
-                self.eight_bytes.push((b1, b2));
-                self.eight_bytes.len() as u32 - 1
-            }
+            } => (b1 as u64) << 32 | (b2 as u64),
 
             Instruction::BrTable(br_table) => {
                 self.br_tables.push(br_table);
-                self.br_tables.len() as u32 - 1
+                self.br_tables.len() as u64 - 1
             }
         };
 
@@ -514,120 +492,111 @@ impl InstrBuffer {
             Opcode::I64TruncSatF64S => Instruction::I64TruncSatF64S,
             Opcode::I64TruncSatF64U => Instruction::I64TruncSatF64U,
 
-            Opcode::Block => {
-                let block = &self.block_types[info.payload as usize];
-                Instruction::Block(block.clone())
-            }
-            Opcode::Loop => {
-                let block = &self.block_types[info.payload as usize];
-                Instruction::Loop(block.clone())
-            }
-            Opcode::If => {
-                let block = &self.block_types[info.payload as usize];
-                Instruction::If(block.clone())
-            }
+            Opcode::Block => Instruction::Block(unsafe { mem::transmute(info.payload) }),
+            Opcode::Loop => Instruction::Loop(unsafe { mem::transmute(info.payload) }),
+            Opcode::If => Instruction::If(unsafe { mem::transmute(info.payload) }),
 
             Opcode::I32Load => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::I32Load(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::I32Load(mem_arg)
             }
             Opcode::I64Load => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::I64Load(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::I64Load(mem_arg)
             }
             Opcode::F32Load => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::F32Load(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::F32Load(mem_arg)
             }
             Opcode::F64Load => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::F64Load(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::F64Load(mem_arg)
             }
             Opcode::I32Load8S => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::I32Load8S(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::I32Load8S(mem_arg)
             }
             Opcode::I32Load8U => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::I32Load8U(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::I32Load8U(mem_arg)
             }
             Opcode::I32Load16S => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::I32Load16S(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::I32Load16S(mem_arg)
             }
             Opcode::I32Load16U => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::I32Load16U(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::I32Load16U(mem_arg)
             }
             Opcode::I64Load8S => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::I64Load8S(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::I64Load8S(mem_arg)
             }
             Opcode::I64Load8U => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::I64Load8U(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::I64Load8U(mem_arg)
             }
             Opcode::I64Load16S => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::I64Load16S(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::I64Load16S(mem_arg)
             }
             Opcode::I64Load16U => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::I64Load16U(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::I64Load16U(mem_arg)
             }
             Opcode::I64Load32S => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::I64Load32S(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::I64Load32S(mem_arg)
             }
             Opcode::I64Load32U => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::I64Load32U(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::I64Load32U(mem_arg)
             }
             Opcode::I32Store => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::I32Store(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::I32Store(mem_arg)
             }
             Opcode::I64Store => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::I64Store(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::I64Store(mem_arg)
             }
             Opcode::F32Store => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::F32Store(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::F32Store(mem_arg)
             }
             Opcode::F64Store => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::F64Store(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::F64Store(mem_arg)
             }
             Opcode::I32Store8 => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::I32Store8(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::I32Store8(mem_arg)
             }
             Opcode::I32Store16 => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::I32Store16(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::I32Store16(mem_arg)
             }
             Opcode::I64Store8 => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::I64Store8(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::I64Store8(mem_arg)
             }
             Opcode::I64Store16 => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::I64Store16(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::I64Store16(mem_arg)
             }
             Opcode::I64Store32 => {
-                let val = &self.mem_args[info.payload as usize];
-                Instruction::I64Store32(val.clone())
+                let mem_arg = unsafe { mem::transmute(info.payload) };
+                Instruction::I64Store32(mem_arg)
             }
 
             Opcode::Br => Instruction::Br {
-                depth: info.payload,
+                depth: info.payload as u32,
             },
             Opcode::BrIf => Instruction::BrIf {
-                depth: info.payload,
+                depth: info.payload as u32,
             },
             Opcode::Call => Instruction::Call {
-                func_idx: info.payload,
+                func_idx: info.payload as u32,
             },
 
             Opcode::BrTable => {
@@ -635,67 +604,79 @@ impl InstrBuffer {
                 Instruction::BrTable(br_table.clone())
             }
 
-            Opcode::LocalGet => Instruction::LocalGet { idx: info.payload },
-            Opcode::LocalSet => Instruction::LocalSet { idx: info.payload },
-            Opcode::LocalTee => Instruction::LocalTee { idx: info.payload },
-            Opcode::GlobalGet => Instruction::GlobalGet { idx: info.payload },
-            Opcode::GlobalSet => Instruction::GlobalSet { idx: info.payload },
+            Opcode::LocalGet => Instruction::LocalGet {
+                idx: info.payload as u32,
+            },
+            Opcode::LocalSet => Instruction::LocalSet {
+                idx: info.payload as u32,
+            },
+            Opcode::LocalTee => Instruction::LocalTee {
+                idx: info.payload as u32,
+            },
+            Opcode::GlobalGet => Instruction::GlobalGet {
+                idx: info.payload as u32,
+            },
+            Opcode::GlobalSet => Instruction::GlobalSet {
+                idx: info.payload as u32,
+            },
             Opcode::DataDrop => Instruction::DataDrop {
-                data_idx: info.payload,
+                data_idx: info.payload as u32,
             },
             Opcode::ElemDrop => Instruction::ElemDrop {
-                elem_idx: info.payload,
+                elem_idx: info.payload as u32,
             },
             // SAFETY: the u32 can be easily decoded back into an i32
-            Opcode::I32Const => Instruction::I32Const(unsafe { std::mem::transmute(info.payload) }),
-            Opcode::F32Const => Instruction::F32Const(F32::new(info.payload)),
+            Opcode::I32Const => {
+                Instruction::I32Const(unsafe { std::mem::transmute(info.payload as u32) })
+            }
+            Opcode::F32Const => Instruction::F32Const(F32::new(info.payload as u32)),
             Opcode::MemoryInit => Instruction::MemoryInit {
-                data_idx: info.payload,
+                data_idx: info.payload as u32,
             },
             Opcode::RefFunc => Instruction::RefFunc {
-                func_idx: info.payload,
+                func_idx: info.payload as u32,
             },
             Opcode::TableGet => Instruction::TableGet {
-                table: info.payload,
+                table: info.payload as u32,
             },
             Opcode::TableSet => Instruction::TableSet {
-                table: info.payload,
+                table: info.payload as u32,
             },
             Opcode::TableGrow => Instruction::TableGrow {
-                table: info.payload,
+                table: info.payload as u32,
             },
             Opcode::TableSize => Instruction::TableSize {
-                table: info.payload,
+                table: info.payload as u32,
             },
             Opcode::TableFill => Instruction::TableFill {
-                table: info.payload,
+                table: info.payload as u32,
             },
 
             Opcode::CallIndirect => {
-                let (type_idx, table_idx) = self.eight_bytes[info.payload as usize];
+                let u64 = info.payload;
+                let type_idx = (u64 >> 32) as u32;
+                let table_idx = (u64 & 0xFFFFFFFF) as u32;
                 Instruction::CallIndirect {
                     type_idx,
                     table_idx,
                 }
             }
             // SAFETY: the u64 can be easily decoded back into an i64
-            Opcode::I64Const => {
-                let i64 = self.u64s[info.payload as usize];
-                Instruction::I64Const(unsafe { std::mem::transmute(i64) })
-            }
-            Opcode::F64Const => {
-                let f64 = self.u64s[info.payload as usize];
-                Instruction::F64Const(F64::new(f64))
-            }
+            Opcode::I64Const => Instruction::I64Const(unsafe { std::mem::transmute(info.payload) }),
+            Opcode::F64Const => Instruction::F64Const(F64::new(info.payload)),
             Opcode::TableInit => {
-                let (elem_idx, table_idx) = self.eight_bytes[info.payload as usize];
+                let u64 = info.payload;
+                let elem_idx = (u64 >> 32) as u32;
+                let table_idx = (u64 & 0xFFFFFFFF) as u32;
                 Instruction::TableInit {
                     elem_idx,
                     table_idx,
                 }
             }
             Opcode::TableCopy => {
-                let (src, dst) = self.eight_bytes[info.payload as usize];
+                let u64 = info.payload;
+                let src = (u64 >> 32) as u32;
+                let dst = (u64 & 0xFFFFFFFF) as u32;
                 Instruction::TableCopy {
                     src_table: src,
                     dst_table: dst,

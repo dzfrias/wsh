@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{
+use crate::module::{
     BlockType, BrTable, DataIdx, ElemIdx, FuncIdx, MemArg, Opcode, RefType, TableIdx, TypeIdx,
     ValType, F32, F64,
 };

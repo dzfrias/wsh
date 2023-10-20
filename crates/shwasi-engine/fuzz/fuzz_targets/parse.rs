@@ -1,7 +1,7 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use shwasi_engine::Parser;
+use shwasi_engine::module::Parser;
 
 fuzz_target!(|data: &[u8]| {
     let parser = Parser::new(data);

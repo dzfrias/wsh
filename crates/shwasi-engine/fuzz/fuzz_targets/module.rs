@@ -6,7 +6,7 @@ use libfuzzer_sys::{
     arbitrary::{self, Arbitrary},
     fuzz_target,
 };
-use shwasi_engine::Parser;
+use shwasi_engine::module::Parser;
 use wasm_smith::{Config, ConfiguredModule};
 
 #[derive(Debug, Arbitrary)]

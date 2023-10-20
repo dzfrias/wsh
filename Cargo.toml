@@ -6,8 +6,12 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.75"
 clap = { version = "4.4.6", features = ["derive"] }
+dhat = "0.3.2"
 shwasi-engine = { path = "crates/shwasi-engine" }
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+
+[features]
+dhat-heap = []
 
 [workspace]
 members = [
@@ -74,7 +78,6 @@ ptr_as_ptr = "warn"
 rc_mutex = "warn"
 rest_pat_in_fully_bound_structs = "warn"
 unused_self = "warn"
-unreadable_literal = "warn"
 same_functions_in_if_condition = "warn"
 semicolon_if_nothing_returned = "warn"
 single_match_else = "warn"

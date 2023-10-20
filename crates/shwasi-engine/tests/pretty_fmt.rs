@@ -1,6 +1,6 @@
 use std::fmt::Write;
 
-use shwasi_engine::Module;
+use shwasi_engine::module::Module;
 
 macro_rules! pretty_fmt_all {
     ($out:expr, $module:expr, $field:ident) => {
