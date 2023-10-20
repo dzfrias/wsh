@@ -182,7 +182,6 @@ fn call_indirect() {
     assert_snapshot!(pretty_fmt(&module));
 }
 
-
 #[test]
 fn refnull_init() {
     let module = Parser::new(REFNULL_INIT).read_module().unwrap();

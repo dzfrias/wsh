@@ -18,7 +18,7 @@ test:
 
 build *ARGS:
   cargo build {{ARGS}}
-  @just engine buildtest
+  @just engine build
   @echo built project!
 
 fmt *ARGS:

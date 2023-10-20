@@ -4,10 +4,11 @@ export RUST_BACKTRACE := bt
 export RUST_LOG := log
 set fallback
 
+alias mkt := mktest
+
 default: parent
 
 parent:
-  @just buildtest
   @just build
   @just check
   @just test
@@ -37,9 +38,15 @@ crash NAME:
   printf "\n\n#[test]\nfn {{NAME}}() {\n    let module = Parser::new({{uppercase(NAME)}}).read_module().unwrap();\n    assert_snapshot!(pretty_fmt(&module));\n}" >> ../tests.rs
   echo "created crash test, {{NAME}}.wasm!"
 
-buildtest:
+build:
   cd tests/inputs && ls dumbwasm | xargs -I{} dumbwasm ./dumbwasm/{}
   @echo built test files!
+
+bench:
+  cargo bench spidermonkey
+
+bench-all *ARGS:
+  cargo bench {{ARGS}}
 
 fuzz *ARGS="parse":
   cargo fuzz run {{ARGS}}
