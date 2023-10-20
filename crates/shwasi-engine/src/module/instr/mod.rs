@@ -69,6 +69,17 @@ impl InstrBuffer {
         }
     }
 
+    pub fn with_capacity(cap: usize) -> Self {
+        Self {
+            infos: Vec::with_capacity(cap),
+            ..Self::new()
+        }
+    }
+
+    pub fn shrink(&mut self) {
+        self.infos.shrink_to_fit();
+    }
+
     pub fn opcode(&self, instr: InstrHandle) -> Opcode {
         self.get_info(instr).opcode
     }

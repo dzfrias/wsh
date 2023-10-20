@@ -54,32 +54,40 @@ impl<'a> Parser<'a> {
         Ok(self.module)
     }
 
+    #[inline]
     fn read_u32(&mut self) -> Result<u32> {
         self.buf
             .read_u32::<LittleEndian>()
             .context("failed to read u32")
     }
 
+    #[inline]
     fn read_u64(&mut self) -> Result<u64> {
         self.buf
             .read_u64::<LittleEndian>()
             .context("failed to read u64")
     }
 
+    #[inline]
     fn read_u8(&mut self) -> Result<u8> {
         self.buf.read_u8().context("failed to read byte")
     }
 
+    #[inline]
     fn read_u32_leb128(&mut self) -> Result<u32> {
-        wasm_leb128::read_u32_leb128(&mut self.buf).context("failed to read leb128 u32")
+        // No context is attached to this one... although this provides a bit worse error handling
+        // just this speeds up the program by 7% when parsing spidermonkey...
+        Ok(wasm_leb128::read_u32_leb128(&mut self.buf)?)
     }
 
+    #[inline]
     fn read_s32_leb128(&mut self) -> Result<i32> {
-        wasm_leb128::read_s32_leb128(&mut self.buf).context("failed to read leb128 u32")
+        wasm_leb128::read_s32_leb128(&mut self.buf).context("failed to read leb128 s32")
     }
 
+    #[inline]
     fn read_s64_leb128(&mut self) -> Result<i64> {
-        wasm_leb128::read_s64_leb128(&mut self.buf).context("failed to read leb128 u32")
+        wasm_leb128::read_s64_leb128(&mut self.buf).context("failed to read leb128 s64")
     }
 
     // Advance a parser n bytes, returning the slice that was advanced over
@@ -509,7 +517,7 @@ impl<'a> Parser<'a> {
                 });
             }
             let body = self
-                .read_instrs(end_offset)
+                .read_instrs(Some(end_offset))
                 .context("error reading code section function")?;
             ensure!(self.offset() == end_offset, "did not read all instructions");
             let code = Code { locals, body };
@@ -649,11 +657,10 @@ impl<'a> Parser<'a> {
     }
 
     fn read_init_expr(&mut self) -> Result<InitExpr> {
-        // We just pass bufsize as the end offset of the init expr, since we aren't always given
-        // the size. However, `read_instrs` will stop reading when it reaches and unmatched `end`
+        // We pass None, meaning that it has no expected end. It should run until an `end`
         // instruction.
         let init_expr = self
-            .read_instrs(self.bufsize as u64)
+            .read_instrs(None)
             .context("error reading init instructions")?;
         ensure!(
             init_expr.len() >= 2,
@@ -685,6 +692,7 @@ impl<'a> Parser<'a> {
         Ok(external_kind)
     }
 
+    #[inline]
     fn read_opcode(&mut self) -> Result<Opcode> {
         let byte = self.read_u8()?;
         // Some opcodes have a prefix byte
@@ -694,7 +702,9 @@ impl<'a> Parser<'a> {
                 .with_context(|| format!("unknown opcode, {byte:#x}"));
         }
 
-        Opcode::try_from_byte(byte).with_context(|| format!("unknown opcode, {byte:#x}"))
+        // .with_context() is a shortcut to this, but it ended up being around 5% slower when
+        // parsing spidermonkey.
+        Opcode::try_from_byte(byte).ok_or_else(|| anyhow::anyhow!("unknown opcode, {byte:#x}"))
     }
 
     fn read_memarg(&mut self) -> Result<MemArg> {
@@ -733,12 +743,19 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn read_instrs(&mut self, end_offset: u64) -> Result<InstrBuffer> {
+    fn read_instrs(&mut self, end_offset: Option<u64>) -> Result<InstrBuffer> {
         trace!("began reading instrs");
-        let mut buffer = InstrBuffer::new();
+        // This uses a bit of domain knowledge, but on average, if there are n bytes to read, then
+        // there is around n / 2 instructions. This results in around a substantial speed increase
+        // when parsing spidermonkey.
+        let mut buffer = end_offset
+            .map(|end_offset| {
+                InstrBuffer::with_capacity(((end_offset - self.offset()) / 2) as usize)
+            })
+            .unwrap_or_default();
         let mut stack = vec![];
 
-        while self.offset() < end_offset {
+        while self.offset() < end_offset.unwrap_or(self.bufsize as u64) {
             let opcode = self
                 .read_opcode()
                 .context("error reading opcode in instructions")?;
@@ -974,6 +991,7 @@ impl<'a> Parser<'a> {
                             "returned early with end instruction, got buffer of size {}",
                             buffer.len()
                         );
+                        buffer.shrink();
                         buffer.add_instr(Instruction::End);
                         return Ok(buffer);
                     }
@@ -1159,6 +1177,7 @@ impl<'a> Parser<'a> {
             buffer.add_instr(instr);
         }
 
+        buffer.shrink();
         trace!("finished reading instrs, got {} instructions", buffer.len());
         Ok(buffer)
     }
