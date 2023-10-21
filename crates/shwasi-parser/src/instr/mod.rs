@@ -39,7 +39,7 @@ pub struct Instrs {
 
 #[derive(Debug, Clone)]
 struct InstrInfo {
-    opcode: Opcode,
+    discriminant: u8,
     payload: u64,
 }
 
@@ -83,7 +83,10 @@ impl InstrBuffer {
     }
 
     pub fn opcode(&self, instr: InstrHandle) -> Opcode {
-        self.get_info(instr).opcode
+        let info = self.get_info(instr);
+        // SAFETY: the discriminant is a valid opcode because opcodes discriminants match up with
+        // instruction discriminants, and info.discriminant must come from a valid instruction.
+        unsafe { Opcode::from_instr_discriminant(info.discriminant) }
     }
 
     pub fn len(&self) -> usize {
@@ -124,7 +127,10 @@ impl InstrBuffer {
     }
 
     pub fn add_instr(&mut self, instr: Instruction) {
-        let opcode = instr.opcode();
+        // The instruction's discriminant (a u8) is used to encode the instruction type. This will
+        // differentiate between two instrucitons and their payloads. It can later be turned into
+        // an Opcode through casting.
+        let discriminant = instr.discriminant();
 
         let encoding = match instr {
             Instruction::Unreachable
@@ -356,7 +362,7 @@ impl InstrBuffer {
         };
 
         self.infos.push(InstrInfo {
-            opcode,
+            discriminant,
             payload: encoding,
         });
     }
@@ -364,7 +370,9 @@ impl InstrBuffer {
     pub fn instruction(&self, instr: InstrHandle) -> Instruction {
         let info = self.get_info(instr);
 
-        match info.opcode {
+        // SAFETY: the discriminant is a valid opcode because opcodes discriminants match up with
+        // instruction discriminants, and info.discriminant must come from a valid instruction.
+        match unsafe { Opcode::from_instr_discriminant(info.discriminant) } {
             Opcode::Unreachable => Instruction::Unreachable,
             Opcode::Nop => Instruction::Nop,
             Opcode::Else => Instruction::Else,
