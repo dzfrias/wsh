@@ -8,7 +8,7 @@ alias c := check
 alias b := build
 alias rev := review
 
-default: build check test fmt
+default: build test fmt check
 
 check:
   cargo clippy --workspace

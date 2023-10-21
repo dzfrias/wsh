@@ -16,6 +16,7 @@ pub struct InstrHandle(u32);
 pub struct InstrBuffer {
     infos: Vec<InstrInfo>,
     br_tables: Vec<BrTable>,
+    selects: Vec<Vec<ValType>>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -66,6 +67,7 @@ impl InstrBuffer {
         Self {
             infos: vec![],
             br_tables: vec![],
+            selects: vec![],
         }
     }
 
@@ -346,6 +348,10 @@ impl InstrBuffer {
             Instruction::BrTable(br_table) => {
                 self.br_tables.push(br_table);
                 self.br_tables.len() as u64 - 1
+            }
+            Instruction::SelectT(types) => {
+                self.selects.push(types);
+                self.selects.len() as u64 - 1
             }
         };
 
@@ -702,6 +708,10 @@ impl InstrBuffer {
             Opcode::I64Extend8S => Instruction::I64Extend8S,
             Opcode::I64Extend16S => Instruction::I64Extend16S,
             Opcode::I64Extend32S => Instruction::I64Extend32S,
+            Opcode::SelectT => {
+                let types = &self.selects[info.payload as usize];
+                Instruction::SelectT(types.clone())
+            }
         }
     }
 

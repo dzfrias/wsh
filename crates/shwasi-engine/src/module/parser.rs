@@ -139,10 +139,12 @@ impl<'a> Parser<'a> {
             let end = self.offset() + size as u64;
             ensure!(end <= self.bufsize as u64, "section extends past end");
 
-            ensure!(
-                last_section != section_code,
-                "duplicate section: {section_code}"
-            );
+            if section_code != SectionCode::Custom {
+                ensure!(
+                    last_section != section_code,
+                    "duplicate section: {section_code}"
+                );
+            }
             match section_code {
                 SectionCode::Custom => {
                     trace!("began reading custom section");
@@ -1173,6 +1175,15 @@ impl<'a> Parser<'a> {
                 Opcode::I64Extend8S => Instruction::I64Extend8S,
                 Opcode::I64Extend16S => Instruction::I64Extend16S,
                 Opcode::I64Extend32S => Instruction::I64Extend32S,
+                Opcode::SelectT => {
+                    let num_types = self.read_u32_leb128()?;
+                    let mut types = vec![];
+                    for _ in 0..num_types {
+                        let ty = self.read_type()?;
+                        types.push(ty);
+                    }
+                    Instruction::SelectT(types)
+                }
             };
 
             trace!("read instruction: `{instr}`");
