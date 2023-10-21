@@ -7,7 +7,7 @@ edition = "2021"
 anyhow = "1.0.75"
 clap = { version = "4.4.6", features = ["derive"] }
 dhat = "0.3.2"
-shwasi-engine = { path = "crates/shwasi-engine" }
+shwasi-parser = { path = "crates/shwasi-parser" }
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 
 [features]
@@ -15,7 +15,7 @@ dhat-heap = []
 
 [workspace]
 members = [
-    "crates/shwasi-engine",
+    "crates/shwasi-parser",
     "crates/dumbwasm",
     "crates/wasm-leb128",
     "xtask",

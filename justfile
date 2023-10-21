@@ -8,7 +8,7 @@ alias c := check
 alias b := build
 alias rev := review
 
-default: build test fmt check
+default: fallback
 
 check:
   cargo clippy --workspace
@@ -18,7 +18,7 @@ test:
 
 build *ARGS:
   cargo build {{ARGS}}
-  @just engine build
+  @just parser build
   @echo built project!
 
 fmt *ARGS:
@@ -27,5 +27,14 @@ fmt *ARGS:
 review:
   @cargo insta review
 
-engine *ARGS:
-  @just -f ./crates/shwasi-engine/justfile {{ARGS}}
+bench *ARGS:
+  cargo bench --workspace {{ARGS}}
+
+parser *ARGS:
+  @just -f ./crates/shwasi-parser/justfile {{ARGS}}
+
+fallback:
+  @just build
+  @just test
+  @just fmt
+  @just check

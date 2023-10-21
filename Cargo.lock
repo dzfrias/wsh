@@ -1110,12 +1110,12 @@ dependencies = [
  "anyhow",
  "clap",
  "dhat",
- "shwasi-engine",
+ "shwasi-parser",
  "tracing-subscriber",
 ]
 
 [[package]]
-name = "shwasi-engine"
+name = "shwasi-parser"
 version = "0.1.0"
 dependencies = [
  "anyhow",

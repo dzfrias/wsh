@@ -4,7 +4,7 @@ use std::fs;
 
 use anyhow::{Context, Result};
 use clap::Parser as CliParser;
-use shwasi_engine::module::Parser;
+use shwasi_parser::Parser;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 use crate::cli::Cli;

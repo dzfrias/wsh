@@ -1,0 +1,5 @@
+---
+source: crates/shwasi-parser/tests/tests.rs
+expression: pretty_fmt(&module)
+---
+

@@ -1,0 +1,23 @@
+---
+source: crates/shwasi-parser/tests/tests.rs
+expression: pretty_fmt(&module)
+---
+types
+---
+0: () -> ()
+
+functions
+---
+0: func (0)
+1: func (0)
+
+codes
+---
+0: locals: []
+end
+
+1: locals: []
+end
+
+
+

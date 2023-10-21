@@ -1,5 +1,0 @@
----
-source: crates/shwasi-engine/tests/tests.rs
-expression: pretty_fmt(&module)
----
-

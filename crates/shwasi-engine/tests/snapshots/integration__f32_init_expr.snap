@@ -1,9 +1,0 @@
----
-source: crates/shwasi-engine/tests/tests.rs
-expression: pretty_fmt(&module)
----
-globals
----
-0: global f32 f32.const 0.000000000000000000000000000000000000000091624
-
-
