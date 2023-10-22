@@ -124,6 +124,7 @@ impl<'a> Parser<'a> {
         Ok(s)
     }
 
+    #[inline]
     fn offset(&self) -> u64 {
         self.buf.position()
     }
