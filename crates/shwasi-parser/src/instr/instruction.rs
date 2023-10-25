@@ -215,7 +215,7 @@ pub enum Instruction {
     ElemDrop {
         elem_idx: ElemIdx,
     } = 184,
-    I32Const(i32) = 185,
+    I32Const(u32) = 185,
     F32Const(F32) = 186,
     MemoryInit {
         data_idx: DataIdx,
@@ -241,7 +241,7 @@ pub enum Instruction {
     RefNull {
         ty: RefType,
     } = 194,
-    I64Const(i64) = 195,
+    I64Const(u64) = 195,
     F64Const(F64) = 196,
     CallIndirect {
         type_idx: TypeIdx,

@@ -16,6 +16,7 @@ dhat-heap = []
 [workspace]
 members = [
     "crates/shwasi-parser",
+    "crates/shwasi-engine",
     "crates/dumbwasm",
     "crates/wasm-leb128",
     "xtask",

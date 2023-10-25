@@ -92,7 +92,7 @@ pub enum ValType {
 }
 
 /// A function type.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FuncType(
     /// The parameters of the function.
     pub Vec<ValType>,
@@ -176,8 +176,8 @@ pub struct Element {
     pub kind: ElementKind,
     /// The type that the element refrences.
     pub types: RefType,
-    /// The initial elements of the segment.
-    pub elems: ElementItems,
+    /// The initial refernces of the elements of the segment.
+    pub elems: Vec<InitExpr>,
 }
 
 /// The kind of an [`Element`].
@@ -194,15 +194,6 @@ pub enum ElementKind {
         /// The offset into the table.
         offset: InitExpr,
     },
-}
-
-/// The items of an [element segment](Element).
-#[derive(Debug, Clone, PartialEq)]
-pub enum ElementItems {
-    /// Function indices.
-    Functions(Vec<FuncIdx>),
-    /// Initialization expressions for element items.
-    Elems(Vec<InitExpr>),
 }
 
 /// A code segment.
@@ -227,9 +218,9 @@ pub struct Data<'a> {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum InitExpr {
     /// A constant i32.
-    I32Const(i32),
+    I32Const(u32),
     /// A constant i64.
-    I64Const(i64),
+    I64Const(u64),
     /// A constant f32.
     F32Const(F32),
     /// A constant i64.
@@ -440,16 +431,13 @@ impl fmt::Display for Import<'_> {
 
 impl fmt::Display for Element {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "element {} ({}) {}", self.elems, self.types, self.kind)
-    }
-}
-
-impl fmt::Display for ElementItems {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ElementItems::Functions(funcs) => write!(f, "functions [{}]", funcs.iter().join(", ")),
-            ElementItems::Elems(elems) => write!(f, "elems [{}]", elems.iter().join(", ")),
-        }
+        write!(
+            f,
+            "element [{}] ({}) {}",
+            self.elems.iter().join(", "),
+            self.types,
+            self.kind
+        )
     }
 }
 

@@ -1,0 +1,11 @@
+[package]
+name = "shwasi-engine"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+shwasi-parser = { path = "../shwasi-parser" }
+thiserror = "1.0.50"
+
+[lints]
+workspace = true

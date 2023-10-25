@@ -9,10 +9,9 @@ use num_enum::TryFromPrimitive;
 use tracing::trace;
 
 use crate::{
-    is_prefix_byte, BlockType, BrTable, Code, Data, Element, ElementItems, ElementKind, Export,
-    ExternalKind, FuncType, Function, Global, GlobalType, Import, ImportKind, InitExpr,
-    InstrBuffer, Instruction, Limit, MemArg, Memory, Module, NumLocals, Opcode, RefType, TableType,
-    ValType, F32, F64,
+    is_prefix_byte, BlockType, BrTable, Code, Data, Element, ElementKind, Export, ExternalKind,
+    FuncType, Function, Global, GlobalType, Import, ImportKind, InitExpr, InstrBuffer, Instruction,
+    Limit, MemArg, Memory, Module, NumLocals, Opcode, RefType, TableType, ValType, F32, F64,
 };
 
 const MAGIC_VALUE: u32 = 0x6d73_6100;
@@ -470,9 +469,11 @@ impl<'a> Parser<'a> {
             let items = if !has_exprs {
                 let mut functions = vec![];
                 for _ in 0..num_items {
-                    functions.push(self.read_u32_leb128()?);
+                    let func_idx = self.read_u32_leb128()?;
+                    let init_expr = InitExpr::RefFunc(func_idx);
+                    functions.push(init_expr);
                 }
-                ElementItems::Functions(functions)
+                functions
             } else {
                 let mut elems = vec![];
                 for _ in 0..num_items {
@@ -481,7 +482,7 @@ impl<'a> Parser<'a> {
                             .context("error reading element init expr")?,
                     );
                 }
-                ElementItems::Elems(elems)
+                elems
             };
 
             let element = Element {
@@ -903,7 +904,7 @@ impl<'a> Parser<'a> {
                     Instruction::ElemDrop { elem_idx }
                 }
                 Opcode::I32Const => {
-                    let val = self.read_s32_leb128()?;
+                    let val = self.read_s32_leb128()? as u32;
                     Instruction::I32Const(val)
                 }
                 Opcode::F32Const => {
@@ -942,7 +943,7 @@ impl<'a> Parser<'a> {
                 }
 
                 Opcode::F64Const => Instruction::F64Const(F64::new(self.read_u64()?)),
-                Opcode::I64Const => Instruction::I64Const(self.read_s64_leb128()?),
+                Opcode::I64Const => Instruction::I64Const(self.read_s64_leb128()? as u64),
 
                 Opcode::TableCopy => {
                     let b1 = self.read_u32_leb128()?;

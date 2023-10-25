@@ -314,17 +314,15 @@ impl InstrBuffer {
             | Instruction::TableSet { table: n }
             | Instruction::TableGrow { table: n }
             | Instruction::TableSize { table: n }
-            | Instruction::TableFill { table: n } => n as u64,
+            | Instruction::TableFill { table: n }
+            | Instruction::I32Const(n) => n as u64,
 
             Instruction::F32Const(n) => n.raw() as u64,
             Instruction::F64Const(n) => n.raw(),
 
             Instruction::RefNull { ty } => ty as u64,
 
-            // SAFETY: an u32 can be interpreted as an i32, just as long
-            // as the u32 is only being used as an encoding key (which it is)
-            Instruction::I32Const(n) => (unsafe { std::mem::transmute::<_, u32>(n) }) as u64,
-            Instruction::I64Const(n) => unsafe { std::mem::transmute(n) },
+            Instruction::I64Const(n) => n,
 
             Instruction::CallIndirect {
                 type_idx: b1,
@@ -637,9 +635,7 @@ impl InstrBuffer {
                 elem_idx: info.payload as u32,
             },
             // SAFETY: the u32 can be easily decoded back into an i32
-            Opcode::I32Const => {
-                Instruction::I32Const(unsafe { std::mem::transmute(info.payload as u32) })
-            }
+            Opcode::I32Const => Instruction::I32Const(info.payload as u32),
             Opcode::F32Const => Instruction::F32Const(F32::new(info.payload as u32)),
             Opcode::MemoryInit => Instruction::MemoryInit {
                 data_idx: info.payload as u32,
@@ -672,8 +668,7 @@ impl InstrBuffer {
                     table_idx,
                 }
             }
-            // SAFETY: the u64 can be easily decoded back into an i64
-            Opcode::I64Const => Instruction::I64Const(unsafe { std::mem::transmute(info.payload) }),
+            Opcode::I64Const => Instruction::I64Const(info.payload),
             Opcode::F64Const => Instruction::F64Const(F64::new(info.payload)),
             Opcode::TableInit => {
                 let u64 = info.payload;
