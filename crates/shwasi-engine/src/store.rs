@@ -6,6 +6,9 @@ use shwasi_parser::{Code, FuncType, GlobalType, Memory, RefType, TableType};
 
 use crate::instance::Instance;
 
+/// A WebAssembly store, holding all global data of given module.
+///
+/// Each field of the store can be retrieved with an [`Addr`].
 #[derive(Debug, Default)]
 pub struct Store {
     pub functions: Vec<FuncInst>,
@@ -15,7 +18,7 @@ pub struct Store {
     pub elems: Vec<ElemInst>,
     pub datas: Vec<DataInst>,
 
-    pub types: HashMap<ExternVal, Extern>,
+    pub(crate) types: HashMap<ExternVal, Extern>,
 }
 
 impl Store {
@@ -25,21 +28,27 @@ impl Store {
     }
 }
 
+/// An instance of a WebAssembly function.
 #[derive(Debug)]
 pub enum FuncInst {
     Host(HostFunc),
     Module(ModuleFunc),
 }
 
+/// A function defined outside of the WebAssembly module, imported into the store.
 #[derive(Debug)]
 pub struct HostFunc {
     pub ty: FuncType,
     pub code: HostFuncInner,
 }
 
+/// The inner function type of a host function.
+///
+/// See [`HostFunc`] for more information.
 // TODO: fill this in
 pub type HostFuncInner = fn();
 
+/// A function defined inside of the WebAssembly module.
 #[derive(Debug)]
 pub struct ModuleFunc {
     pub ty: FuncType,
@@ -47,42 +56,48 @@ pub struct ModuleFunc {
     pub inst: Rc<Instance>,
 }
 
+/// An instance of a WebAssembly table.
 #[derive(Debug)]
 pub struct TableInst {
     pub ty: TableType,
     pub elements: Vec<Option<Ref>>,
 }
 
+/// An instance of WebAssembly memory.
 #[derive(Debug)]
 pub struct MemInst {
     pub ty: Memory,
     pub data: Vec<u8>,
 }
 
+/// An instance of a WebAssembly global.
 #[derive(Debug)]
 pub struct GlobalInst {
     pub ty: GlobalType,
     pub value: Value,
 }
 
+/// An instance of a WebAssembly element.
 #[derive(Debug)]
 pub struct ElemInst {
     pub ty: RefType,
     pub elems: Vec<Ref>,
 }
 
+/// An instance of field exported from a WebAssembly module.
 #[derive(Debug)]
 pub struct ExportInst {
     pub name: String,
     pub reference: ExternVal,
 }
 
+/// An instance of a WebAssembly data segment.
 #[derive(Debug)]
 pub struct DataInst(pub Vec<u8>);
 
 /// An address into a [`Store`].
 pub type Addr = usize;
-/// A reference
+/// A reference.
 pub type Ref = Addr;
 
 /// A reference to a value in the store, but not in the module.
@@ -118,7 +133,7 @@ pub enum Value {
 impl Value {
     /// Attempt to convert the [`Value`] into a [`u32`].
     ///
-    /// This function will return [`Option::None`] if it is not of the variant [`Value::I32`].
+    /// This function will return [`None`] if it is not of the variant [`Value::I32`].
     pub fn to_u32(self) -> Option<u32> {
         match self {
             Self::I32(i32) => Some(i32),
@@ -128,7 +143,7 @@ impl Value {
 
     /// Attempt to convert the [`Value`] into a [`Ref`].
     ///
-    /// This function will return [`Option::None`] if it is not of the variant [`Value::Ref`].
+    /// This function will return [`None`] if it is not of the variant [`Value::Ref`].
     pub fn to_ref(self) -> Option<Ref> {
         match self {
             Self::Ref(ref_) => Some(ref_),

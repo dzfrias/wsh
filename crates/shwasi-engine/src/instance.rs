@@ -13,8 +13,13 @@ use crate::{
     vm,
 };
 
+/// Memory page size in WebAssembly.
 pub const PAGE_SIZE: usize = 65536;
 
+/// An instance of a WebAssembly [`Module`].
+///
+/// This can be interacted with by calling functions, getting and setting globals, and
+/// reading/writing memory.
 #[derive(Debug, Default)]
 pub struct Instance {
     pub types: Vec<FuncType>,
@@ -29,6 +34,10 @@ pub struct Instance {
 }
 
 impl Instance {
+    /// Instantiate a module with the given [`ExternVal`]s and [`Store`].
+    ///
+    /// This will allocate the module's imports into the store, and allocate the module's different
+    /// sections, and run the module's start function, if present.
     pub fn instantiate(
         mut module: Module,
         store: &mut Store,
