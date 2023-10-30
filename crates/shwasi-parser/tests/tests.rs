@@ -188,3 +188,9 @@ fn refnull_init() {
     let module = Parser::new(REFNULL_INIT).read_module().unwrap();
     assert_snapshot!(pretty_fmt(&module));
 }
+
+#[test]
+fn blocktype() {
+    let module = Parser::new(BLOCKTYPE).read_module().unwrap();
+    assert_snapshot!(pretty_fmt(&module));
+}

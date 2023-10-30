@@ -87,6 +87,11 @@ impl<'a> Parser<'a> {
     }
 
     #[inline]
+    fn read_s33_leb128(&mut self) -> Result<i64> {
+        wasm_leb128::read_s33_leb128(&mut self.buf).context("failed to read leb128 s32")
+    }
+
+    #[inline]
     fn read_s64_leb128(&mut self) -> Result<i64> {
         wasm_leb128::read_s64_leb128(&mut self.buf).context("failed to read leb128 s64")
     }
@@ -723,16 +728,20 @@ impl<'a> Parser<'a> {
     }
 
     fn read_blocktype(&mut self) -> Result<BlockType> {
-        let ty = self.read_s32_leb128()?;
-        if ty == -0x40 {
+        let ty = self.read_u8()?;
+        if ty == 0x40 {
             return Ok(BlockType::Empty);
         }
-        if let Ok(valtype) = ValType::try_from_primitive((ty & 0xff) as u8) {
+        if let Ok(valtype) = ValType::try_from_primitive(ty) {
             return Ok(BlockType::Type(valtype));
         }
 
-        // SAFETY: This value is just an i32, so it is safe to re-interpret it as a u32
-        Ok(BlockType::FuncType(unsafe { std::mem::transmute(ty) }))
+        self.buf.set_position(self.offset() - 1);
+        let func_ty = self.read_s33_leb128()?;
+
+        Ok(BlockType::FuncType(
+            u32::try_from(func_ty).context("invalid function index")?,
+        ))
     }
 
     fn read_br_table(&mut self) -> Result<BrTable> {
