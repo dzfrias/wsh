@@ -41,9 +41,8 @@ fn get_bench_inputs(path: impl AsRef<Path>, targets: &mut Vec<BenchTarget>) {
             }
             Some("wast") => {
                 let input = fs::read_to_string(&path).expect("should be able to read wast file");
-                let buf = match wast::parser::ParseBuffer::new(&input) {
-                    Ok(buf) => buf,
-                    Err(_) => continue,
+                let Ok(buf) = wast::parser::ParseBuffer::new(&input) else {
+                    continue;
                 };
                 let wast: wast::Wast<'_> = match wast::parser::parse(&buf) {
                     Ok(wast) => wast,
@@ -78,7 +77,7 @@ fn run_benchmarks(c: &mut Criterion) {
             b.iter(|| {
                 let parser = Parser::new(&wasm);
                 criterion::black_box(parser.read_module().expect("should be able to read module"));
-            })
+            });
         });
     }
 }

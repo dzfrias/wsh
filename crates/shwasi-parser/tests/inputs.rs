@@ -27,3 +27,5 @@ pub const SIGN_EXTEND: &[u8] = include_bytes!("./inputs/sign_extend.wasm");
 pub const CALL_INDIRECT: &[u8] = include_bytes!("./inputs/call_indirect.wasm");
 pub const REFNULL_INIT: &[u8] = include_bytes!("./inputs/refnull_init.wasm");
 pub const BLOCKTYPE: &[u8] = include_bytes!("./inputs/blocktype.wasm");
+pub const STACK_HEIGHT: &[u8] = include_bytes!("./inputs/stack_height.wasm");
+pub const VALID_BR_TABLE: &[u8] = include_bytes!("./inputs/valid_br_table.wasm");

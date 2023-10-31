@@ -2,7 +2,9 @@
 
 use std::rc::Rc;
 
-use shwasi_parser::{Code, ElementKind, ExternalKind, FuncType, ImportKind, InstrBuffer, Module};
+use shwasi_parser::{
+    validate, Code, ElementKind, ExternalKind, FuncType, ImportKind, InstrBuffer, Module,
+};
 
 use crate::{
     error::{Error, Result},
@@ -43,7 +45,7 @@ impl Instance {
         store: &mut Store,
         externs: &[ExternVal],
     ) -> Result<Rc<Self>> {
-        // TODO: validate module
+        validate(&module).map_err(Error::Validation)?;
 
         if module.imports.len() != externs.len() {
             return Err(Error::InvalidExternLength {
@@ -153,7 +155,7 @@ impl Instance {
                     .map(|init| {
                         vm::eval_const_expr(&store.globals, &imported_globals, init)
                             .to_ref()
-                            .expect("should not happen do to validation")
+                            .expect("should not happen due to validation")
                     })
                     .collect(),
             };
@@ -195,29 +197,28 @@ impl Instance {
             let elem_inst = &mut store.elems[*elem_addr];
             match elem.kind {
                 ElementKind::Passive => {}
-                ElementKind::Declarative => elem_inst.drop(),
+                ElementKind::Declarative => elem_inst.elem_drop(),
                 ElementKind::Active { tbl_idx, offset } => {
                     let offset = vm::eval_const_expr(&store.globals, &imported_globals, &offset)
                         .to_u32()
-                        .expect("should not happen do to validation");
+                        .expect("should not happen due to validation");
                     for (i, func_idx) in elem_inst.elems.iter().enumerate() {
                         let funcaddr = inst.func_addrs[*func_idx];
                         store.tables[inst.table_addrs[tbl_idx as usize]].elements
                             [offset as usize + i] = Some(funcaddr);
                     }
+                    elem_inst.elem_drop();
                 }
             }
         }
         // Initialize memory using data segmengts
         for data in &module.datas {
-            let offset = data
-                .offset
-                .map(|offset| {
-                    vm::eval_const_expr(&store.globals, &imported_globals, &offset)
-                        .to_u32()
-                        .expect("should not happen do to validation")
-                })
-                .unwrap_or_default() as usize;
+            let Some(offset_expr) = &data.offset else {
+                continue;
+            };
+            let offset = vm::eval_const_expr(&store.globals, &imported_globals, offset_expr)
+                .to_u32()
+                .expect("should not happen due to validation") as usize;
             let mem = &mut store.memories[inst.mem_addrs[0]];
             mem.data[offset..offset + data.data.len()].copy_from_slice(data.data);
         }

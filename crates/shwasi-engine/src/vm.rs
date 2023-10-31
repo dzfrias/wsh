@@ -1,6 +1,9 @@
 use shwasi_parser::InitExpr;
 
-use crate::store::{Addr, GlobalInst, Value};
+use crate::{
+    store::{Addr, GlobalInst},
+    values::Value,
+};
 
 pub fn eval_const_expr(globals: &[GlobalInst], module_globals: &[Addr], expr: &InitExpr) -> Value {
     match expr {

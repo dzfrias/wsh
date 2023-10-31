@@ -32,3 +32,9 @@ name = "module"
 path = "fuzz_targets/module.rs"
 test = false
 doc = false
+
+[[bin]]
+name = "validate"
+path = "fuzz_targets/validate.rs"
+test = false
+doc = false

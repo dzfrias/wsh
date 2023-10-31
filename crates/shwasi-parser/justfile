@@ -35,6 +35,15 @@ crash NAME:
   printf "\n\n#[test]\nfn {{NAME}}() {\n    let module = Parser::new({{uppercase(NAME)}}).read_module().unwrap();\n    assert_snapshot!(pretty_fmt(&module));\n}" >> ../tests.rs
   echo "created crash test, {{NAME}}.wasm!"
 
+val-crash NAME:
+  #!/bin/bash
+  set -euo pipefail
+  mv crash.wasm ./tests/inputs/{{NAME}}.wasm
+  cd ./tests/inputs
+  echo "pub const {{uppercase(NAME)}}: &[u8] = include_bytes!(\"./inputs/{{NAME}}.wasm\");" >> ../inputs.rs
+  printf "\n\n#[test]\nfn {{NAME}}() {\n    let module = Parser::new({{uppercase(NAME)}}).read_module().unwrap();\n    validate(&module).expect(\"validation should not fail\");\n}" >> ../tests.rs
+  echo "created crash validator test, {{NAME}}.wasm!"
+
 build:
   cd tests/inputs && ls dumbwasm | xargs -I{} dumbwasm ./dumbwasm/{}
   @echo built test files!

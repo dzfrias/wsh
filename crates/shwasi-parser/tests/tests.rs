@@ -3,7 +3,7 @@ mod pretty_fmt;
 mod spectests;
 
 use insta::{assert_display_snapshot, assert_snapshot};
-use shwasi_parser::Parser;
+use shwasi_parser::{validate, Parser};
 
 use crate::{inputs::*, pretty_fmt::pretty_fmt};
 
@@ -193,4 +193,16 @@ fn refnull_init() {
 fn blocktype() {
     let module = Parser::new(BLOCKTYPE).read_module().unwrap();
     assert_snapshot!(pretty_fmt(&module));
+}
+
+#[test]
+fn stack_height() {
+    let module = Parser::new(STACK_HEIGHT).read_module().unwrap();
+    validate(&module).expect("validation should not fail");
+}
+
+#[test]
+fn valid_br_table() {
+    let module = Parser::new(VALID_BR_TABLE).read_module().unwrap();
+    validate(&module).expect("validation should not fail");
 }

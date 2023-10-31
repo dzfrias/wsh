@@ -1,0 +1,23 @@
+magic
+version
+
+type {
+  [form.func [i32] []]
+}
+
+function {
+  [0]
+}
+
+code {
+  [
+    instrs {
+      [] (locals)
+      i32.const 0
+      loop 0<s33> (type index)
+        drop
+      end
+      end
+    },
+  ]
+}

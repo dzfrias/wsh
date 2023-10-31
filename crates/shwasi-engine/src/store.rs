@@ -4,7 +4,10 @@ use std::{collections::HashMap, fmt, rc::Rc};
 
 use shwasi_parser::{Code, FuncType, GlobalType, Memory, RefType, TableType};
 
-use crate::instance::Instance;
+use crate::{
+    instance::Instance,
+    values::{Ref, Value},
+};
 
 /// A WebAssembly store, holding all global data of given module.
 ///
@@ -36,7 +39,6 @@ pub enum FuncInst {
 }
 
 /// A function defined outside of the WebAssembly module, imported into the store.
-#[derive(Debug)]
 pub struct HostFunc {
     pub ty: FuncType,
     pub code: HostFuncInner,
@@ -46,7 +48,7 @@ pub struct HostFunc {
 ///
 /// See [`HostFunc`] for more information.
 // TODO: fill this in
-pub type HostFuncInner = fn();
+pub type HostFuncInner = Box<dyn Fn()>;
 
 /// A function defined inside of the WebAssembly module.
 #[derive(Debug)]
@@ -97,8 +99,6 @@ pub struct DataInst(pub Vec<u8>);
 
 /// An address into a [`Store`].
 pub type Addr = usize;
-/// A reference.
-pub type Ref = Addr;
 
 /// A reference to a value in the store, but not in the module.
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash, Copy)]
@@ -118,42 +118,8 @@ pub enum Extern {
     Global(GlobalType),
 }
 
-/// A WebAssembly value.
-#[derive(Debug, Clone, PartialEq, Copy)]
-pub enum Value {
-    I32(u32),
-    I64(u64),
-    F32(f32),
-    F64(f64),
-    NullRef(RefType),
-    /// A reference to a function.
-    Ref(Ref),
-}
-
-impl Value {
-    /// Attempt to convert the [`Value`] into a [`u32`].
-    ///
-    /// This function will return [`None`] if it is not of the variant [`Value::I32`].
-    pub fn to_u32(self) -> Option<u32> {
-        match self {
-            Self::I32(i32) => Some(i32),
-            _ => None,
-        }
-    }
-
-    /// Attempt to convert the [`Value`] into a [`Ref`].
-    ///
-    /// This function will return [`None`] if it is not of the variant [`Value::Ref`].
-    pub fn to_ref(self) -> Option<Ref> {
-        match self {
-            Self::Ref(ref_) => Some(ref_),
-            _ => None,
-        }
-    }
-}
-
 impl ElemInst {
-    pub fn drop(&mut self) {
+    pub fn elem_drop(&mut self) {
         self.elems.clear();
     }
 }
@@ -177,5 +143,14 @@ impl fmt::Display for Extern {
             Extern::Mem(ty) => write!(f, "mem: {ty}"),
             Extern::Global(ty) => write!(f, "global: {ty}"),
         }
+    }
+}
+
+impl fmt::Debug for HostFunc {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("HostFunc")
+            .field("ty", &self.ty)
+            .field("code", &"fn(...)")
+            .finish()
     }
 }

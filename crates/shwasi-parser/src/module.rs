@@ -486,3 +486,22 @@ impl fmt::Display for FuncType {
         write!(f, "({params}) -> ({results})")
     }
 }
+
+impl From<RefType> for ValType {
+    fn from(value: RefType) -> Self {
+        match value {
+            RefType::Func => Self::Func,
+            RefType::Extern => Self::Extern,
+        }
+    }
+}
+
+impl ValType {
+    pub fn is_ref(&self) -> bool {
+        matches!(self, Self::Func | Self::Extern)
+    }
+
+    pub fn is_num(&self) -> bool {
+        matches!(self, Self::I32 | Self::I64 | Self::F32 | Self::F64)
+    }
+}
