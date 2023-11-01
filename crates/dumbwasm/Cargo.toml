@@ -17,7 +17,7 @@ snailquote = "0.3.1"
 anyhow = "1.0.75"
 byteorder = "1.5.0"
 clap = { version = "4.4.6", features = ["derive"] }
-thiserror = "1.0.49"
+thiserror.workspace = true
 console = "0.15.7"
 strsim = "0.10.0"
 phf = { version = "0.11.2", features = ["macros"] }

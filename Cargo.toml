@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow.workspace = true
 clap = { version = "4.4.6", features = ["derive"] }
 dhat = "0.3.2"
 shwasi-parser = { path = "crates/shwasi-parser" }
@@ -21,6 +21,10 @@ members = [
     "crates/wasm-leb128",
     "xtask",
 ]
+
+[workspace.dependencies]
+anyhow = "1.0.75"
+thiserror = "1.0.50"
 
 [workspace.lints.clippy]
 all = "warn"
