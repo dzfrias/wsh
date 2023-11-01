@@ -34,33 +34,6 @@ fn get_bench_inputs(path: impl AsRef<Path>, targets: &mut Vec<BenchTarget>) {
                 let wasm = fs::read(&path).expect("should be able to read wasm");
                 targets.push(BenchTarget { path, wasm });
             }
-            Some("wat") => {
-                let input = fs::read_to_string(&path).expect("should be able to read wat file");
-                let wasm = wat::parse_str(&input).expect("should be able to parse wat");
-                targets.push(BenchTarget { path, wasm });
-            }
-            Some("wast") => {
-                let input = fs::read_to_string(&path).expect("should be able to read wast file");
-                let Ok(buf) = wast::parser::ParseBuffer::new(&input) else {
-                    continue;
-                };
-                let wast: wast::Wast<'_> = match wast::parser::parse(&buf) {
-                    Ok(wast) => wast,
-                    Err(_) => continue,
-                };
-                for directive in wast.directives {
-                    match directive {
-                        wast::WastDirective::Wat(mut module) => {
-                            let wasm = module.encode().expect("should be able to encode module");
-                            targets.push(BenchTarget {
-                                path: path.clone(),
-                                wasm,
-                            });
-                        }
-                        _ => continue,
-                    }
-                }
-            }
             _ => continue,
         }
     }

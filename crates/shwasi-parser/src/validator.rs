@@ -1,6 +1,7 @@
 use std::{borrow::Cow, fmt, iter};
 
 use anyhow::{bail, ensure, Context, Result};
+use tracing::{debug, info, instrument, trace};
 
 use crate::{
     BlockType, Code, Data, Element, ElementKind, Export, ExternalKind, FuncType, Function, Global,
@@ -135,7 +136,10 @@ impl<'a> Validator<'a> {
         }
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn validate_module(mut self, m: &'a Module) -> Result<()> {
+        info!("began module validation");
+
         self.module_tys = &m.types;
         self.elems = &m.elements;
 
@@ -156,6 +160,14 @@ impl<'a> Validator<'a> {
         self.valdate_globals(&m.globals)?;
         self.globals.extend(m.globals.iter().map(|g| &g.kind));
 
+        trace!("begin current module state");
+        trace!("module_tys: {:?}", self.module_tys);
+        trace!("elems: {:?}", self.elems);
+        trace!("funcs: {:?}", self.funcs);
+        trace!("datas_found: {}", self.datas_found);
+        trace!("globals: {:?}", self.globals);
+        trace!("end current module state");
+
         self.validate_codes(&m.codes, &m.functions)?;
         self.validate_tables(&m.tables)?;
         self.validate_memories(&m.memories)?;
@@ -169,6 +181,7 @@ impl<'a> Validator<'a> {
                 .context("start function not found")?;
             ensure!(ty.0.is_empty(), "start function params not zero");
             ensure!(ty.1.is_empty(), "start function results not zero");
+            debug!("validated start function: {start}");
         }
 
         self.validate_exports(&m.exports)?;
@@ -179,9 +192,11 @@ impl<'a> Validator<'a> {
             "too many memores, only one is supported"
         );
 
+        info!("finisehd module validation");
         Ok(())
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn validate_imports(&mut self, imports: &'a [Import]) -> Result<()> {
         for import in imports {
             match &import.kind {
@@ -202,6 +217,7 @@ impl<'a> Validator<'a> {
                 }
                 ImportKind::Global(global) => self.globals.push(global),
             }
+            debug!("validated import: {import}");
         }
 
         Ok(())
@@ -216,14 +232,17 @@ impl<'a> Validator<'a> {
         Ok(())
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn validate_tables(&self, tables: &[TableType]) -> Result<()> {
         for tbl in tables {
             self.validate_limit(&tbl.limit)?;
+            debug!("validated table: {tbl}");
         }
 
         Ok(())
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn validate_memories(&self, mems: &[Memory]) -> Result<()> {
         for mem in mems {
             self.validate_mem(mem)?;
@@ -232,6 +251,7 @@ impl<'a> Validator<'a> {
         Ok(())
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn validate_mem(&self, mem: &Memory) -> Result<()> {
         // Memory limit must be less than 4GB
         const MAX: u64 = (1u64 << 32) / 65536;
@@ -245,13 +265,16 @@ impl<'a> Validator<'a> {
 
         self.validate_limit(&mem.limit)?;
 
+        debug!("validated memory: {mem}");
         Ok(())
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn validate_datas(&self, datas: &[Data]) -> Result<()> {
         for init in datas.iter().filter_map(|data| data.offset) {
             // Data offset into memory must be an integer
             self.validate_init_expr(init, Operand::Exact(ValType::I32))?;
+            debug!("validated data offset: {init}");
         }
 
         Ok(())
@@ -294,20 +317,26 @@ impl<'a> Validator<'a> {
             "unexepected init expr type: {expected} != {ty}"
         );
 
+        debug!("validated init expr {init} => {ty}");
         Ok(())
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn valdate_globals(&self, globals: &[Global]) -> Result<()> {
         for global in globals {
             // Global init expr must match global type
             self.validate_init_expr(global.init, Operand::Exact(global.kind.content_type))?;
+            debug!("validated global: {global}");
         }
 
         Ok(())
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn validate_elems(&self, elements: &[Element]) -> Result<()> {
         for elem in elements {
+            debug!("started validating element");
+
             if let ElementKind::Active { tbl_idx, offset } = elem.kind {
                 let Some(tbl) = self.tables.get(tbl_idx as usize) else {
                     bail!("table not found: {tbl_idx}");
@@ -327,11 +356,13 @@ impl<'a> Validator<'a> {
                 // Init expr must match elem type
                 self.validate_init_expr(*init, Operand::Exact(elem.types.into()))?;
             }
+            debug!("validated element: {elem}");
         }
 
         Ok(())
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn validate_exports(&self, exports: &[Export]) -> Result<()> {
         let mut seen_exports = Vec::with_capacity(exports.len());
         for export in exports {
@@ -360,13 +391,18 @@ impl<'a> Validator<'a> {
                 }
             }
             seen_exports.push(export.field);
+            debug!("validated export: {export}");
+            trace!("seen exports: {seen_exports:?}");
         }
 
         Ok(())
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn validate_codes(&mut self, codes: &[Code], funcs: &[Function]) -> Result<()> {
         for (code, func) in codes.iter().zip(funcs) {
+            debug!("started validating function with index: {func}");
+
             let ty = self.get_ty(func.index)?;
             self.current_func.locals = ty.0.clone();
             self.current_func
@@ -375,6 +411,7 @@ impl<'a> Validator<'a> {
                     iter::repeat(num_locals.locals_type).take(num_locals.num as usize)
                 }));
             self.current_func.result = &ty.1;
+            debug!("current function: {:?}", self.current_func);
             self.push_frame(FrameKind::Function, &[], Cow::Borrowed(&ty.1));
 
             for instr in code.body.instrs() {
@@ -392,6 +429,7 @@ impl<'a> Validator<'a> {
         self.vals.clear();
         self.current_func.locals.clear();
         self.current_func.result = &[];
+        trace!("reset code state");
     }
 
     fn push_vals(&mut self, label_ty: &[ValType]) {
@@ -447,6 +485,7 @@ impl<'a> Validator<'a> {
         Ok(())
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn push_frame(&mut self, kind: FrameKind, label_ty: &'a [ValType], result: Cow<'a, [ValType]>) {
         self.frames.push(Frame {
             label_ty,
@@ -456,6 +495,7 @@ impl<'a> Validator<'a> {
             unreachable: false,
         });
         self.push_vals(label_ty);
+        trace!("pushed frame");
     }
 
     fn pop_frame(&mut self) -> Result<Frame<'a>> {
@@ -487,6 +527,7 @@ impl<'a> Validator<'a> {
     }
 
     fn validate_instr(&mut self, instr: Instruction) -> Result<()> {
+        debug!("got instruction: {instr:?}");
         match instr {
             Instruction::Unreachable => self.unreachable(),
             Instruction::Nop => {}
@@ -1134,10 +1175,14 @@ impl<'a> Validator<'a> {
                 self.expect_val(Operand::Exact(ValType::I32))?;
             }
         }
+        trace!("values: {:?}", self.vals);
+        trace!("frames: {:?}", self.frames);
+        debug!("validated instruction");
 
         Ok(())
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn validate_mem_load(
         &mut self,
         memarg: MemArg,
@@ -1157,9 +1202,11 @@ impl<'a> Validator<'a> {
         self.expect_val(Operand::Exact(ValType::I32))?;
         self.push_val(Operand::Exact(valtype));
 
+        debug!("validated memory load instruction");
         Ok(())
     }
 
+    #[instrument(level = "debug", skip(self))]
     fn validate_mem_store(
         &mut self,
         memarg: MemArg,
@@ -1179,6 +1226,7 @@ impl<'a> Validator<'a> {
         self.expect_val(Operand::Exact(valtype))?;
         self.expect_val(Operand::Exact(ValType::I32))?;
 
+        debug!("validated memory load instruction");
         Ok(())
     }
 }

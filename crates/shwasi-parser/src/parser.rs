@@ -6,7 +6,7 @@ use anyhow::{bail, ensure, Context, Result};
 use bitflags::bitflags;
 use byteorder::{LittleEndian, ReadBytesExt};
 use num_enum::TryFromPrimitive;
-use tracing::trace;
+use tracing::{debug, info, instrument, trace};
 
 use crate::{
     is_prefix_byte, BlockType, BrTable, Code, Data, Element, ElementKind, Export, ExternalKind,
@@ -35,9 +35,8 @@ impl<'a> Parser<'a> {
         }
     }
 
+    #[instrument(skip(self), level = "debug")]
     pub fn read_module(mut self) -> Result<Module<'a>> {
-        trace!("began reading module");
-
         let magic = self.read_u32()?;
         ensure!(magic == MAGIC_VALUE, "bad magic value: {magic}");
         let version = self.read_u32()?;
@@ -51,7 +50,6 @@ impl<'a> Parser<'a> {
             self.bufsize as u64 - self.offset()
         );
 
-        trace!("finished reading module");
         Ok(self.module)
     }
 
@@ -124,7 +122,7 @@ impl<'a> Parser<'a> {
         let contents = self.slice(len as usize)?;
         let s =
             str::from_utf8(contents).context("bytes contained invalid UTF-8 when reading str")?;
-        trace!("finished reading str, got {s}");
+        debug!("finished reading str, got {s}");
         Ok(s)
     }
 
@@ -133,9 +131,8 @@ impl<'a> Parser<'a> {
         self.buf.position()
     }
 
+    #[instrument(skip(self), level = "debug")]
     fn read_sections(&mut self) -> Result<()> {
-        trace!("began reading sections");
-
         // The last section that was read. Used to ensure sections are in order and that duplicate
         // sections are not present.
         let mut last_section = SectionCode::Custom;
@@ -154,10 +151,8 @@ impl<'a> Parser<'a> {
             }
             match section_code {
                 SectionCode::Custom => {
-                    trace!("began reading custom section");
                     // skip custom sections, for now
                     self.buf.set_position(end);
-                    trace!("finished reading custom section");
                 }
                 SectionCode::Type => self
                     .read_type_section()
@@ -195,7 +190,7 @@ impl<'a> Parser<'a> {
                 SectionCode::DataCount if size != 0 => {
                     let amount = self.read_u32_leb128()?;
                     self.module.data_count = Some(amount);
-                    trace!("got data count section, segments: {amount}");
+                    debug!("got data count section, segments: {amount}");
                 }
                 SectionCode::DataCount => {}
             }
@@ -210,15 +205,13 @@ impl<'a> Parser<'a> {
             ensure!(self.offset() == end, "did not finish reading section");
         }
 
-        trace!("finished reading sections");
         Ok(())
     }
 
+    #[instrument(skip(self), level = "debug")]
     fn read_type_section(&mut self) -> Result<()> {
-        trace!("began reading type section");
-
         let signatures = self.read_u32_leb128()?;
-        trace!("found {signatures} signatures");
+        debug!("found {signatures} signatures");
         for _ in 0..signatures {
             // Functions are the only type form accepted as of right now
             let form = self.read_u8()?;
@@ -247,19 +240,17 @@ impl<'a> Parser<'a> {
                 results
             };
 
-            trace!("read type {params:?} -> {results:?}");
+            debug!("read type {params:?} -> {results:?}");
             self.module.types.push(FuncType(params, results));
         }
 
-        trace!("finished reading type section");
         Ok(())
     }
 
+    #[instrument(skip(self), level = "debug")]
     fn read_import_section(&mut self) -> Result<()> {
-        trace!("began reading import section");
-
         let num_imports = self.read_u32_leb128()?;
-        trace!("found {num_imports} imports");
+        debug!("found {num_imports} imports");
 
         for _ in 0..num_imports {
             let module = self.read_str().context("error reading module name")?;
@@ -294,35 +285,32 @@ impl<'a> Parser<'a> {
                 field,
                 module,
             };
-            trace!("read import: {import:?}");
+            debug!("read import: {import:?}");
             self.module.imports.push(import);
         }
 
-        trace!("finished reading import section");
         Ok(())
     }
 
+    #[instrument(skip(self), level = "debug")]
     fn read_function_section(&mut self) -> Result<()> {
-        trace!("began reading function section");
-
         let signatures = self.read_u32_leb128()?;
+        debug!("found {signatures} signatures");
         for _ in 0..signatures {
             // Type index
             let index = self.read_u32_leb128()?;
             let function = Function { index };
-            trace!("read function that points to type index: {index}");
+            debug!("read function that points to type index: {index}");
             self.module.functions.push(function);
         }
 
-        trace!("finished reading function section");
         Ok(())
     }
 
+    #[instrument(skip(self), level = "debug")]
     fn read_table_section(&mut self) -> Result<()> {
-        trace!("began reading table section");
-
         let tables = self.read_u32_leb128()?;
-        trace!("got {tables} tables");
+        debug!("got {tables} tables");
         for _ in 0..tables {
             let table = self
                 .read_table_type()
@@ -330,15 +318,13 @@ impl<'a> Parser<'a> {
             self.module.tables.push(table);
         }
 
-        trace!("finished reading table section");
         Ok(())
     }
 
+    #[instrument(skip(self), level = "debug")]
     fn read_memory_section(&mut self) -> Result<()> {
-        trace!("began reading memory section");
-
         let memories = self.read_u32_leb128()?;
-        trace!("got {memories} memories");
+        debug!("got {memories} memories");
         for _ in 0..memories {
             let memory = self
                 .read_memory_type()
@@ -346,15 +332,13 @@ impl<'a> Parser<'a> {
             self.module.memories.push(memory);
         }
 
-        trace!("finished reading memory section");
         Ok(())
     }
 
+    #[instrument(skip(self), level = "debug")]
     fn read_global_section(&mut self) -> Result<()> {
-        trace!("began reading global section");
-
         let globals = self.read_u32_leb128()?;
-        trace!("got {globals} globals");
+        debug!("got {globals} globals");
         for _ in 0..globals {
             let global_type = self
                 .read_global_type()
@@ -367,19 +351,17 @@ impl<'a> Parser<'a> {
                 init: init_expr,
                 kind: global_type,
             };
-            trace!("read global: {global:?}");
+            debug!("read global: {global:?}");
             self.module.globals.push(global);
         }
 
-        trace!("finished reading global section");
         Ok(())
     }
 
+    #[instrument(skip(self), level = "debug")]
     fn read_export_section(&mut self) -> Result<()> {
-        trace!("began reading export section");
-
         let exports = self.read_u32_leb128()?;
-        trace!("got {exports} exports");
+        debug!("got {exports} exports");
         for _ in 0..exports {
             let name = self.read_str().context("error reading export name")?;
             let kind = self
@@ -393,31 +375,28 @@ impl<'a> Parser<'a> {
                 kind,
                 external_idx: index,
             };
-            trace!("read export: {export:?}");
+            debug!("read export: {export:?}");
 
             self.module.exports.push(export);
         }
 
-        trace!("finished reading export section");
         Ok(())
     }
 
+    #[instrument(skip(self), level = "debug")]
     fn read_start_section(&mut self) -> Result<()> {
-        trace!("began reading start section");
-
         // Function index
         let index = self.read_u32_leb128()?;
         self.module.start = Some(index);
 
-        trace!("finished reading start section, got index: {index}");
+        info!("got start section index: {index}");
         Ok(())
     }
 
+    #[instrument(skip(self), level = "debug")]
     fn read_elem_section(&mut self) -> Result<()> {
-        trace!("began reading element section");
-
         let elems = self.read_u32_leb128()?;
-        trace!("found {elems} elements");
+        debug!("found {elems} elements");
         for _ in 0..elems {
             let flags_raw = self.read_u32_leb128()?;
             let flags = SegmentFlags::from_bits(flags_raw)
@@ -498,15 +477,13 @@ impl<'a> Parser<'a> {
             self.module.elements.push(element);
         }
 
-        trace!("finished reading element section");
         Ok(())
     }
 
+    #[instrument(skip(self), level = "debug")]
     fn read_code_section(&mut self) -> Result<()> {
-        trace!("began reading the code section");
-
         let function_bodies = self.read_u32_leb128()?;
-        trace!("found {function_bodies} function bodies");
+        debug!("found {function_bodies} function bodies");
         ensure!(
             function_bodies as usize == self.module.functions.len(),
             "should have the same amount of function bodies as types"
@@ -532,19 +509,22 @@ impl<'a> Parser<'a> {
                 .context("error reading code section function")?;
             ensure!(self.offset() == end_offset, "did not read all instructions");
             let code = Code { locals, body };
-            trace!("got code: {code:?}");
+            debug!(
+                "got code with locals: {:?} and {} instrs",
+                code.locals,
+                code.body.len()
+            );
+            trace!("code body: {}", code.body);
             self.module.codes.push(code);
         }
 
-        trace!("finished reading the code section");
         Ok(())
     }
 
+    #[instrument(skip(self), level = "debug")]
     fn read_data_section(&mut self) -> Result<()> {
-        trace!("began reading data section");
-
         let data_segments = self.read_u32_leb128()?;
-        trace!("got {data_segments} data segments");
+        debug!("got {data_segments} data segments");
         if let Some(count) = self.module.data_count {
             ensure!(
                 count == data_segments,
@@ -585,24 +565,23 @@ impl<'a> Parser<'a> {
                 .context("error reading data")?;
 
             let data = Data { offset: init, data };
-            trace!("got data segment {data:?}");
+            debug!("got data segment with length {}", data.data.len());
             self.module.datas.push(data);
         }
 
-        trace!("finished reading data section");
         Ok(())
     }
 
     fn read_type(&mut self) -> Result<ValType> {
         let valtype =
             ValType::try_from_primitive(self.read_u8()?).context("invalid valtype found")?;
-        trace!("read type: {valtype:?}");
+        debug!("read type: {valtype:?}");
         Ok(valtype)
     }
 
     fn read_reftype(&mut self) -> Result<RefType> {
         let reftype = RefType::try_from_primitive(self.read_u8()?).context("invalid reftype")?;
-        trace!("read reftype: {reftype:?}");
+        debug!("read reftype: {reftype:?}");
         Ok(reftype)
     }
 
@@ -627,7 +606,7 @@ impl<'a> Parser<'a> {
             limit: Limit { initial, max },
         };
 
-        trace!("read table type: {table:?}");
+        debug!("read table type: {table:?}");
         Ok(table)
     }
 
@@ -646,7 +625,7 @@ impl<'a> Parser<'a> {
         };
         let limit = Limit { initial, max };
 
-        trace!("read memory type with limit: {limit:?}");
+        debug!("read memory type with limit: {limit:?}");
         Ok(Memory { limit })
     }
 
@@ -663,7 +642,7 @@ impl<'a> Parser<'a> {
             mutable,
         };
 
-        trace!("read global type: {global:?}");
+        debug!("read global type: {global:?}");
         Ok(global)
     }
 
@@ -701,7 +680,7 @@ impl<'a> Parser<'a> {
     fn read_external_kind(&mut self) -> Result<ExternalKind> {
         let external_kind =
             ExternalKind::try_from_primitive(self.read_u8()?).context("invalid external kind")?;
-        trace!("read external kind: {external_kind:?}");
+        debug!("read external kind: {external_kind:?}");
         Ok(external_kind)
     }
 
@@ -760,8 +739,8 @@ impl<'a> Parser<'a> {
         })
     }
 
+    #[instrument(skip(self), level = "debug")]
     fn read_instrs(&mut self, end_offset: Option<u64>) -> Result<InstrBuffer> {
-        trace!("began reading instrs");
         // This uses a bit of domain knowledge, but on average, if there are n bytes to read, then
         // there is around n / 2 instructions. This results in around a substantial speed increase
         // when parsing spidermonkey.
@@ -1204,7 +1183,7 @@ impl<'a> Parser<'a> {
         }
 
         buffer.shrink();
-        trace!("finished reading instrs, got {} instructions", buffer.len());
+        debug!("got {} instructions", buffer.len());
         Ok(buffer)
     }
 }
