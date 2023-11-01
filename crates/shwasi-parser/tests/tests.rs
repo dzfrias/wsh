@@ -206,3 +206,21 @@ fn valid_br_table() {
     let module = Parser::new(VALID_BR_TABLE).read_module().unwrap();
     validate(&module).expect("validation should not fail");
 }
+
+#[test]
+fn stack_height2() {
+    let module = Parser::new(STACK_HEIGHT2).read_module().unwrap();
+    validate(&module).expect("validation should not fail");
+}
+
+#[test]
+fn import_call() {
+    let module = Parser::new(IMPORT_CALL).read_module().unwrap();
+    validate(&module).expect("validation should not fail");
+}
+
+#[test]
+fn import_call2() {
+    let module = Parser::new(IMPORT_CALL2).read_module().unwrap();
+    validate(&module).expect("validation should not fail");
+}

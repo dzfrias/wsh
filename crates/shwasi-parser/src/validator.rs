@@ -106,10 +106,9 @@ struct Validator<'a> {
     vals: Vec<Operand>,
     current_func: FuncCtx<'a>,
 
-    tys: &'a [FuncType],
+    module_tys: &'a [FuncType],
     elems: &'a [Element],
-    funcs: &'a [Function],
-    func_tys: Vec<&'a FuncType>,
+    funcs: Vec<&'a FuncType>,
     tables: Vec<&'a TableType>,
     mems: Vec<&'a Memory>,
     globals: Vec<&'a GlobalType>,
@@ -119,8 +118,7 @@ struct Validator<'a> {
 impl<'a> Validator<'a> {
     pub fn new() -> Self {
         Self {
-            tys: &[],
-            funcs: &[],
+            module_tys: &[],
             frames: vec![],
             current_func: FuncCtx {
                 locals: vec![],
@@ -128,7 +126,7 @@ impl<'a> Validator<'a> {
             },
 
             vals: vec![],
-            func_tys: vec![],
+            funcs: vec![],
             tables: vec![],
             mems: vec![],
             globals: vec![],
@@ -138,14 +136,17 @@ impl<'a> Validator<'a> {
     }
 
     fn validate_module(mut self, m: &'a Module) -> Result<()> {
-        self.tys = &m.types;
+        self.module_tys = &m.types;
         self.elems = &m.elements;
-        self.funcs = &m.functions;
 
         self.validate_imports(&m.imports)?;
 
         for func in &m.functions {
-            self.func_tys.push(self.get_ty(func.index)?);
+            let ty = m
+                .types
+                .get(func.index as usize)
+                .context("function type not found")?;
+            self.funcs.push(ty);
         }
         self.tables.extend(&m.tables);
         self.mems.extend(&m.memories);
@@ -163,7 +164,7 @@ impl<'a> Validator<'a> {
 
         if let Some(start) = m.start {
             let ty = self
-                .func_tys
+                .funcs
                 .get(start as usize)
                 .context("start function not found")?;
             ensure!(ty.0.is_empty(), "start function params not zero");
@@ -184,7 +185,13 @@ impl<'a> Validator<'a> {
     fn validate_imports(&mut self, imports: &'a [Import]) -> Result<()> {
         for import in imports {
             match &import.kind {
-                ImportKind::Function(idx) => self.func_tys.push(self.get_ty(*idx)?),
+                ImportKind::Function(idx) => {
+                    let ty = self
+                        .module_tys
+                        .get(*idx as usize)
+                        .context("function type not found")?;
+                    self.funcs.push(ty);
+                }
                 ImportKind::Table(table) => {
                     self.validate_limit(&table.limit)?;
                     self.tables.push(table);
@@ -252,15 +259,10 @@ impl<'a> Validator<'a> {
 
     fn get_ty(&self, idx: u32) -> Result<&'a FuncType> {
         // Type must exist
-        self.tys
+        self.funcs
             .get(idx as usize)
+            .copied()
             .context("function type not found")
-    }
-
-    fn get_functype(&self, idx: u32) -> Result<&'a FuncType> {
-        // Function must exist
-        let f = self.funcs.get(idx as usize).context("function not found")?;
-        self.get_ty(f.index)
     }
 
     fn validate_init_expr(&self, init: InitExpr, operand: Operand) -> Result<()> {
@@ -343,7 +345,7 @@ impl<'a> Validator<'a> {
             match export.kind {
                 ExternalKind::Function => {
                     ensure!(
-                        self.func_tys.get(idx).is_some(),
+                        self.funcs.get(idx).is_some(),
                         "export function type not found"
                     );
                 }
@@ -373,7 +375,7 @@ impl<'a> Validator<'a> {
                     iter::repeat(num_locals.locals_type).take(num_locals.num as usize)
                 }));
             self.current_func.result = &ty.1;
-            self.push_frame(FrameKind::Function, &ty.1, Cow::Borrowed(&ty.1));
+            self.push_frame(FrameKind::Function, &[], Cow::Borrowed(&ty.1));
 
             for instr in code.body.instrs() {
                 let instr = code.body.instruction(instr);
@@ -960,7 +962,7 @@ impl<'a> Validator<'a> {
             Instruction::F64Const(_) => self.push_val(Operand::Exact(ValType::F64)),
 
             Instruction::Call { func_idx } => {
-                let ty = self.get_functype(func_idx)?;
+                let ty = self.get_ty(func_idx)?;
                 self.expect_vals(ty.0.iter())?;
                 self.push_vals(&ty.1);
             }
@@ -1014,7 +1016,7 @@ impl<'a> Validator<'a> {
             }
             Instruction::RefFunc { func_idx } => {
                 ensure!(
-                    (func_idx as usize) < self.func_tys.len(),
+                    (func_idx as usize) < self.funcs.len(),
                     "function type not found: {func_idx}"
                 );
                 self.push_val(Operand::Exact(ValType::Func));
@@ -1080,10 +1082,7 @@ impl<'a> Validator<'a> {
                     "call.indirect table elem type must be of type funcref, got: {}",
                     table.elem_type
                 );
-                let ty = *self
-                    .func_tys
-                    .get(type_idx as usize)
-                    .context("function type not found")?;
+                let ty = self.get_ty(type_idx)?;
                 self.expect_val(Operand::Exact(ValType::I32))?;
                 self.expect_vals(ty.0.iter())?;
                 self.push_vals(&ty.1);

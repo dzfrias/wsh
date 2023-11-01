@@ -29,3 +29,6 @@ pub const REFNULL_INIT: &[u8] = include_bytes!("./inputs/refnull_init.wasm");
 pub const BLOCKTYPE: &[u8] = include_bytes!("./inputs/blocktype.wasm");
 pub const STACK_HEIGHT: &[u8] = include_bytes!("./inputs/stack_height.wasm");
 pub const VALID_BR_TABLE: &[u8] = include_bytes!("./inputs/valid_br_table.wasm");
+pub const STACK_HEIGHT2: &[u8] = include_bytes!("./inputs/stack_height2.wasm");
+pub const IMPORT_CALL: &[u8] = include_bytes!("./inputs/import_call.wasm");
+pub const IMPORT_CALL2: &[u8] = include_bytes!("./inputs/import_call2.wasm");
