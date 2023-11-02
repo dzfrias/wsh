@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Debug, Parser)]
@@ -15,7 +13,4 @@ pub enum Task {
 }
 
 #[derive(Debug, Args)]
-pub struct Specgen {
-    #[arg(value_name = "PATH")]
-    pub spectests: PathBuf,
-}
+pub struct Specgen {}
