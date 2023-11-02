@@ -13,8 +13,8 @@ default: fallback
 check:
   cargo clippy --workspace
 
-test:
-  cargo nextest run --workspace
+test *ARGS:
+  cargo nextest run --workspace {{ARGS}}
 
 build *ARGS:
   cargo build {{ARGS}}

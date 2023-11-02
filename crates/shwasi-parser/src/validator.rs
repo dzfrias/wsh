@@ -1,4 +1,4 @@
-use std::{borrow::Cow, fmt, iter};
+use std::{borrow::Cow, collections::HashSet, fmt, iter};
 
 use anyhow::{bail, ensure, Context, Result};
 use tracing::{debug, info, instrument, trace};
@@ -77,7 +77,7 @@ impl Operand {
 
     #[must_use]
     pub fn is_ref(&self) -> bool {
-        self.is_any() || matches!(self, Self::Exact(ValType::Func | ValType::Extern))
+        matches!(self, Self::Exact(ValType::Func | ValType::Extern))
     }
 }
 
@@ -102,6 +102,12 @@ impl From<&ValType> for Operand {
     }
 }
 
+#[derive(Debug)]
+struct ValidatorGlobal<'a> {
+    ty: &'a GlobalType,
+    is_imported: bool,
+}
+
 /// A validator for a WebAssembly module.
 ///
 /// Contains the current state of validation for the module.
@@ -117,7 +123,8 @@ struct Validator<'a> {
     funcs: Vec<&'a FuncType>,
     tables: Vec<&'a TableType>,
     mems: Vec<&'a Memory>,
-    globals: Vec<&'a GlobalType>,
+    globals: Vec<ValidatorGlobal<'a>>,
+    declared_funcs: HashSet<u32>,
     datas_found: usize,
 }
 
@@ -132,6 +139,7 @@ impl<'a> Validator<'a> {
             },
 
             vals: vec![],
+            declared_funcs: HashSet::new(),
             funcs: vec![],
             tables: vec![],
             mems: vec![],
@@ -163,7 +171,11 @@ impl<'a> Validator<'a> {
 
         // Validate globals before adding them to validator to prevent self-referencing
         self.valdate_globals(&m.globals)?;
-        self.globals.extend(m.globals.iter().map(|g| &g.kind));
+        self.globals
+            .extend(m.globals.iter().map(|g| ValidatorGlobal {
+                ty: &g.kind,
+                is_imported: false,
+            }));
 
         trace!("begin current module state");
         trace!("module_tys: {:?}", self.module_tys);
@@ -173,10 +185,9 @@ impl<'a> Validator<'a> {
         trace!("globals: {:?}", self.globals);
         trace!("end current module state");
 
-        self.validate_codes(&m.codes, &m.functions)?;
+        self.validate_elems(&m.elements)?;
         self.validate_tables(&m.tables)?;
         self.validate_memories(&m.memories)?;
-        self.validate_elems(&m.elements)?;
         self.validate_datas(&m.datas)?;
 
         if let Some(start) = m.start {
@@ -191,9 +202,11 @@ impl<'a> Validator<'a> {
 
         self.validate_exports(&m.exports)?;
 
+        self.validate_codes(&m.codes, &m.functions)?;
+
         // Multi-memories not supported
         ensure!(
-            m.memories.len() <= 1,
+            self.mems.len() <= 1,
             "too many memores, only one is supported"
         );
 
@@ -220,7 +233,10 @@ impl<'a> Validator<'a> {
                     self.validate_mem(mem)?;
                     self.mems.push(mem);
                 }
-                ImportKind::Global(global) => self.globals.push(global),
+                ImportKind::Global(global) => self.globals.push(ValidatorGlobal {
+                    ty: global,
+                    is_imported: true,
+                }),
             }
             debug!("validated import: {import}");
         }
@@ -275,8 +291,9 @@ impl<'a> Validator<'a> {
     }
 
     #[instrument(level = "debug", skip(self))]
-    fn validate_datas(&self, datas: &[Data]) -> Result<()> {
+    fn validate_datas(&mut self, datas: &[Data]) -> Result<()> {
         for init in datas.iter().filter_map(|data| data.offset) {
+            ensure!(!self.mems.is_empty(), "no memory to copy data section to");
             // Data offset into memory must be an integer
             self.validate_init_expr(init, Operand::Exact(ValType::I32))?;
             debug!("validated data offset: {init}");
@@ -293,7 +310,7 @@ impl<'a> Validator<'a> {
             .context("function type not found")
     }
 
-    fn validate_init_expr(&self, init: InitExpr, operand: Operand) -> Result<()> {
+    fn validate_init_expr(&mut self, init: InitExpr, operand: Operand) -> Result<()> {
         let Operand::Exact(expected) = operand else {
             return Ok(());
         };
@@ -305,16 +322,25 @@ impl<'a> Validator<'a> {
             InitExpr::F64Const(_) => ValType::F64,
             InitExpr::ConstGlobalGet(idx) => {
                 // Global must exist
-                self.globals
-                    .get(idx as usize)
-                    .context("global not found")?
-                    .content_type
+                let global = self.globals.get(idx as usize).context("global not found")?;
+                ensure!(
+                    global.is_imported && !global.ty.mutable,
+                    "cannot initialize with-non imported mutable global const expr"
+                );
+                global.ty.content_type
             }
             InitExpr::RefNull(t) => match t {
                 RefType::Func => ValType::Func,
                 RefType::Extern => ValType::Extern,
             },
-            InitExpr::RefFunc(_) => ValType::Func,
+            InitExpr::RefFunc(idx) => {
+                ensure!(
+                    self.funcs.get(idx as usize).is_some(),
+                    "function reference not found"
+                );
+                self.declared_funcs.insert(idx);
+                ValType::Func
+            }
         };
 
         ensure!(
@@ -327,7 +353,7 @@ impl<'a> Validator<'a> {
     }
 
     #[instrument(level = "debug", skip(self))]
-    fn valdate_globals(&self, globals: &[Global]) -> Result<()> {
+    fn valdate_globals(&mut self, globals: &[Global]) -> Result<()> {
         for global in globals {
             // Global init expr must match global type
             self.validate_init_expr(global.init, Operand::Exact(global.kind.content_type))?;
@@ -338,7 +364,7 @@ impl<'a> Validator<'a> {
     }
 
     #[instrument(level = "debug", skip(self))]
-    fn validate_elems(&self, elements: &[Element]) -> Result<()> {
+    fn validate_elems(&mut self, elements: &[Element]) -> Result<()> {
         for elem in elements {
             debug!("started validating element");
 
@@ -368,7 +394,7 @@ impl<'a> Validator<'a> {
     }
 
     #[instrument(level = "debug", skip(self))]
-    fn validate_exports(&self, exports: &[Export]) -> Result<()> {
+    fn validate_exports(&mut self, exports: &[Export]) -> Result<()> {
         let mut seen_exports = Vec::with_capacity(exports.len());
         for export in exports {
             // Exports must be unique
@@ -384,6 +410,7 @@ impl<'a> Validator<'a> {
                         self.funcs.get(idx).is_some(),
                         "export function type not found"
                     );
+                    self.declared_funcs.insert(export.external_idx);
                 }
                 ExternalKind::Table => {
                     ensure!(self.tables.get(idx).is_some(), "export table not found");
@@ -483,16 +510,18 @@ impl<'a> Validator<'a> {
         Ok(Operand::Exact(got))
     }
 
-    fn expect_vals<T, I>(&mut self, expected: I) -> Result<()>
+    fn expect_vals<T, I>(&mut self, expected: I) -> Result<Vec<Operand>>
     where
         T: Into<Operand>,
         I: DoubleEndedIterator<Item = T>,
     {
+        let mut operands = vec![];
         for expected in expected.into_iter().rev() {
-            self.expect_val(expected.into())?;
+            let op = self.expect_val(expected.into())?;
+            operands.push(op);
         }
 
-        Ok(())
+        Ok(operands)
     }
 
     #[instrument(level = "debug", skip(self))]
@@ -503,7 +532,7 @@ impl<'a> Validator<'a> {
             init_height: self.vals.len(),
             unreachable: false,
         });
-        self.push_vals(self.params(FrameType::Block(blockty))?);
+        self.push_vals(self.start_types(FrameType::Block(blockty))?);
         debug!("pushed frame");
 
         Ok(())
@@ -522,7 +551,7 @@ impl<'a> Validator<'a> {
         Ok(())
     }
 
-    fn params(&self, blockty: FrameType) -> Result<&'a [ValType]> {
+    fn start_types(&self, blockty: FrameType) -> Result<&'a [ValType]> {
         let FrameType::Block(blockty) = blockty else {
             return Ok(&[]);
         };
@@ -539,7 +568,38 @@ impl<'a> Validator<'a> {
         })
     }
 
-    fn results(&self, blockty: FrameType) -> Result<Cow<'a, [ValType]>> {
+    fn labels(&self, frame: &Frame) -> Result<Cow<'a, [ValType]>> {
+        let ty = match frame.ty {
+            FrameType::Block(b) => b,
+            FrameType::Function(idx) => {
+                return Ok(Cow::Borrowed(
+                    &self
+                        .module_tys
+                        .get(idx as usize)
+                        .context("type not found")?
+                        .1,
+                ))
+            }
+        };
+
+        Ok(match ty {
+            BlockType::Empty => Cow::Borrowed(&[]),
+            BlockType::Type(_) if frame.kind == FrameKind::Loop => Cow::Borrowed(&[]),
+            BlockType::Type(t) => Cow::Owned(vec![t]),
+            BlockType::FuncType(idx) => {
+                let ty = self
+                    .module_tys
+                    .get(idx as usize)
+                    .context("type not found")?;
+                Cow::Borrowed(match frame.kind {
+                    FrameKind::Loop => &ty.0,
+                    _ => &ty.1,
+                })
+            }
+        })
+    }
+
+    fn end_types(&self, blockty: FrameType) -> Result<Cow<'a, [ValType]>> {
         Ok(match blockty {
             FrameType::Block(blockty) => match blockty {
                 BlockType::Empty => Cow::Borrowed(&[][..]),
@@ -566,7 +626,7 @@ impl<'a> Validator<'a> {
         debug_assert!(!self.frames.is_empty());
 
         let last_frame = self.frames.last().expect("should have a frame");
-        let result = self.results(last_frame.ty)?;
+        let result = self.end_types(last_frame.ty)?;
         self.expect_vals(result.iter()).with_context(|| {
             format!("error getting result values from frame, expected: {result:?}",)
         })?;
@@ -592,7 +652,8 @@ impl<'a> Validator<'a> {
 
     #[inline]
     fn get_frame_n(&self, n: usize) -> Option<&Frame> {
-        self.frames.get(self.frames.len() - n - 1)
+        self.frames
+            .get(self.frames.len().checked_sub(n)?.checked_sub(1)?)
     }
 
     fn validate_instr(&mut self, instr: Instruction) -> Result<()> {
@@ -612,8 +673,13 @@ impl<'a> Validator<'a> {
                 self.push_frame(FrameKind::Else, blockty)?;
             }
             Instruction::End => {
+                // If this is true, then the `if` had no else. In that case, validate that the
+                // empty else block produces the correct type.
+                if self.frames.last().expect("frames should not be empty").kind == FrameKind::If {
+                    self.validate_instr(Instruction::Else)?;
+                }
                 let frame = self.pop_frame()?;
-                self.push_vals(&self.results(frame.ty)?);
+                self.push_vals(&self.end_types(frame.ty)?);
             }
             Instruction::Return => {
                 let func_ctx = self.current_func.result;
@@ -628,6 +694,10 @@ impl<'a> Validator<'a> {
                 ensure!(
                     val1.matches(val2),
                     "select operands must be the same type, got {val1} and {val2}"
+                );
+                ensure!(
+                    !val1.is_ref() && !val2.is_ref(),
+                    "cannot have two ref types in select"
                 );
                 let push = if val1.is_any() { val2 } else { val1 };
                 self.push_val(push);
@@ -917,7 +987,7 @@ impl<'a> Validator<'a> {
             Instruction::RefIsNull => {
                 let val = self.expect_val(Operand::Any)?;
                 ensure!(
-                    val.is_ref(),
+                    val.is_ref() || val.is_any(),
                     "ref.is_null must be called on a reference type, got {val}"
                 );
                 self.push_val(Operand::Exact(ValType::I32));
@@ -1000,52 +1070,46 @@ impl<'a> Validator<'a> {
                 self.validate_mem_store(memarg, ValType::I64, Some(32))?;
             }
 
-            Instruction::Loop(ref blockty) => {
-                self.expect_vals(self.params(FrameType::Block(*blockty))?.iter())?;
-                self.push_frame(FrameKind::Loop, *blockty)?;
+            Instruction::Loop(blockty) => {
+                self.expect_vals(self.start_types(FrameType::Block(blockty))?.iter())?;
+                self.push_frame(FrameKind::Loop, blockty)?;
             }
-            Instruction::Block(ref blockty) => {
-                self.expect_vals(self.params(FrameType::Block(*blockty))?.iter())?;
-                self.push_frame(FrameKind::Block, *blockty)?;
+            Instruction::Block(blockty) => {
+                self.expect_vals(self.start_types(FrameType::Block(blockty))?.iter())?;
+                self.push_frame(FrameKind::Block, blockty)?;
             }
             Instruction::If(blockty) => {
                 self.expect_val(Operand::Exact(ValType::I32))?;
-                self.expect_vals(self.params(FrameType::Block(blockty))?.iter())?;
+                self.expect_vals(self.start_types(FrameType::Block(blockty))?.iter())?;
                 self.push_frame(FrameKind::If, blockty)?;
             }
             Instruction::Br { depth } => {
                 let frame = self
                     .get_frame_n(depth as usize)
                     .context("br to invalid depth")?;
-                match frame.kind {
-                    FrameKind::Loop => {
-                        self.expect_vals(self.params(frame.ty)?.iter())?;
-                    }
-                    _ => {
-                        self.expect_vals(self.results(frame.ty)?.iter())?;
-                    }
-                }
+                self.expect_vals(self.labels(frame)?.iter())?;
                 self.unreachable();
             }
             Instruction::BrTable(br_tbl) => {
                 self.expect_val(Operand::Exact(ValType::I32))?;
-                let default_labels = self.params(
+                let default_labels = self.labels(
                     self.get_frame_n(br_tbl.default_depth as usize)
-                        .context("br_table to invalid depth")?
-                        .ty,
+                        .context("br_table to invalid depth")?,
                 )?;
                 let arity = default_labels.len();
                 for depth in br_tbl.depths {
-                    let vals = self.params(
+                    let vals = self.labels(
                         self.get_frame_n(depth as usize)
-                            .context("br_table to invalid depth")?
-                            .ty,
+                            .context("br_table to invalid depth")?,
                     )?;
                     ensure!(
                         vals.len() == arity,
-                        "br_table arity mismatch, got {depth}, want {arity}"
+                        "br_table arity mismatch, got {}, want {arity}",
+                        vals.len()
                     );
-                    self.expect_vals(vals.iter())?;
+                    for pushed in self.expect_vals(vals.iter())?.into_iter().rev() {
+                        self.push_val(pushed);
+                    }
                 }
                 self.expect_vals(default_labels.iter())?;
                 self.unreachable();
@@ -1055,19 +1119,11 @@ impl<'a> Validator<'a> {
                 let frame = self
                     .get_frame_n(depth as usize)
                     .context("br_if to invalid depth")?;
-                match frame.kind {
-                    FrameKind::Loop => {
-                        self.expect_vals(self.params(frame.ty)?.iter())?;
-                    }
-                    _ => {
-                        self.expect_vals(self.results(frame.ty)?.iter())?;
-                    }
-                }
+                self.expect_vals(self.labels(frame)?.iter())?;
                 // Need to get new reference for borrowck. Should be the same frame as before as
                 // long as `expect_vals` doesn't push or pop a frame (which it doesn't)
                 let frame = self.get_frame_n(depth as usize).unwrap();
-                self.push_vals(self.params(frame.ty)?);
-                self.unreachable();
+                self.push_vals(&self.labels(frame)?);
             }
 
             // Const instrs
@@ -1112,6 +1168,7 @@ impl<'a> Validator<'a> {
                     .globals
                     .get(idx as usize)
                     .context("global.get out of bounds")?
+                    .ty
                     .content_type;
                 self.push_val(Operand::Exact(ty));
             }
@@ -1120,8 +1177,9 @@ impl<'a> Validator<'a> {
                     .globals
                     .get(idx as usize)
                     .context("global.set out of bounds")?
-                    .content_type;
-                self.expect_val(Operand::Exact(ty))?;
+                    .ty;
+                ensure!(ty.mutable, "cannot global set on an immutable global");
+                self.expect_val(Operand::Exact(ty.content_type))?;
             }
             Instruction::ElemDrop { elem_idx } => {
                 ensure!(
@@ -1133,6 +1191,10 @@ impl<'a> Validator<'a> {
                 ensure!(
                     (func_idx as usize) < self.funcs.len(),
                     "function type not found: {func_idx}"
+                );
+                ensure!(
+                    self.declared_funcs.contains(&func_idx),
+                    "ref_func: no declared initializers found for function at index {func_idx}"
                 );
                 self.push_val(Operand::Exact(ValType::Func));
             }

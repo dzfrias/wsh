@@ -82,7 +82,7 @@ fn globals() {
 fn bad_init_expr() {
     let result = Parser::new(BAD_INIT_EXPR).read_module();
     let err = result.unwrap_err();
-    assert_display_snapshot!(err.root_cause(), @"init expr can must have 2+ instructions");
+    assert_display_snapshot!(err.root_cause(), @"init expr can must have 2 instructions");
 }
 
 #[test]

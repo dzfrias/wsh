@@ -553,6 +553,26 @@ fn memory_5() {
 }
 
 #[test]
+fn memory_6() {
+    let wasm = include_bytes!("wasm/memory_6.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_7() {
+    let wasm = include_bytes!("wasm/memory_7.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn memory_8() {
     let wasm = include_bytes!("wasm/memory_8.wasm");
     let module = Parser::new(wasm)
@@ -577,6 +597,166 @@ fn memory_12() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn memory_14() {
+    let wasm = include_bytes!("wasm/memory_14.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_15() {
+    let wasm = include_bytes!("wasm/memory_15.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_16() {
+    let wasm = include_bytes!("wasm/memory_16.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_17() {
+    let wasm = include_bytes!("wasm/memory_17.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_18() {
+    let wasm = include_bytes!("wasm/memory_18.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_19() {
+    let wasm = include_bytes!("wasm/memory_19.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_20() {
+    let wasm = include_bytes!("wasm/memory_20.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_21() {
+    let wasm = include_bytes!("wasm/memory_21.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_22() {
+    let wasm = include_bytes!("wasm/memory_22.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_23() {
+    let wasm = include_bytes!("wasm/memory_23.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_24() {
+    let wasm = include_bytes!("wasm/memory_24.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_25() {
+    let wasm = include_bytes!("wasm/memory_25.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_26() {
+    let wasm = include_bytes!("wasm/memory_26.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_27() {
+    let wasm = include_bytes!("wasm/memory_27.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_28() {
+    let wasm = include_bytes!("wasm/memory_28.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_29() {
+    let wasm = include_bytes!("wasm/memory_29.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -607,6 +787,186 @@ fn call_0() {
 }
 
 #[test]
+fn call_73() {
+    let wasm = include_bytes!("wasm/call_73.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_74() {
+    let wasm = include_bytes!("wasm/call_74.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_75() {
+    let wasm = include_bytes!("wasm/call_75.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_76() {
+    let wasm = include_bytes!("wasm/call_76.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_77() {
+    let wasm = include_bytes!("wasm/call_77.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_78() {
+    let wasm = include_bytes!("wasm/call_78.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_79() {
+    let wasm = include_bytes!("wasm/call_79.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_80() {
+    let wasm = include_bytes!("wasm/call_80.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_81() {
+    let wasm = include_bytes!("wasm/call_81.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_82() {
+    let wasm = include_bytes!("wasm/call_82.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_83() {
+    let wasm = include_bytes!("wasm/call_83.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_84() {
+    let wasm = include_bytes!("wasm/call_84.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_85() {
+    let wasm = include_bytes!("wasm/call_85.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_86() {
+    let wasm = include_bytes!("wasm/call_86.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_87() {
+    let wasm = include_bytes!("wasm/call_87.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_88() {
+    let wasm = include_bytes!("wasm/call_88.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_89() {
+    let wasm = include_bytes!("wasm/call_89.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_90() {
+    let wasm = include_bytes!("wasm/call_90.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn local_get_0() {
     let wasm = include_bytes!("wasm/local_get_0.wasm");
     let module = Parser::new(wasm)
@@ -616,12 +976,192 @@ fn local_get_0() {
 }
 
 #[test]
+fn local_get_20() {
+    let wasm = include_bytes!("wasm/local_get_20.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_get_21() {
+    let wasm = include_bytes!("wasm/local_get_21.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_get_22() {
+    let wasm = include_bytes!("wasm/local_get_22.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_get_23() {
+    let wasm = include_bytes!("wasm/local_get_23.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_get_24() {
+    let wasm = include_bytes!("wasm/local_get_24.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_get_25() {
+    let wasm = include_bytes!("wasm/local_get_25.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_get_26() {
+    let wasm = include_bytes!("wasm/local_get_26.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_get_27() {
+    let wasm = include_bytes!("wasm/local_get_27.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_get_28() {
+    let wasm = include_bytes!("wasm/local_get_28.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_get_29() {
+    let wasm = include_bytes!("wasm/local_get_29.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_get_30() {
+    let wasm = include_bytes!("wasm/local_get_30.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_get_31() {
+    let wasm = include_bytes!("wasm/local_get_31.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_get_32() {
+    let wasm = include_bytes!("wasm/local_get_32.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_get_33() {
+    let wasm = include_bytes!("wasm/local_get_33.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_get_34() {
+    let wasm = include_bytes!("wasm/local_get_34.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_get_35() {
+    let wasm = include_bytes!("wasm/local_get_35.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn fac_0() {
     let wasm = include_bytes!("wasm/fac_0.wasm");
     let module = Parser::new(wasm)
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn table_sub_0() {
+    let wasm = include_bytes!("wasm/table-sub_0.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_sub_1() {
+    let wasm = include_bytes!("wasm/table-sub_1.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -643,6 +1183,16 @@ fn func_90() {
 }
 
 #[test]
+fn func_91() {
+    let wasm = include_bytes!("wasm/func_91.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn func_93() {
     let wasm = include_bytes!("wasm/func_93.wasm");
     let module = Parser::new(wasm)
@@ -658,6 +1208,486 @@ fn func_97() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn func_112() {
+    let wasm = include_bytes!("wasm/func_112.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_113() {
+    let wasm = include_bytes!("wasm/func_113.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_114() {
+    let wasm = include_bytes!("wasm/func_114.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_115() {
+    let wasm = include_bytes!("wasm/func_115.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_116() {
+    let wasm = include_bytes!("wasm/func_116.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_117() {
+    let wasm = include_bytes!("wasm/func_117.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_118() {
+    let wasm = include_bytes!("wasm/func_118.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_119() {
+    let wasm = include_bytes!("wasm/func_119.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_120() {
+    let wasm = include_bytes!("wasm/func_120.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_121() {
+    let wasm = include_bytes!("wasm/func_121.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_122() {
+    let wasm = include_bytes!("wasm/func_122.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_123() {
+    let wasm = include_bytes!("wasm/func_123.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_124() {
+    let wasm = include_bytes!("wasm/func_124.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_125() {
+    let wasm = include_bytes!("wasm/func_125.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_126() {
+    let wasm = include_bytes!("wasm/func_126.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_127() {
+    let wasm = include_bytes!("wasm/func_127.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_128() {
+    let wasm = include_bytes!("wasm/func_128.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_129() {
+    let wasm = include_bytes!("wasm/func_129.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_130() {
+    let wasm = include_bytes!("wasm/func_130.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_131() {
+    let wasm = include_bytes!("wasm/func_131.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_132() {
+    let wasm = include_bytes!("wasm/func_132.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_133() {
+    let wasm = include_bytes!("wasm/func_133.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_134() {
+    let wasm = include_bytes!("wasm/func_134.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_135() {
+    let wasm = include_bytes!("wasm/func_135.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_136() {
+    let wasm = include_bytes!("wasm/func_136.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_137() {
+    let wasm = include_bytes!("wasm/func_137.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_138() {
+    let wasm = include_bytes!("wasm/func_138.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_139() {
+    let wasm = include_bytes!("wasm/func_139.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_140() {
+    let wasm = include_bytes!("wasm/func_140.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_141() {
+    let wasm = include_bytes!("wasm/func_141.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_142() {
+    let wasm = include_bytes!("wasm/func_142.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_143() {
+    let wasm = include_bytes!("wasm/func_143.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_144() {
+    let wasm = include_bytes!("wasm/func_144.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_145() {
+    let wasm = include_bytes!("wasm/func_145.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_146() {
+    let wasm = include_bytes!("wasm/func_146.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_147() {
+    let wasm = include_bytes!("wasm/func_147.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_148() {
+    let wasm = include_bytes!("wasm/func_148.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_149() {
+    let wasm = include_bytes!("wasm/func_149.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_150() {
+    let wasm = include_bytes!("wasm/func_150.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_151() {
+    let wasm = include_bytes!("wasm/func_151.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_152() {
+    let wasm = include_bytes!("wasm/func_152.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_153() {
+    let wasm = include_bytes!("wasm/func_153.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_154() {
+    let wasm = include_bytes!("wasm/func_154.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_155() {
+    let wasm = include_bytes!("wasm/func_155.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_156() {
+    let wasm = include_bytes!("wasm/func_156.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_157() {
+    let wasm = include_bytes!("wasm/func_157.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_158() {
+    let wasm = include_bytes!("wasm/func_158.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_159() {
+    let wasm = include_bytes!("wasm/func_159.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -796,6 +1826,86 @@ fn exports_17() {
 }
 
 #[test]
+fn exports_21() {
+    let wasm = include_bytes!("wasm/exports_21.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_22() {
+    let wasm = include_bytes!("wasm/exports_22.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_23() {
+    let wasm = include_bytes!("wasm/exports_23.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_24() {
+    let wasm = include_bytes!("wasm/exports_24.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_25() {
+    let wasm = include_bytes!("wasm/exports_25.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_26() {
+    let wasm = include_bytes!("wasm/exports_26.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_27() {
+    let wasm = include_bytes!("wasm/exports_27.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_28() {
+    let wasm = include_bytes!("wasm/exports_28.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn exports_29() {
     let wasm = include_bytes!("wasm/exports_29.wasm");
     let module = Parser::new(wasm)
@@ -901,6 +2011,86 @@ fn exports_42() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn exports_44() {
+    let wasm = include_bytes!("wasm/exports_44.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_45() {
+    let wasm = include_bytes!("wasm/exports_45.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_46() {
+    let wasm = include_bytes!("wasm/exports_46.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_47() {
+    let wasm = include_bytes!("wasm/exports_47.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_48() {
+    let wasm = include_bytes!("wasm/exports_48.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_49() {
+    let wasm = include_bytes!("wasm/exports_49.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_50() {
+    let wasm = include_bytes!("wasm/exports_50.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_51() {
+    let wasm = include_bytes!("wasm/exports_51.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -1039,6 +2229,86 @@ fn exports_66() {
 }
 
 #[test]
+fn exports_67() {
+    let wasm = include_bytes!("wasm/exports_67.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_68() {
+    let wasm = include_bytes!("wasm/exports_68.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_69() {
+    let wasm = include_bytes!("wasm/exports_69.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_70() {
+    let wasm = include_bytes!("wasm/exports_70.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_71() {
+    let wasm = include_bytes!("wasm/exports_71.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_72() {
+    let wasm = include_bytes!("wasm/exports_72.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_73() {
+    let wasm = include_bytes!("wasm/exports_73.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_74() {
+    let wasm = include_bytes!("wasm/exports_74.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn exports_75() {
     let wasm = include_bytes!("wasm/exports_75.wasm");
     let module = Parser::new(wasm)
@@ -1165,12 +2435,412 @@ fn exports_88() {
 }
 
 #[test]
+fn exports_89() {
+    let wasm = include_bytes!("wasm/exports_89.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_90() {
+    let wasm = include_bytes!("wasm/exports_90.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_91() {
+    let wasm = include_bytes!("wasm/exports_91.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_92() {
+    let wasm = include_bytes!("wasm/exports_92.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_93() {
+    let wasm = include_bytes!("wasm/exports_93.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_94() {
+    let wasm = include_bytes!("wasm/exports_94.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn exports_95() {
+    let wasm = include_bytes!("wasm/exports_95.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn local_set_0() {
     let wasm = include_bytes!("wasm/local_set_0.wasm");
     let module = Parser::new(wasm)
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn local_set_20() {
+    let wasm = include_bytes!("wasm/local_set_20.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_21() {
+    let wasm = include_bytes!("wasm/local_set_21.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_22() {
+    let wasm = include_bytes!("wasm/local_set_22.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_23() {
+    let wasm = include_bytes!("wasm/local_set_23.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_24() {
+    let wasm = include_bytes!("wasm/local_set_24.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_25() {
+    let wasm = include_bytes!("wasm/local_set_25.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_26() {
+    let wasm = include_bytes!("wasm/local_set_26.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_27() {
+    let wasm = include_bytes!("wasm/local_set_27.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_28() {
+    let wasm = include_bytes!("wasm/local_set_28.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_29() {
+    let wasm = include_bytes!("wasm/local_set_29.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_30() {
+    let wasm = include_bytes!("wasm/local_set_30.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_31() {
+    let wasm = include_bytes!("wasm/local_set_31.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_32() {
+    let wasm = include_bytes!("wasm/local_set_32.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_33() {
+    let wasm = include_bytes!("wasm/local_set_33.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_34() {
+    let wasm = include_bytes!("wasm/local_set_34.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_35() {
+    let wasm = include_bytes!("wasm/local_set_35.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_36() {
+    let wasm = include_bytes!("wasm/local_set_36.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_37() {
+    let wasm = include_bytes!("wasm/local_set_37.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_38() {
+    let wasm = include_bytes!("wasm/local_set_38.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_39() {
+    let wasm = include_bytes!("wasm/local_set_39.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_40() {
+    let wasm = include_bytes!("wasm/local_set_40.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_41() {
+    let wasm = include_bytes!("wasm/local_set_41.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_42() {
+    let wasm = include_bytes!("wasm/local_set_42.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_43() {
+    let wasm = include_bytes!("wasm/local_set_43.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_44() {
+    let wasm = include_bytes!("wasm/local_set_44.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_45() {
+    let wasm = include_bytes!("wasm/local_set_45.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_46() {
+    let wasm = include_bytes!("wasm/local_set_46.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_47() {
+    let wasm = include_bytes!("wasm/local_set_47.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_48() {
+    let wasm = include_bytes!("wasm/local_set_48.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_49() {
+    let wasm = include_bytes!("wasm/local_set_49.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_50() {
+    let wasm = include_bytes!("wasm/local_set_50.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_51() {
+    let wasm = include_bytes!("wasm/local_set_51.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_set_52() {
+    let wasm = include_bytes!("wasm/local_set_52.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -1597,6 +3267,376 @@ fn align_22() {
 }
 
 #[test]
+fn align_69() {
+    let wasm = include_bytes!("wasm/align_69.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_70() {
+    let wasm = include_bytes!("wasm/align_70.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_71() {
+    let wasm = include_bytes!("wasm/align_71.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_72() {
+    let wasm = include_bytes!("wasm/align_72.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_73() {
+    let wasm = include_bytes!("wasm/align_73.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_74() {
+    let wasm = include_bytes!("wasm/align_74.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_75() {
+    let wasm = include_bytes!("wasm/align_75.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_76() {
+    let wasm = include_bytes!("wasm/align_76.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_77() {
+    let wasm = include_bytes!("wasm/align_77.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_78() {
+    let wasm = include_bytes!("wasm/align_78.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_79() {
+    let wasm = include_bytes!("wasm/align_79.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_80() {
+    let wasm = include_bytes!("wasm/align_80.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_81() {
+    let wasm = include_bytes!("wasm/align_81.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_82() {
+    let wasm = include_bytes!("wasm/align_82.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_83() {
+    let wasm = include_bytes!("wasm/align_83.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_84() {
+    let wasm = include_bytes!("wasm/align_84.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_85() {
+    let wasm = include_bytes!("wasm/align_85.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_86() {
+    let wasm = include_bytes!("wasm/align_86.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_87() {
+    let wasm = include_bytes!("wasm/align_87.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_88() {
+    let wasm = include_bytes!("wasm/align_88.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_89() {
+    let wasm = include_bytes!("wasm/align_89.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_90() {
+    let wasm = include_bytes!("wasm/align_90.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_91() {
+    let wasm = include_bytes!("wasm/align_91.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_92() {
+    let wasm = include_bytes!("wasm/align_92.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_93() {
+    let wasm = include_bytes!("wasm/align_93.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_94() {
+    let wasm = include_bytes!("wasm/align_94.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_95() {
+    let wasm = include_bytes!("wasm/align_95.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_96() {
+    let wasm = include_bytes!("wasm/align_96.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_97() {
+    let wasm = include_bytes!("wasm/align_97.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_98() {
+    let wasm = include_bytes!("wasm/align_98.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_99() {
+    let wasm = include_bytes!("wasm/align_99.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_100() {
+    let wasm = include_bytes!("wasm/align_100.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_101() {
+    let wasm = include_bytes!("wasm/align_101.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_102() {
+    let wasm = include_bytes!("wasm/align_102.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_103() {
+    let wasm = include_bytes!("wasm/align_103.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_104() {
+    let wasm = include_bytes!("wasm/align_104.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn align_105() {
+    let wasm = include_bytes!("wasm/align_105.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn align_106() {
     let wasm = include_bytes!("wasm/align_106.wasm");
     let module = Parser::new(wasm)
@@ -1621,6 +3661,926 @@ fn if_0() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn if_135() {
+    let wasm = include_bytes!("wasm/if_135.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_136() {
+    let wasm = include_bytes!("wasm/if_136.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_137() {
+    let wasm = include_bytes!("wasm/if_137.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_138() {
+    let wasm = include_bytes!("wasm/if_138.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_139() {
+    let wasm = include_bytes!("wasm/if_139.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_140() {
+    let wasm = include_bytes!("wasm/if_140.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_141() {
+    let wasm = include_bytes!("wasm/if_141.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_142() {
+    let wasm = include_bytes!("wasm/if_142.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_143() {
+    let wasm = include_bytes!("wasm/if_143.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_144() {
+    let wasm = include_bytes!("wasm/if_144.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_145() {
+    let wasm = include_bytes!("wasm/if_145.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_146() {
+    let wasm = include_bytes!("wasm/if_146.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_147() {
+    let wasm = include_bytes!("wasm/if_147.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_148() {
+    let wasm = include_bytes!("wasm/if_148.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_149() {
+    let wasm = include_bytes!("wasm/if_149.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_150() {
+    let wasm = include_bytes!("wasm/if_150.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_151() {
+    let wasm = include_bytes!("wasm/if_151.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_152() {
+    let wasm = include_bytes!("wasm/if_152.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_153() {
+    let wasm = include_bytes!("wasm/if_153.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_154() {
+    let wasm = include_bytes!("wasm/if_154.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_155() {
+    let wasm = include_bytes!("wasm/if_155.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_156() {
+    let wasm = include_bytes!("wasm/if_156.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_157() {
+    let wasm = include_bytes!("wasm/if_157.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_158() {
+    let wasm = include_bytes!("wasm/if_158.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_159() {
+    let wasm = include_bytes!("wasm/if_159.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_160() {
+    let wasm = include_bytes!("wasm/if_160.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_161() {
+    let wasm = include_bytes!("wasm/if_161.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_162() {
+    let wasm = include_bytes!("wasm/if_162.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_163() {
+    let wasm = include_bytes!("wasm/if_163.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_164() {
+    let wasm = include_bytes!("wasm/if_164.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_165() {
+    let wasm = include_bytes!("wasm/if_165.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_166() {
+    let wasm = include_bytes!("wasm/if_166.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_167() {
+    let wasm = include_bytes!("wasm/if_167.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_168() {
+    let wasm = include_bytes!("wasm/if_168.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_169() {
+    let wasm = include_bytes!("wasm/if_169.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_170() {
+    let wasm = include_bytes!("wasm/if_170.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_171() {
+    let wasm = include_bytes!("wasm/if_171.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_172() {
+    let wasm = include_bytes!("wasm/if_172.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_173() {
+    let wasm = include_bytes!("wasm/if_173.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_174() {
+    let wasm = include_bytes!("wasm/if_174.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_175() {
+    let wasm = include_bytes!("wasm/if_175.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_176() {
+    let wasm = include_bytes!("wasm/if_176.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_177() {
+    let wasm = include_bytes!("wasm/if_177.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_178() {
+    let wasm = include_bytes!("wasm/if_178.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_179() {
+    let wasm = include_bytes!("wasm/if_179.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_180() {
+    let wasm = include_bytes!("wasm/if_180.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_181() {
+    let wasm = include_bytes!("wasm/if_181.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_182() {
+    let wasm = include_bytes!("wasm/if_182.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_183() {
+    let wasm = include_bytes!("wasm/if_183.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_184() {
+    let wasm = include_bytes!("wasm/if_184.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_185() {
+    let wasm = include_bytes!("wasm/if_185.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_186() {
+    let wasm = include_bytes!("wasm/if_186.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_187() {
+    let wasm = include_bytes!("wasm/if_187.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_188() {
+    let wasm = include_bytes!("wasm/if_188.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_189() {
+    let wasm = include_bytes!("wasm/if_189.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_190() {
+    let wasm = include_bytes!("wasm/if_190.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_191() {
+    let wasm = include_bytes!("wasm/if_191.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_192() {
+    let wasm = include_bytes!("wasm/if_192.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_193() {
+    let wasm = include_bytes!("wasm/if_193.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_194() {
+    let wasm = include_bytes!("wasm/if_194.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_195() {
+    let wasm = include_bytes!("wasm/if_195.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_196() {
+    let wasm = include_bytes!("wasm/if_196.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_197() {
+    let wasm = include_bytes!("wasm/if_197.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_198() {
+    let wasm = include_bytes!("wasm/if_198.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_199() {
+    let wasm = include_bytes!("wasm/if_199.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_200() {
+    let wasm = include_bytes!("wasm/if_200.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_201() {
+    let wasm = include_bytes!("wasm/if_201.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_202() {
+    let wasm = include_bytes!("wasm/if_202.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_203() {
+    let wasm = include_bytes!("wasm/if_203.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_204() {
+    let wasm = include_bytes!("wasm/if_204.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_205() {
+    let wasm = include_bytes!("wasm/if_205.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_206() {
+    let wasm = include_bytes!("wasm/if_206.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_207() {
+    let wasm = include_bytes!("wasm/if_207.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_208() {
+    let wasm = include_bytes!("wasm/if_208.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_209() {
+    let wasm = include_bytes!("wasm/if_209.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_210() {
+    let wasm = include_bytes!("wasm/if_210.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_211() {
+    let wasm = include_bytes!("wasm/if_211.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_212() {
+    let wasm = include_bytes!("wasm/if_212.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_213() {
+    let wasm = include_bytes!("wasm/if_213.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_214() {
+    let wasm = include_bytes!("wasm/if_214.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_215() {
+    let wasm = include_bytes!("wasm/if_215.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_216() {
+    let wasm = include_bytes!("wasm/if_216.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_217() {
+    let wasm = include_bytes!("wasm/if_217.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_218() {
+    let wasm = include_bytes!("wasm/if_218.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_219() {
+    let wasm = include_bytes!("wasm/if_219.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_220() {
+    let wasm = include_bytes!("wasm/if_220.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_221() {
+    let wasm = include_bytes!("wasm/if_221.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_222() {
+    let wasm = include_bytes!("wasm/if_222.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_223() {
+    let wasm = include_bytes!("wasm/if_223.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_224() {
+    let wasm = include_bytes!("wasm/if_224.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_225() {
+    let wasm = include_bytes!("wasm/if_225.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn if_226() {
+    let wasm = include_bytes!("wasm/if_226.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -5260,12 +8220,2802 @@ fn f64_cmp_0() {
 }
 
 #[test]
+fn f64_cmp_2401() {
+    let wasm = include_bytes!("wasm/f64_cmp_2401.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f64_cmp_2402() {
+    let wasm = include_bytes!("wasm/f64_cmp_2402.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f64_cmp_2403() {
+    let wasm = include_bytes!("wasm/f64_cmp_2403.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f64_cmp_2404() {
+    let wasm = include_bytes!("wasm/f64_cmp_2404.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f64_cmp_2405() {
+    let wasm = include_bytes!("wasm/f64_cmp_2405.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f64_cmp_2406() {
+    let wasm = include_bytes!("wasm/f64_cmp_2406.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn block_0() {
     let wasm = include_bytes!("wasm/block_0.wasm");
     let module = Parser::new(wasm)
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn block_64() {
+    let wasm = include_bytes!("wasm/block_64.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_65() {
+    let wasm = include_bytes!("wasm/block_65.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_66() {
+    let wasm = include_bytes!("wasm/block_66.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_67() {
+    let wasm = include_bytes!("wasm/block_67.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_68() {
+    let wasm = include_bytes!("wasm/block_68.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_69() {
+    let wasm = include_bytes!("wasm/block_69.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_70() {
+    let wasm = include_bytes!("wasm/block_70.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_71() {
+    let wasm = include_bytes!("wasm/block_71.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_72() {
+    let wasm = include_bytes!("wasm/block_72.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_73() {
+    let wasm = include_bytes!("wasm/block_73.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_74() {
+    let wasm = include_bytes!("wasm/block_74.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_75() {
+    let wasm = include_bytes!("wasm/block_75.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_76() {
+    let wasm = include_bytes!("wasm/block_76.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_77() {
+    let wasm = include_bytes!("wasm/block_77.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_78() {
+    let wasm = include_bytes!("wasm/block_78.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_79() {
+    let wasm = include_bytes!("wasm/block_79.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_80() {
+    let wasm = include_bytes!("wasm/block_80.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_81() {
+    let wasm = include_bytes!("wasm/block_81.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_82() {
+    let wasm = include_bytes!("wasm/block_82.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_83() {
+    let wasm = include_bytes!("wasm/block_83.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_84() {
+    let wasm = include_bytes!("wasm/block_84.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_85() {
+    let wasm = include_bytes!("wasm/block_85.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_86() {
+    let wasm = include_bytes!("wasm/block_86.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_87() {
+    let wasm = include_bytes!("wasm/block_87.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_88() {
+    let wasm = include_bytes!("wasm/block_88.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_89() {
+    let wasm = include_bytes!("wasm/block_89.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_90() {
+    let wasm = include_bytes!("wasm/block_90.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_91() {
+    let wasm = include_bytes!("wasm/block_91.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_92() {
+    let wasm = include_bytes!("wasm/block_92.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_93() {
+    let wasm = include_bytes!("wasm/block_93.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_94() {
+    let wasm = include_bytes!("wasm/block_94.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_95() {
+    let wasm = include_bytes!("wasm/block_95.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_96() {
+    let wasm = include_bytes!("wasm/block_96.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_97() {
+    let wasm = include_bytes!("wasm/block_97.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_98() {
+    let wasm = include_bytes!("wasm/block_98.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_99() {
+    let wasm = include_bytes!("wasm/block_99.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_100() {
+    let wasm = include_bytes!("wasm/block_100.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_101() {
+    let wasm = include_bytes!("wasm/block_101.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_102() {
+    let wasm = include_bytes!("wasm/block_102.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_103() {
+    let wasm = include_bytes!("wasm/block_103.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_104() {
+    let wasm = include_bytes!("wasm/block_104.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_105() {
+    let wasm = include_bytes!("wasm/block_105.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_106() {
+    let wasm = include_bytes!("wasm/block_106.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_107() {
+    let wasm = include_bytes!("wasm/block_107.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_108() {
+    let wasm = include_bytes!("wasm/block_108.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_109() {
+    let wasm = include_bytes!("wasm/block_109.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_110() {
+    let wasm = include_bytes!("wasm/block_110.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_111() {
+    let wasm = include_bytes!("wasm/block_111.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_112() {
+    let wasm = include_bytes!("wasm/block_112.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_113() {
+    let wasm = include_bytes!("wasm/block_113.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_114() {
+    let wasm = include_bytes!("wasm/block_114.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_115() {
+    let wasm = include_bytes!("wasm/block_115.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_116() {
+    let wasm = include_bytes!("wasm/block_116.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_117() {
+    let wasm = include_bytes!("wasm/block_117.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_118() {
+    let wasm = include_bytes!("wasm/block_118.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_119() {
+    let wasm = include_bytes!("wasm/block_119.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_120() {
+    let wasm = include_bytes!("wasm/block_120.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_121() {
+    let wasm = include_bytes!("wasm/block_121.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_122() {
+    let wasm = include_bytes!("wasm/block_122.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_123() {
+    let wasm = include_bytes!("wasm/block_123.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_124() {
+    let wasm = include_bytes!("wasm/block_124.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_125() {
+    let wasm = include_bytes!("wasm/block_125.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_126() {
+    let wasm = include_bytes!("wasm/block_126.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_127() {
+    let wasm = include_bytes!("wasm/block_127.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_128() {
+    let wasm = include_bytes!("wasm/block_128.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_129() {
+    let wasm = include_bytes!("wasm/block_129.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_130() {
+    let wasm = include_bytes!("wasm/block_130.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_131() {
+    let wasm = include_bytes!("wasm/block_131.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_132() {
+    let wasm = include_bytes!("wasm/block_132.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_133() {
+    let wasm = include_bytes!("wasm/block_133.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_134() {
+    let wasm = include_bytes!("wasm/block_134.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_135() {
+    let wasm = include_bytes!("wasm/block_135.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_136() {
+    let wasm = include_bytes!("wasm/block_136.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_137() {
+    let wasm = include_bytes!("wasm/block_137.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_138() {
+    let wasm = include_bytes!("wasm/block_138.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_139() {
+    let wasm = include_bytes!("wasm/block_139.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_140() {
+    let wasm = include_bytes!("wasm/block_140.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_141() {
+    let wasm = include_bytes!("wasm/block_141.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_142() {
+    let wasm = include_bytes!("wasm/block_142.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_143() {
+    let wasm = include_bytes!("wasm/block_143.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_144() {
+    let wasm = include_bytes!("wasm/block_144.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_145() {
+    let wasm = include_bytes!("wasm/block_145.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_146() {
+    let wasm = include_bytes!("wasm/block_146.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_147() {
+    let wasm = include_bytes!("wasm/block_147.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_148() {
+    let wasm = include_bytes!("wasm/block_148.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_149() {
+    let wasm = include_bytes!("wasm/block_149.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_150() {
+    let wasm = include_bytes!("wasm/block_150.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_151() {
+    let wasm = include_bytes!("wasm/block_151.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_152() {
+    let wasm = include_bytes!("wasm/block_152.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_153() {
+    let wasm = include_bytes!("wasm/block_153.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_154() {
+    let wasm = include_bytes!("wasm/block_154.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_155() {
+    let wasm = include_bytes!("wasm/block_155.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_156() {
+    let wasm = include_bytes!("wasm/block_156.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_157() {
+    let wasm = include_bytes!("wasm/block_157.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_158() {
+    let wasm = include_bytes!("wasm/block_158.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_159() {
+    let wasm = include_bytes!("wasm/block_159.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_160() {
+    let wasm = include_bytes!("wasm/block_160.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_161() {
+    let wasm = include_bytes!("wasm/block_161.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_162() {
+    let wasm = include_bytes!("wasm/block_162.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_163() {
+    let wasm = include_bytes!("wasm/block_163.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_164() {
+    let wasm = include_bytes!("wasm/block_164.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_165() {
+    let wasm = include_bytes!("wasm/block_165.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_166() {
+    let wasm = include_bytes!("wasm/block_166.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_167() {
+    let wasm = include_bytes!("wasm/block_167.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_168() {
+    let wasm = include_bytes!("wasm/block_168.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_169() {
+    let wasm = include_bytes!("wasm/block_169.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_170() {
+    let wasm = include_bytes!("wasm/block_170.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_171() {
+    let wasm = include_bytes!("wasm/block_171.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_172() {
+    let wasm = include_bytes!("wasm/block_172.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_173() {
+    let wasm = include_bytes!("wasm/block_173.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_174() {
+    let wasm = include_bytes!("wasm/block_174.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_175() {
+    let wasm = include_bytes!("wasm/block_175.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_176() {
+    let wasm = include_bytes!("wasm/block_176.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_177() {
+    let wasm = include_bytes!("wasm/block_177.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_178() {
+    let wasm = include_bytes!("wasm/block_178.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_179() {
+    let wasm = include_bytes!("wasm/block_179.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_180() {
+    let wasm = include_bytes!("wasm/block_180.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_181() {
+    let wasm = include_bytes!("wasm/block_181.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_182() {
+    let wasm = include_bytes!("wasm/block_182.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_183() {
+    let wasm = include_bytes!("wasm/block_183.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_184() {
+    let wasm = include_bytes!("wasm/block_184.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_185() {
+    let wasm = include_bytes!("wasm/block_185.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_186() {
+    let wasm = include_bytes!("wasm/block_186.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_187() {
+    let wasm = include_bytes!("wasm/block_187.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_188() {
+    let wasm = include_bytes!("wasm/block_188.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_189() {
+    let wasm = include_bytes!("wasm/block_189.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_190() {
+    let wasm = include_bytes!("wasm/block_190.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_191() {
+    let wasm = include_bytes!("wasm/block_191.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_192() {
+    let wasm = include_bytes!("wasm/block_192.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_193() {
+    let wasm = include_bytes!("wasm/block_193.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_194() {
+    let wasm = include_bytes!("wasm/block_194.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_195() {
+    let wasm = include_bytes!("wasm/block_195.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_196() {
+    let wasm = include_bytes!("wasm/block_196.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_197() {
+    let wasm = include_bytes!("wasm/block_197.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_198() {
+    let wasm = include_bytes!("wasm/block_198.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_199() {
+    let wasm = include_bytes!("wasm/block_199.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_200() {
+    let wasm = include_bytes!("wasm/block_200.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_201() {
+    let wasm = include_bytes!("wasm/block_201.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_202() {
+    let wasm = include_bytes!("wasm/block_202.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_203() {
+    let wasm = include_bytes!("wasm/block_203.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_204() {
+    let wasm = include_bytes!("wasm/block_204.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_205() {
+    let wasm = include_bytes!("wasm/block_205.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_206() {
+    let wasm = include_bytes!("wasm/block_206.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_207() {
+    let wasm = include_bytes!("wasm/block_207.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_208() {
+    let wasm = include_bytes!("wasm/block_208.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_209() {
+    let wasm = include_bytes!("wasm/block_209.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_210() {
+    let wasm = include_bytes!("wasm/block_210.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_211() {
+    let wasm = include_bytes!("wasm/block_211.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_212() {
+    let wasm = include_bytes!("wasm/block_212.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_213() {
+    let wasm = include_bytes!("wasm/block_213.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_214() {
+    let wasm = include_bytes!("wasm/block_214.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_215() {
+    let wasm = include_bytes!("wasm/block_215.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_216() {
+    let wasm = include_bytes!("wasm/block_216.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_217() {
+    let wasm = include_bytes!("wasm/block_217.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn block_218() {
+    let wasm = include_bytes!("wasm/block_218.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_0() {
+    let wasm = include_bytes!("wasm/unreached-invalid_0.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_1() {
+    let wasm = include_bytes!("wasm/unreached-invalid_1.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_2() {
+    let wasm = include_bytes!("wasm/unreached-invalid_2.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_3() {
+    let wasm = include_bytes!("wasm/unreached-invalid_3.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_4() {
+    let wasm = include_bytes!("wasm/unreached-invalid_4.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_5() {
+    let wasm = include_bytes!("wasm/unreached-invalid_5.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_6() {
+    let wasm = include_bytes!("wasm/unreached-invalid_6.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_7() {
+    let wasm = include_bytes!("wasm/unreached-invalid_7.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_8() {
+    let wasm = include_bytes!("wasm/unreached-invalid_8.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_9() {
+    let wasm = include_bytes!("wasm/unreached-invalid_9.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_10() {
+    let wasm = include_bytes!("wasm/unreached-invalid_10.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_11() {
+    let wasm = include_bytes!("wasm/unreached-invalid_11.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_12() {
+    let wasm = include_bytes!("wasm/unreached-invalid_12.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_13() {
+    let wasm = include_bytes!("wasm/unreached-invalid_13.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_14() {
+    let wasm = include_bytes!("wasm/unreached-invalid_14.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_15() {
+    let wasm = include_bytes!("wasm/unreached-invalid_15.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_16() {
+    let wasm = include_bytes!("wasm/unreached-invalid_16.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_17() {
+    let wasm = include_bytes!("wasm/unreached-invalid_17.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_18() {
+    let wasm = include_bytes!("wasm/unreached-invalid_18.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_19() {
+    let wasm = include_bytes!("wasm/unreached-invalid_19.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_20() {
+    let wasm = include_bytes!("wasm/unreached-invalid_20.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_21() {
+    let wasm = include_bytes!("wasm/unreached-invalid_21.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_22() {
+    let wasm = include_bytes!("wasm/unreached-invalid_22.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_23() {
+    let wasm = include_bytes!("wasm/unreached-invalid_23.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_24() {
+    let wasm = include_bytes!("wasm/unreached-invalid_24.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_25() {
+    let wasm = include_bytes!("wasm/unreached-invalid_25.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_26() {
+    let wasm = include_bytes!("wasm/unreached-invalid_26.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_27() {
+    let wasm = include_bytes!("wasm/unreached-invalid_27.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_28() {
+    let wasm = include_bytes!("wasm/unreached-invalid_28.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_29() {
+    let wasm = include_bytes!("wasm/unreached-invalid_29.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_30() {
+    let wasm = include_bytes!("wasm/unreached-invalid_30.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_31() {
+    let wasm = include_bytes!("wasm/unreached-invalid_31.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_32() {
+    let wasm = include_bytes!("wasm/unreached-invalid_32.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_33() {
+    let wasm = include_bytes!("wasm/unreached-invalid_33.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_34() {
+    let wasm = include_bytes!("wasm/unreached-invalid_34.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_35() {
+    let wasm = include_bytes!("wasm/unreached-invalid_35.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_36() {
+    let wasm = include_bytes!("wasm/unreached-invalid_36.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_37() {
+    let wasm = include_bytes!("wasm/unreached-invalid_37.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_38() {
+    let wasm = include_bytes!("wasm/unreached-invalid_38.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_39() {
+    let wasm = include_bytes!("wasm/unreached-invalid_39.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_40() {
+    let wasm = include_bytes!("wasm/unreached-invalid_40.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_41() {
+    let wasm = include_bytes!("wasm/unreached-invalid_41.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_42() {
+    let wasm = include_bytes!("wasm/unreached-invalid_42.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_43() {
+    let wasm = include_bytes!("wasm/unreached-invalid_43.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_44() {
+    let wasm = include_bytes!("wasm/unreached-invalid_44.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_45() {
+    let wasm = include_bytes!("wasm/unreached-invalid_45.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_46() {
+    let wasm = include_bytes!("wasm/unreached-invalid_46.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_47() {
+    let wasm = include_bytes!("wasm/unreached-invalid_47.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_48() {
+    let wasm = include_bytes!("wasm/unreached-invalid_48.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_49() {
+    let wasm = include_bytes!("wasm/unreached-invalid_49.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_50() {
+    let wasm = include_bytes!("wasm/unreached-invalid_50.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_51() {
+    let wasm = include_bytes!("wasm/unreached-invalid_51.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_52() {
+    let wasm = include_bytes!("wasm/unreached-invalid_52.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_53() {
+    let wasm = include_bytes!("wasm/unreached-invalid_53.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_54() {
+    let wasm = include_bytes!("wasm/unreached-invalid_54.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_55() {
+    let wasm = include_bytes!("wasm/unreached-invalid_55.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_56() {
+    let wasm = include_bytes!("wasm/unreached-invalid_56.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_57() {
+    let wasm = include_bytes!("wasm/unreached-invalid_57.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_58() {
+    let wasm = include_bytes!("wasm/unreached-invalid_58.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_59() {
+    let wasm = include_bytes!("wasm/unreached-invalid_59.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_60() {
+    let wasm = include_bytes!("wasm/unreached-invalid_60.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_61() {
+    let wasm = include_bytes!("wasm/unreached-invalid_61.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_62() {
+    let wasm = include_bytes!("wasm/unreached-invalid_62.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_63() {
+    let wasm = include_bytes!("wasm/unreached-invalid_63.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_64() {
+    let wasm = include_bytes!("wasm/unreached-invalid_64.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_65() {
+    let wasm = include_bytes!("wasm/unreached-invalid_65.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_66() {
+    let wasm = include_bytes!("wasm/unreached-invalid_66.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_67() {
+    let wasm = include_bytes!("wasm/unreached-invalid_67.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_68() {
+    let wasm = include_bytes!("wasm/unreached-invalid_68.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_69() {
+    let wasm = include_bytes!("wasm/unreached-invalid_69.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_70() {
+    let wasm = include_bytes!("wasm/unreached-invalid_70.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_71() {
+    let wasm = include_bytes!("wasm/unreached-invalid_71.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_72() {
+    let wasm = include_bytes!("wasm/unreached-invalid_72.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_73() {
+    let wasm = include_bytes!("wasm/unreached-invalid_73.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_74() {
+    let wasm = include_bytes!("wasm/unreached-invalid_74.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_75() {
+    let wasm = include_bytes!("wasm/unreached-invalid_75.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_76() {
+    let wasm = include_bytes!("wasm/unreached-invalid_76.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_77() {
+    let wasm = include_bytes!("wasm/unreached-invalid_77.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_78() {
+    let wasm = include_bytes!("wasm/unreached-invalid_78.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_79() {
+    let wasm = include_bytes!("wasm/unreached-invalid_79.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_80() {
+    let wasm = include_bytes!("wasm/unreached-invalid_80.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_81() {
+    let wasm = include_bytes!("wasm/unreached-invalid_81.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_82() {
+    let wasm = include_bytes!("wasm/unreached-invalid_82.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_83() {
+    let wasm = include_bytes!("wasm/unreached-invalid_83.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_84() {
+    let wasm = include_bytes!("wasm/unreached-invalid_84.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_85() {
+    let wasm = include_bytes!("wasm/unreached-invalid_85.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_86() {
+    let wasm = include_bytes!("wasm/unreached-invalid_86.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_87() {
+    let wasm = include_bytes!("wasm/unreached-invalid_87.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_88() {
+    let wasm = include_bytes!("wasm/unreached-invalid_88.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_89() {
+    let wasm = include_bytes!("wasm/unreached-invalid_89.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_90() {
+    let wasm = include_bytes!("wasm/unreached-invalid_90.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_91() {
+    let wasm = include_bytes!("wasm/unreached-invalid_91.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_92() {
+    let wasm = include_bytes!("wasm/unreached-invalid_92.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_93() {
+    let wasm = include_bytes!("wasm/unreached-invalid_93.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_94() {
+    let wasm = include_bytes!("wasm/unreached-invalid_94.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_95() {
+    let wasm = include_bytes!("wasm/unreached-invalid_95.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_96() {
+    let wasm = include_bytes!("wasm/unreached-invalid_96.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_97() {
+    let wasm = include_bytes!("wasm/unreached-invalid_97.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_98() {
+    let wasm = include_bytes!("wasm/unreached-invalid_98.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_99() {
+    let wasm = include_bytes!("wasm/unreached-invalid_99.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_100() {
+    let wasm = include_bytes!("wasm/unreached-invalid_100.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_101() {
+    let wasm = include_bytes!("wasm/unreached-invalid_101.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_102() {
+    let wasm = include_bytes!("wasm/unreached-invalid_102.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_103() {
+    let wasm = include_bytes!("wasm/unreached-invalid_103.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_104() {
+    let wasm = include_bytes!("wasm/unreached-invalid_104.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_105() {
+    let wasm = include_bytes!("wasm/unreached-invalid_105.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_106() {
+    let wasm = include_bytes!("wasm/unreached-invalid_106.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_107() {
+    let wasm = include_bytes!("wasm/unreached-invalid_107.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_108() {
+    let wasm = include_bytes!("wasm/unreached-invalid_108.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_109() {
+    let wasm = include_bytes!("wasm/unreached-invalid_109.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_110() {
+    let wasm = include_bytes!("wasm/unreached-invalid_110.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_111() {
+    let wasm = include_bytes!("wasm/unreached-invalid_111.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_112() {
+    let wasm = include_bytes!("wasm/unreached-invalid_112.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_113() {
+    let wasm = include_bytes!("wasm/unreached-invalid_113.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_114() {
+    let wasm = include_bytes!("wasm/unreached-invalid_114.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_115() {
+    let wasm = include_bytes!("wasm/unreached-invalid_115.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_116() {
+    let wasm = include_bytes!("wasm/unreached-invalid_116.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn unreached_invalid_117() {
+    let wasm = include_bytes!("wasm/unreached-invalid_117.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -5278,6 +11028,36 @@ fn labels_0() {
 }
 
 #[test]
+fn labels_26() {
+    let wasm = include_bytes!("wasm/labels_26.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn labels_27() {
+    let wasm = include_bytes!("wasm/labels_27.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn labels_28() {
+    let wasm = include_bytes!("wasm/labels_28.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn switch_0() {
     let wasm = include_bytes!("wasm/switch_0.wasm");
     let module = Parser::new(wasm)
@@ -5287,12 +11067,312 @@ fn switch_0() {
 }
 
 #[test]
+fn switch_27() {
+    let wasm = include_bytes!("wasm/switch_27.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn i64_0() {
     let wasm = include_bytes!("wasm/i64_0.wasm");
     let module = Parser::new(wasm)
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn i64_385() {
+    let wasm = include_bytes!("wasm/i64_385.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_386() {
+    let wasm = include_bytes!("wasm/i64_386.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_387() {
+    let wasm = include_bytes!("wasm/i64_387.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_388() {
+    let wasm = include_bytes!("wasm/i64_388.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_389() {
+    let wasm = include_bytes!("wasm/i64_389.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_390() {
+    let wasm = include_bytes!("wasm/i64_390.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_391() {
+    let wasm = include_bytes!("wasm/i64_391.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_392() {
+    let wasm = include_bytes!("wasm/i64_392.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_393() {
+    let wasm = include_bytes!("wasm/i64_393.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_394() {
+    let wasm = include_bytes!("wasm/i64_394.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_395() {
+    let wasm = include_bytes!("wasm/i64_395.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_396() {
+    let wasm = include_bytes!("wasm/i64_396.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_397() {
+    let wasm = include_bytes!("wasm/i64_397.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_398() {
+    let wasm = include_bytes!("wasm/i64_398.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_399() {
+    let wasm = include_bytes!("wasm/i64_399.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_400() {
+    let wasm = include_bytes!("wasm/i64_400.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_401() {
+    let wasm = include_bytes!("wasm/i64_401.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_402() {
+    let wasm = include_bytes!("wasm/i64_402.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_403() {
+    let wasm = include_bytes!("wasm/i64_403.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_404() {
+    let wasm = include_bytes!("wasm/i64_404.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_405() {
+    let wasm = include_bytes!("wasm/i64_405.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_406() {
+    let wasm = include_bytes!("wasm/i64_406.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_407() {
+    let wasm = include_bytes!("wasm/i64_407.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_408() {
+    let wasm = include_bytes!("wasm/i64_408.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_409() {
+    let wasm = include_bytes!("wasm/i64_409.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_410() {
+    let wasm = include_bytes!("wasm/i64_410.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_411() {
+    let wasm = include_bytes!("wasm/i64_411.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_412() {
+    let wasm = include_bytes!("wasm/i64_412.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i64_413() {
+    let wasm = include_bytes!("wasm/i64_413.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -5467,6 +11547,646 @@ fn memory_copy_3768() {
 }
 
 #[test]
+fn memory_copy_4119() {
+    let wasm = include_bytes!("wasm/memory_copy_4119.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4120() {
+    let wasm = include_bytes!("wasm/memory_copy_4120.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4121() {
+    let wasm = include_bytes!("wasm/memory_copy_4121.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4122() {
+    let wasm = include_bytes!("wasm/memory_copy_4122.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4123() {
+    let wasm = include_bytes!("wasm/memory_copy_4123.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4124() {
+    let wasm = include_bytes!("wasm/memory_copy_4124.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4125() {
+    let wasm = include_bytes!("wasm/memory_copy_4125.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4126() {
+    let wasm = include_bytes!("wasm/memory_copy_4126.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4127() {
+    let wasm = include_bytes!("wasm/memory_copy_4127.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4128() {
+    let wasm = include_bytes!("wasm/memory_copy_4128.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4129() {
+    let wasm = include_bytes!("wasm/memory_copy_4129.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4130() {
+    let wasm = include_bytes!("wasm/memory_copy_4130.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4131() {
+    let wasm = include_bytes!("wasm/memory_copy_4131.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4132() {
+    let wasm = include_bytes!("wasm/memory_copy_4132.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4133() {
+    let wasm = include_bytes!("wasm/memory_copy_4133.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4134() {
+    let wasm = include_bytes!("wasm/memory_copy_4134.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4135() {
+    let wasm = include_bytes!("wasm/memory_copy_4135.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4136() {
+    let wasm = include_bytes!("wasm/memory_copy_4136.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4137() {
+    let wasm = include_bytes!("wasm/memory_copy_4137.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4138() {
+    let wasm = include_bytes!("wasm/memory_copy_4138.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4139() {
+    let wasm = include_bytes!("wasm/memory_copy_4139.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4140() {
+    let wasm = include_bytes!("wasm/memory_copy_4140.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4141() {
+    let wasm = include_bytes!("wasm/memory_copy_4141.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4142() {
+    let wasm = include_bytes!("wasm/memory_copy_4142.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4143() {
+    let wasm = include_bytes!("wasm/memory_copy_4143.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4144() {
+    let wasm = include_bytes!("wasm/memory_copy_4144.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4145() {
+    let wasm = include_bytes!("wasm/memory_copy_4145.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4146() {
+    let wasm = include_bytes!("wasm/memory_copy_4146.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4147() {
+    let wasm = include_bytes!("wasm/memory_copy_4147.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4148() {
+    let wasm = include_bytes!("wasm/memory_copy_4148.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4149() {
+    let wasm = include_bytes!("wasm/memory_copy_4149.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4150() {
+    let wasm = include_bytes!("wasm/memory_copy_4150.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4151() {
+    let wasm = include_bytes!("wasm/memory_copy_4151.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4152() {
+    let wasm = include_bytes!("wasm/memory_copy_4152.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4153() {
+    let wasm = include_bytes!("wasm/memory_copy_4153.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4154() {
+    let wasm = include_bytes!("wasm/memory_copy_4154.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4155() {
+    let wasm = include_bytes!("wasm/memory_copy_4155.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4156() {
+    let wasm = include_bytes!("wasm/memory_copy_4156.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4157() {
+    let wasm = include_bytes!("wasm/memory_copy_4157.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4158() {
+    let wasm = include_bytes!("wasm/memory_copy_4158.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4159() {
+    let wasm = include_bytes!("wasm/memory_copy_4159.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4160() {
+    let wasm = include_bytes!("wasm/memory_copy_4160.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4161() {
+    let wasm = include_bytes!("wasm/memory_copy_4161.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4162() {
+    let wasm = include_bytes!("wasm/memory_copy_4162.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4163() {
+    let wasm = include_bytes!("wasm/memory_copy_4163.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4164() {
+    let wasm = include_bytes!("wasm/memory_copy_4164.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4165() {
+    let wasm = include_bytes!("wasm/memory_copy_4165.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4166() {
+    let wasm = include_bytes!("wasm/memory_copy_4166.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4167() {
+    let wasm = include_bytes!("wasm/memory_copy_4167.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4168() {
+    let wasm = include_bytes!("wasm/memory_copy_4168.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4169() {
+    let wasm = include_bytes!("wasm/memory_copy_4169.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4170() {
+    let wasm = include_bytes!("wasm/memory_copy_4170.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4171() {
+    let wasm = include_bytes!("wasm/memory_copy_4171.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4172() {
+    let wasm = include_bytes!("wasm/memory_copy_4172.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4173() {
+    let wasm = include_bytes!("wasm/memory_copy_4173.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4174() {
+    let wasm = include_bytes!("wasm/memory_copy_4174.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4175() {
+    let wasm = include_bytes!("wasm/memory_copy_4175.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4176() {
+    let wasm = include_bytes!("wasm/memory_copy_4176.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4177() {
+    let wasm = include_bytes!("wasm/memory_copy_4177.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4178() {
+    let wasm = include_bytes!("wasm/memory_copy_4178.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4179() {
+    let wasm = include_bytes!("wasm/memory_copy_4179.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4180() {
+    let wasm = include_bytes!("wasm/memory_copy_4180.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4181() {
+    let wasm = include_bytes!("wasm/memory_copy_4181.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_copy_4182() {
+    let wasm = include_bytes!("wasm/memory_copy_4182.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn memory_copy_4183() {
     let wasm = include_bytes!("wasm/memory_copy_4183.wasm");
     let module = Parser::new(wasm)
@@ -5620,12 +12340,532 @@ fn loop_0() {
 }
 
 #[test]
+fn loop_89() {
+    let wasm = include_bytes!("wasm/loop_89.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_90() {
+    let wasm = include_bytes!("wasm/loop_90.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_91() {
+    let wasm = include_bytes!("wasm/loop_91.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_92() {
+    let wasm = include_bytes!("wasm/loop_92.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_93() {
+    let wasm = include_bytes!("wasm/loop_93.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_94() {
+    let wasm = include_bytes!("wasm/loop_94.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_95() {
+    let wasm = include_bytes!("wasm/loop_95.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_96() {
+    let wasm = include_bytes!("wasm/loop_96.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_97() {
+    let wasm = include_bytes!("wasm/loop_97.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_98() {
+    let wasm = include_bytes!("wasm/loop_98.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_99() {
+    let wasm = include_bytes!("wasm/loop_99.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_100() {
+    let wasm = include_bytes!("wasm/loop_100.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_101() {
+    let wasm = include_bytes!("wasm/loop_101.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_102() {
+    let wasm = include_bytes!("wasm/loop_102.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_103() {
+    let wasm = include_bytes!("wasm/loop_103.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_104() {
+    let wasm = include_bytes!("wasm/loop_104.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_105() {
+    let wasm = include_bytes!("wasm/loop_105.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_106() {
+    let wasm = include_bytes!("wasm/loop_106.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_107() {
+    let wasm = include_bytes!("wasm/loop_107.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_108() {
+    let wasm = include_bytes!("wasm/loop_108.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_109() {
+    let wasm = include_bytes!("wasm/loop_109.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_110() {
+    let wasm = include_bytes!("wasm/loop_110.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_111() {
+    let wasm = include_bytes!("wasm/loop_111.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_112() {
+    let wasm = include_bytes!("wasm/loop_112.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_113() {
+    let wasm = include_bytes!("wasm/loop_113.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_114() {
+    let wasm = include_bytes!("wasm/loop_114.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn loop_115() {
+    let wasm = include_bytes!("wasm/loop_115.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn conversions_0() {
     let wasm = include_bytes!("wasm/conversions_0.wasm");
     let module = Parser::new(wasm)
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn conversions_594() {
+    let wasm = include_bytes!("wasm/conversions_594.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_595() {
+    let wasm = include_bytes!("wasm/conversions_595.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_596() {
+    let wasm = include_bytes!("wasm/conversions_596.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_597() {
+    let wasm = include_bytes!("wasm/conversions_597.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_598() {
+    let wasm = include_bytes!("wasm/conversions_598.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_599() {
+    let wasm = include_bytes!("wasm/conversions_599.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_600() {
+    let wasm = include_bytes!("wasm/conversions_600.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_601() {
+    let wasm = include_bytes!("wasm/conversions_601.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_602() {
+    let wasm = include_bytes!("wasm/conversions_602.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_603() {
+    let wasm = include_bytes!("wasm/conversions_603.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_604() {
+    let wasm = include_bytes!("wasm/conversions_604.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_605() {
+    let wasm = include_bytes!("wasm/conversions_605.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_606() {
+    let wasm = include_bytes!("wasm/conversions_606.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_607() {
+    let wasm = include_bytes!("wasm/conversions_607.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_608() {
+    let wasm = include_bytes!("wasm/conversions_608.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_609() {
+    let wasm = include_bytes!("wasm/conversions_609.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_610() {
+    let wasm = include_bytes!("wasm/conversions_610.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_611() {
+    let wasm = include_bytes!("wasm/conversions_611.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_612() {
+    let wasm = include_bytes!("wasm/conversions_612.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_613() {
+    let wasm = include_bytes!("wasm/conversions_613.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_614() {
+    let wasm = include_bytes!("wasm/conversions_614.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_615() {
+    let wasm = include_bytes!("wasm/conversions_615.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_616() {
+    let wasm = include_bytes!("wasm/conversions_616.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_617() {
+    let wasm = include_bytes!("wasm/conversions_617.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn conversions_618() {
+    let wasm = include_bytes!("wasm/conversions_618.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -5683,12 +12923,722 @@ fn return_0() {
 }
 
 #[test]
+fn return_64() {
+    let wasm = include_bytes!("wasm/return_64.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn return_65() {
+    let wasm = include_bytes!("wasm/return_65.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn return_66() {
+    let wasm = include_bytes!("wasm/return_66.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn return_67() {
+    let wasm = include_bytes!("wasm/return_67.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn return_68() {
+    let wasm = include_bytes!("wasm/return_68.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn return_69() {
+    let wasm = include_bytes!("wasm/return_69.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn return_70() {
+    let wasm = include_bytes!("wasm/return_70.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn return_71() {
+    let wasm = include_bytes!("wasm/return_71.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn return_72() {
+    let wasm = include_bytes!("wasm/return_72.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn return_73() {
+    let wasm = include_bytes!("wasm/return_73.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn return_74() {
+    let wasm = include_bytes!("wasm/return_74.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn return_75() {
+    let wasm = include_bytes!("wasm/return_75.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn return_76() {
+    let wasm = include_bytes!("wasm/return_76.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn return_77() {
+    let wasm = include_bytes!("wasm/return_77.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn return_78() {
+    let wasm = include_bytes!("wasm/return_78.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn return_79() {
+    let wasm = include_bytes!("wasm/return_79.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn return_80() {
+    let wasm = include_bytes!("wasm/return_80.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn return_81() {
+    let wasm = include_bytes!("wasm/return_81.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn return_82() {
+    let wasm = include_bytes!("wasm/return_82.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn return_83() {
+    let wasm = include_bytes!("wasm/return_83.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn store_0() {
     let wasm = include_bytes!("wasm/store_0.wasm");
     let module = Parser::new(wasm)
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn store_17() {
+    let wasm = include_bytes!("wasm/store_17.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_18() {
+    let wasm = include_bytes!("wasm/store_18.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_19() {
+    let wasm = include_bytes!("wasm/store_19.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_20() {
+    let wasm = include_bytes!("wasm/store_20.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_21() {
+    let wasm = include_bytes!("wasm/store_21.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_22() {
+    let wasm = include_bytes!("wasm/store_22.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_23() {
+    let wasm = include_bytes!("wasm/store_23.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_24() {
+    let wasm = include_bytes!("wasm/store_24.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_25() {
+    let wasm = include_bytes!("wasm/store_25.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_26() {
+    let wasm = include_bytes!("wasm/store_26.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_27() {
+    let wasm = include_bytes!("wasm/store_27.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_28() {
+    let wasm = include_bytes!("wasm/store_28.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_29() {
+    let wasm = include_bytes!("wasm/store_29.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_30() {
+    let wasm = include_bytes!("wasm/store_30.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_31() {
+    let wasm = include_bytes!("wasm/store_31.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_32() {
+    let wasm = include_bytes!("wasm/store_32.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_33() {
+    let wasm = include_bytes!("wasm/store_33.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_34() {
+    let wasm = include_bytes!("wasm/store_34.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_35() {
+    let wasm = include_bytes!("wasm/store_35.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_36() {
+    let wasm = include_bytes!("wasm/store_36.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_37() {
+    let wasm = include_bytes!("wasm/store_37.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_38() {
+    let wasm = include_bytes!("wasm/store_38.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_39() {
+    let wasm = include_bytes!("wasm/store_39.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_40() {
+    let wasm = include_bytes!("wasm/store_40.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_41() {
+    let wasm = include_bytes!("wasm/store_41.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_42() {
+    let wasm = include_bytes!("wasm/store_42.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_43() {
+    let wasm = include_bytes!("wasm/store_43.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_44() {
+    let wasm = include_bytes!("wasm/store_44.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_45() {
+    let wasm = include_bytes!("wasm/store_45.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_46() {
+    let wasm = include_bytes!("wasm/store_46.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_47() {
+    let wasm = include_bytes!("wasm/store_47.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_48() {
+    let wasm = include_bytes!("wasm/store_48.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_49() {
+    let wasm = include_bytes!("wasm/store_49.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_50() {
+    let wasm = include_bytes!("wasm/store_50.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_51() {
+    let wasm = include_bytes!("wasm/store_51.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_52() {
+    let wasm = include_bytes!("wasm/store_52.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_53() {
+    let wasm = include_bytes!("wasm/store_53.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_54() {
+    let wasm = include_bytes!("wasm/store_54.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_55() {
+    let wasm = include_bytes!("wasm/store_55.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_56() {
+    let wasm = include_bytes!("wasm/store_56.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_57() {
+    let wasm = include_bytes!("wasm/store_57.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_58() {
+    let wasm = include_bytes!("wasm/store_58.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_59() {
+    let wasm = include_bytes!("wasm/store_59.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_60() {
+    let wasm = include_bytes!("wasm/store_60.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_61() {
+    let wasm = include_bytes!("wasm/store_61.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_62() {
+    let wasm = include_bytes!("wasm/store_62.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_63() {
+    let wasm = include_bytes!("wasm/store_63.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_64() {
+    let wasm = include_bytes!("wasm/store_64.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_65() {
+    let wasm = include_bytes!("wasm/store_65.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_66() {
+    let wasm = include_bytes!("wasm/store_66.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn store_67() {
+    let wasm = include_bytes!("wasm/store_67.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -5707,6 +13657,836 @@ fn i32_0() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn i32_375() {
+    let wasm = include_bytes!("wasm/i32_375.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_376() {
+    let wasm = include_bytes!("wasm/i32_376.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_377() {
+    let wasm = include_bytes!("wasm/i32_377.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_378() {
+    let wasm = include_bytes!("wasm/i32_378.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_379() {
+    let wasm = include_bytes!("wasm/i32_379.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_380() {
+    let wasm = include_bytes!("wasm/i32_380.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_381() {
+    let wasm = include_bytes!("wasm/i32_381.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_382() {
+    let wasm = include_bytes!("wasm/i32_382.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_383() {
+    let wasm = include_bytes!("wasm/i32_383.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_384() {
+    let wasm = include_bytes!("wasm/i32_384.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_385() {
+    let wasm = include_bytes!("wasm/i32_385.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_386() {
+    let wasm = include_bytes!("wasm/i32_386.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_387() {
+    let wasm = include_bytes!("wasm/i32_387.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_388() {
+    let wasm = include_bytes!("wasm/i32_388.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_389() {
+    let wasm = include_bytes!("wasm/i32_389.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_390() {
+    let wasm = include_bytes!("wasm/i32_390.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_391() {
+    let wasm = include_bytes!("wasm/i32_391.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_392() {
+    let wasm = include_bytes!("wasm/i32_392.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_393() {
+    let wasm = include_bytes!("wasm/i32_393.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_394() {
+    let wasm = include_bytes!("wasm/i32_394.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_395() {
+    let wasm = include_bytes!("wasm/i32_395.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_396() {
+    let wasm = include_bytes!("wasm/i32_396.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_397() {
+    let wasm = include_bytes!("wasm/i32_397.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_398() {
+    let wasm = include_bytes!("wasm/i32_398.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_399() {
+    let wasm = include_bytes!("wasm/i32_399.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_400() {
+    let wasm = include_bytes!("wasm/i32_400.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_401() {
+    let wasm = include_bytes!("wasm/i32_401.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_402() {
+    let wasm = include_bytes!("wasm/i32_402.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_403() {
+    let wasm = include_bytes!("wasm/i32_403.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_404() {
+    let wasm = include_bytes!("wasm/i32_404.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_405() {
+    let wasm = include_bytes!("wasm/i32_405.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_406() {
+    let wasm = include_bytes!("wasm/i32_406.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_407() {
+    let wasm = include_bytes!("wasm/i32_407.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_408() {
+    let wasm = include_bytes!("wasm/i32_408.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_409() {
+    let wasm = include_bytes!("wasm/i32_409.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_410() {
+    let wasm = include_bytes!("wasm/i32_410.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_411() {
+    let wasm = include_bytes!("wasm/i32_411.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_412() {
+    let wasm = include_bytes!("wasm/i32_412.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_413() {
+    let wasm = include_bytes!("wasm/i32_413.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_414() {
+    let wasm = include_bytes!("wasm/i32_414.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_415() {
+    let wasm = include_bytes!("wasm/i32_415.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_416() {
+    let wasm = include_bytes!("wasm/i32_416.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_417() {
+    let wasm = include_bytes!("wasm/i32_417.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_418() {
+    let wasm = include_bytes!("wasm/i32_418.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_419() {
+    let wasm = include_bytes!("wasm/i32_419.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_420() {
+    let wasm = include_bytes!("wasm/i32_420.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_421() {
+    let wasm = include_bytes!("wasm/i32_421.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_422() {
+    let wasm = include_bytes!("wasm/i32_422.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_423() {
+    let wasm = include_bytes!("wasm/i32_423.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_424() {
+    let wasm = include_bytes!("wasm/i32_424.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_425() {
+    let wasm = include_bytes!("wasm/i32_425.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_426() {
+    let wasm = include_bytes!("wasm/i32_426.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_427() {
+    let wasm = include_bytes!("wasm/i32_427.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_428() {
+    let wasm = include_bytes!("wasm/i32_428.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_429() {
+    let wasm = include_bytes!("wasm/i32_429.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_430() {
+    let wasm = include_bytes!("wasm/i32_430.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_431() {
+    let wasm = include_bytes!("wasm/i32_431.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_432() {
+    let wasm = include_bytes!("wasm/i32_432.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_433() {
+    let wasm = include_bytes!("wasm/i32_433.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_434() {
+    let wasm = include_bytes!("wasm/i32_434.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_435() {
+    let wasm = include_bytes!("wasm/i32_435.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_436() {
+    let wasm = include_bytes!("wasm/i32_436.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_437() {
+    let wasm = include_bytes!("wasm/i32_437.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_438() {
+    let wasm = include_bytes!("wasm/i32_438.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_439() {
+    let wasm = include_bytes!("wasm/i32_439.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_440() {
+    let wasm = include_bytes!("wasm/i32_440.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_441() {
+    let wasm = include_bytes!("wasm/i32_441.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_442() {
+    let wasm = include_bytes!("wasm/i32_442.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_443() {
+    let wasm = include_bytes!("wasm/i32_443.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_444() {
+    let wasm = include_bytes!("wasm/i32_444.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_445() {
+    let wasm = include_bytes!("wasm/i32_445.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_446() {
+    let wasm = include_bytes!("wasm/i32_446.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_447() {
+    let wasm = include_bytes!("wasm/i32_447.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_448() {
+    let wasm = include_bytes!("wasm/i32_448.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_449() {
+    let wasm = include_bytes!("wasm/i32_449.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_450() {
+    let wasm = include_bytes!("wasm/i32_450.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_451() {
+    let wasm = include_bytes!("wasm/i32_451.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_452() {
+    let wasm = include_bytes!("wasm/i32_452.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_453() {
+    let wasm = include_bytes!("wasm/i32_453.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_454() {
+    let wasm = include_bytes!("wasm/i32_454.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_455() {
+    let wasm = include_bytes!("wasm/i32_455.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_456() {
+    let wasm = include_bytes!("wasm/i32_456.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn i32_457() {
+    let wasm = include_bytes!("wasm/i32_457.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -5881,12 +14661,452 @@ fn local_tee_0() {
 }
 
 #[test]
+fn local_tee_56() {
+    let wasm = include_bytes!("wasm/local_tee_56.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_57() {
+    let wasm = include_bytes!("wasm/local_tee_57.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_58() {
+    let wasm = include_bytes!("wasm/local_tee_58.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_59() {
+    let wasm = include_bytes!("wasm/local_tee_59.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_60() {
+    let wasm = include_bytes!("wasm/local_tee_60.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_61() {
+    let wasm = include_bytes!("wasm/local_tee_61.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_62() {
+    let wasm = include_bytes!("wasm/local_tee_62.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_63() {
+    let wasm = include_bytes!("wasm/local_tee_63.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_64() {
+    let wasm = include_bytes!("wasm/local_tee_64.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_65() {
+    let wasm = include_bytes!("wasm/local_tee_65.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_66() {
+    let wasm = include_bytes!("wasm/local_tee_66.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_67() {
+    let wasm = include_bytes!("wasm/local_tee_67.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_68() {
+    let wasm = include_bytes!("wasm/local_tee_68.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_69() {
+    let wasm = include_bytes!("wasm/local_tee_69.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_70() {
+    let wasm = include_bytes!("wasm/local_tee_70.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_71() {
+    let wasm = include_bytes!("wasm/local_tee_71.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_72() {
+    let wasm = include_bytes!("wasm/local_tee_72.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_73() {
+    let wasm = include_bytes!("wasm/local_tee_73.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_74() {
+    let wasm = include_bytes!("wasm/local_tee_74.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_75() {
+    let wasm = include_bytes!("wasm/local_tee_75.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_76() {
+    let wasm = include_bytes!("wasm/local_tee_76.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_77() {
+    let wasm = include_bytes!("wasm/local_tee_77.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_78() {
+    let wasm = include_bytes!("wasm/local_tee_78.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_79() {
+    let wasm = include_bytes!("wasm/local_tee_79.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_80() {
+    let wasm = include_bytes!("wasm/local_tee_80.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_81() {
+    let wasm = include_bytes!("wasm/local_tee_81.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_82() {
+    let wasm = include_bytes!("wasm/local_tee_82.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_83() {
+    let wasm = include_bytes!("wasm/local_tee_83.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_84() {
+    let wasm = include_bytes!("wasm/local_tee_84.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_85() {
+    let wasm = include_bytes!("wasm/local_tee_85.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_86() {
+    let wasm = include_bytes!("wasm/local_tee_86.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_87() {
+    let wasm = include_bytes!("wasm/local_tee_87.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_88() {
+    let wasm = include_bytes!("wasm/local_tee_88.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_89() {
+    let wasm = include_bytes!("wasm/local_tee_89.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_90() {
+    let wasm = include_bytes!("wasm/local_tee_90.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_91() {
+    let wasm = include_bytes!("wasm/local_tee_91.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_92() {
+    let wasm = include_bytes!("wasm/local_tee_92.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_93() {
+    let wasm = include_bytes!("wasm/local_tee_93.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_94() {
+    let wasm = include_bytes!("wasm/local_tee_94.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_95() {
+    let wasm = include_bytes!("wasm/local_tee_95.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn local_tee_96() {
+    let wasm = include_bytes!("wasm/local_tee_96.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn f64_bitwise_0() {
     let wasm = include_bytes!("wasm/f64_bitwise_0.wasm");
     let module = Parser::new(wasm)
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn f64_bitwise_361() {
+    let wasm = include_bytes!("wasm/f64_bitwise_361.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f64_bitwise_362() {
+    let wasm = include_bytes!("wasm/f64_bitwise_362.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f64_bitwise_363() {
+    let wasm = include_bytes!("wasm/f64_bitwise_363.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -6103,6 +15323,76 @@ fn memory_grow_51() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn memory_grow_89() {
+    let wasm = include_bytes!("wasm/memory_grow_89.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_grow_90() {
+    let wasm = include_bytes!("wasm/memory_grow_90.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_grow_91() {
+    let wasm = include_bytes!("wasm/memory_grow_91.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_grow_92() {
+    let wasm = include_bytes!("wasm/memory_grow_92.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_grow_93() {
+    let wasm = include_bytes!("wasm/memory_grow_93.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_grow_94() {
+    let wasm = include_bytes!("wasm/memory_grow_94.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_grow_95() {
+    let wasm = include_bytes!("wasm/memory_grow_95.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -6439,6 +15729,226 @@ fn call_indirect_123() {
 }
 
 #[test]
+fn call_indirect_147() {
+    let wasm = include_bytes!("wasm/call_indirect_147.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_indirect_148() {
+    let wasm = include_bytes!("wasm/call_indirect_148.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_indirect_149() {
+    let wasm = include_bytes!("wasm/call_indirect_149.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_indirect_150() {
+    let wasm = include_bytes!("wasm/call_indirect_150.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_indirect_151() {
+    let wasm = include_bytes!("wasm/call_indirect_151.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_indirect_152() {
+    let wasm = include_bytes!("wasm/call_indirect_152.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_indirect_153() {
+    let wasm = include_bytes!("wasm/call_indirect_153.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_indirect_154() {
+    let wasm = include_bytes!("wasm/call_indirect_154.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_indirect_155() {
+    let wasm = include_bytes!("wasm/call_indirect_155.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_indirect_156() {
+    let wasm = include_bytes!("wasm/call_indirect_156.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_indirect_157() {
+    let wasm = include_bytes!("wasm/call_indirect_157.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_indirect_158() {
+    let wasm = include_bytes!("wasm/call_indirect_158.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_indirect_159() {
+    let wasm = include_bytes!("wasm/call_indirect_159.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_indirect_160() {
+    let wasm = include_bytes!("wasm/call_indirect_160.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_indirect_161() {
+    let wasm = include_bytes!("wasm/call_indirect_161.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_indirect_162() {
+    let wasm = include_bytes!("wasm/call_indirect_162.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_indirect_163() {
+    let wasm = include_bytes!("wasm/call_indirect_163.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_indirect_164() {
+    let wasm = include_bytes!("wasm/call_indirect_164.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_indirect_165() {
+    let wasm = include_bytes!("wasm/call_indirect_165.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_indirect_166() {
+    let wasm = include_bytes!("wasm/call_indirect_166.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_indirect_167() {
+    let wasm = include_bytes!("wasm/call_indirect_167.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn call_indirect_168() {
+    let wasm = include_bytes!("wasm/call_indirect_168.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn call_indirect_169() {
     let wasm = include_bytes!("wasm/call_indirect_169.wasm");
     let module = Parser::new(wasm)
@@ -6463,6 +15973,466 @@ fn load_0() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn load_51() {
+    let wasm = include_bytes!("wasm/load_51.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_52() {
+    let wasm = include_bytes!("wasm/load_52.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_53() {
+    let wasm = include_bytes!("wasm/load_53.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_54() {
+    let wasm = include_bytes!("wasm/load_54.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_55() {
+    let wasm = include_bytes!("wasm/load_55.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_56() {
+    let wasm = include_bytes!("wasm/load_56.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_57() {
+    let wasm = include_bytes!("wasm/load_57.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_58() {
+    let wasm = include_bytes!("wasm/load_58.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_59() {
+    let wasm = include_bytes!("wasm/load_59.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_60() {
+    let wasm = include_bytes!("wasm/load_60.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_61() {
+    let wasm = include_bytes!("wasm/load_61.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_62() {
+    let wasm = include_bytes!("wasm/load_62.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_63() {
+    let wasm = include_bytes!("wasm/load_63.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_64() {
+    let wasm = include_bytes!("wasm/load_64.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_65() {
+    let wasm = include_bytes!("wasm/load_65.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_66() {
+    let wasm = include_bytes!("wasm/load_66.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_67() {
+    let wasm = include_bytes!("wasm/load_67.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_68() {
+    let wasm = include_bytes!("wasm/load_68.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_69() {
+    let wasm = include_bytes!("wasm/load_69.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_70() {
+    let wasm = include_bytes!("wasm/load_70.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_71() {
+    let wasm = include_bytes!("wasm/load_71.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_72() {
+    let wasm = include_bytes!("wasm/load_72.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_73() {
+    let wasm = include_bytes!("wasm/load_73.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_74() {
+    let wasm = include_bytes!("wasm/load_74.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_75() {
+    let wasm = include_bytes!("wasm/load_75.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_76() {
+    let wasm = include_bytes!("wasm/load_76.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_77() {
+    let wasm = include_bytes!("wasm/load_77.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_78() {
+    let wasm = include_bytes!("wasm/load_78.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_79() {
+    let wasm = include_bytes!("wasm/load_79.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_80() {
+    let wasm = include_bytes!("wasm/load_80.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_81() {
+    let wasm = include_bytes!("wasm/load_81.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_82() {
+    let wasm = include_bytes!("wasm/load_82.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_83() {
+    let wasm = include_bytes!("wasm/load_83.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_84() {
+    let wasm = include_bytes!("wasm/load_84.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_85() {
+    let wasm = include_bytes!("wasm/load_85.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_86() {
+    let wasm = include_bytes!("wasm/load_86.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_87() {
+    let wasm = include_bytes!("wasm/load_87.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_88() {
+    let wasm = include_bytes!("wasm/load_88.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_89() {
+    let wasm = include_bytes!("wasm/load_89.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_90() {
+    let wasm = include_bytes!("wasm/load_90.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_91() {
+    let wasm = include_bytes!("wasm/load_91.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_92() {
+    let wasm = include_bytes!("wasm/load_92.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_93() {
+    let wasm = include_bytes!("wasm/load_93.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_94() {
+    let wasm = include_bytes!("wasm/load_94.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_95() {
+    let wasm = include_bytes!("wasm/load_95.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn load_96() {
+    let wasm = include_bytes!("wasm/load_96.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -6538,6 +16508,646 @@ fn memory_fill_20() {
 }
 
 #[test]
+fn memory_fill_27() {
+    let wasm = include_bytes!("wasm/memory_fill_27.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_28() {
+    let wasm = include_bytes!("wasm/memory_fill_28.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_29() {
+    let wasm = include_bytes!("wasm/memory_fill_29.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_30() {
+    let wasm = include_bytes!("wasm/memory_fill_30.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_31() {
+    let wasm = include_bytes!("wasm/memory_fill_31.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_32() {
+    let wasm = include_bytes!("wasm/memory_fill_32.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_33() {
+    let wasm = include_bytes!("wasm/memory_fill_33.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_34() {
+    let wasm = include_bytes!("wasm/memory_fill_34.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_35() {
+    let wasm = include_bytes!("wasm/memory_fill_35.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_36() {
+    let wasm = include_bytes!("wasm/memory_fill_36.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_37() {
+    let wasm = include_bytes!("wasm/memory_fill_37.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_38() {
+    let wasm = include_bytes!("wasm/memory_fill_38.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_39() {
+    let wasm = include_bytes!("wasm/memory_fill_39.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_40() {
+    let wasm = include_bytes!("wasm/memory_fill_40.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_41() {
+    let wasm = include_bytes!("wasm/memory_fill_41.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_42() {
+    let wasm = include_bytes!("wasm/memory_fill_42.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_43() {
+    let wasm = include_bytes!("wasm/memory_fill_43.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_44() {
+    let wasm = include_bytes!("wasm/memory_fill_44.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_45() {
+    let wasm = include_bytes!("wasm/memory_fill_45.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_46() {
+    let wasm = include_bytes!("wasm/memory_fill_46.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_47() {
+    let wasm = include_bytes!("wasm/memory_fill_47.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_48() {
+    let wasm = include_bytes!("wasm/memory_fill_48.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_49() {
+    let wasm = include_bytes!("wasm/memory_fill_49.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_50() {
+    let wasm = include_bytes!("wasm/memory_fill_50.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_51() {
+    let wasm = include_bytes!("wasm/memory_fill_51.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_52() {
+    let wasm = include_bytes!("wasm/memory_fill_52.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_53() {
+    let wasm = include_bytes!("wasm/memory_fill_53.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_54() {
+    let wasm = include_bytes!("wasm/memory_fill_54.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_55() {
+    let wasm = include_bytes!("wasm/memory_fill_55.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_56() {
+    let wasm = include_bytes!("wasm/memory_fill_56.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_57() {
+    let wasm = include_bytes!("wasm/memory_fill_57.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_58() {
+    let wasm = include_bytes!("wasm/memory_fill_58.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_59() {
+    let wasm = include_bytes!("wasm/memory_fill_59.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_60() {
+    let wasm = include_bytes!("wasm/memory_fill_60.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_61() {
+    let wasm = include_bytes!("wasm/memory_fill_61.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_62() {
+    let wasm = include_bytes!("wasm/memory_fill_62.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_63() {
+    let wasm = include_bytes!("wasm/memory_fill_63.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_64() {
+    let wasm = include_bytes!("wasm/memory_fill_64.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_65() {
+    let wasm = include_bytes!("wasm/memory_fill_65.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_66() {
+    let wasm = include_bytes!("wasm/memory_fill_66.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_67() {
+    let wasm = include_bytes!("wasm/memory_fill_67.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_68() {
+    let wasm = include_bytes!("wasm/memory_fill_68.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_69() {
+    let wasm = include_bytes!("wasm/memory_fill_69.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_70() {
+    let wasm = include_bytes!("wasm/memory_fill_70.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_71() {
+    let wasm = include_bytes!("wasm/memory_fill_71.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_72() {
+    let wasm = include_bytes!("wasm/memory_fill_72.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_73() {
+    let wasm = include_bytes!("wasm/memory_fill_73.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_74() {
+    let wasm = include_bytes!("wasm/memory_fill_74.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_75() {
+    let wasm = include_bytes!("wasm/memory_fill_75.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_76() {
+    let wasm = include_bytes!("wasm/memory_fill_76.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_77() {
+    let wasm = include_bytes!("wasm/memory_fill_77.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_78() {
+    let wasm = include_bytes!("wasm/memory_fill_78.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_79() {
+    let wasm = include_bytes!("wasm/memory_fill_79.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_80() {
+    let wasm = include_bytes!("wasm/memory_fill_80.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_81() {
+    let wasm = include_bytes!("wasm/memory_fill_81.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_82() {
+    let wasm = include_bytes!("wasm/memory_fill_82.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_83() {
+    let wasm = include_bytes!("wasm/memory_fill_83.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_84() {
+    let wasm = include_bytes!("wasm/memory_fill_84.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_85() {
+    let wasm = include_bytes!("wasm/memory_fill_85.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_86() {
+    let wasm = include_bytes!("wasm/memory_fill_86.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_87() {
+    let wasm = include_bytes!("wasm/memory_fill_87.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_88() {
+    let wasm = include_bytes!("wasm/memory_fill_88.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_89() {
+    let wasm = include_bytes!("wasm/memory_fill_89.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_fill_90() {
+    let wasm = include_bytes!("wasm/memory_fill_90.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn memory_fill_91() {
     let wasm = include_bytes!("wasm/memory_fill_91.wasm");
     let module = Parser::new(wasm)
@@ -6601,6 +17211,26 @@ fn memory_size_28() {
 }
 
 #[test]
+fn memory_size_40() {
+    let wasm = include_bytes!("wasm/memory_size_40.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_size_41() {
+    let wasm = include_bytes!("wasm/memory_size_41.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn imports_0() {
     let wasm = include_bytes!("wasm/imports_0.wasm");
     let module = Parser::new(wasm)
@@ -6616,6 +17246,16 @@ fn imports_2() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn imports_5() {
+    let wasm = include_bytes!("wasm/imports_5.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -6961,6 +17601,36 @@ fn imports_119() {
 }
 
 #[test]
+fn imports_124() {
+    let wasm = include_bytes!("wasm/imports_124.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn imports_125() {
+    let wasm = include_bytes!("wasm/imports_125.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn imports_126() {
+    let wasm = include_bytes!("wasm/imports_126.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn imports_127() {
     let wasm = include_bytes!("wasm/imports_127.wasm");
     let module = Parser::new(wasm)
@@ -7102,6 +17772,26 @@ fn ref_is_null_0() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn ref_is_null_14() {
+    let wasm = include_bytes!("wasm/ref_is_null_14.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn ref_is_null_15() {
+    let wasm = include_bytes!("wasm/ref_is_null_15.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -7429,12 +18119,532 @@ fn br_table_0() {
 }
 
 #[test]
+fn br_table_150() {
+    let wasm = include_bytes!("wasm/br_table_150.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_151() {
+    let wasm = include_bytes!("wasm/br_table_151.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_152() {
+    let wasm = include_bytes!("wasm/br_table_152.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_153() {
+    let wasm = include_bytes!("wasm/br_table_153.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_154() {
+    let wasm = include_bytes!("wasm/br_table_154.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_155() {
+    let wasm = include_bytes!("wasm/br_table_155.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_156() {
+    let wasm = include_bytes!("wasm/br_table_156.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_157() {
+    let wasm = include_bytes!("wasm/br_table_157.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_158() {
+    let wasm = include_bytes!("wasm/br_table_158.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_159() {
+    let wasm = include_bytes!("wasm/br_table_159.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_160() {
+    let wasm = include_bytes!("wasm/br_table_160.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_161() {
+    let wasm = include_bytes!("wasm/br_table_161.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_162() {
+    let wasm = include_bytes!("wasm/br_table_162.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_163() {
+    let wasm = include_bytes!("wasm/br_table_163.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_164() {
+    let wasm = include_bytes!("wasm/br_table_164.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_165() {
+    let wasm = include_bytes!("wasm/br_table_165.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_166() {
+    let wasm = include_bytes!("wasm/br_table_166.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_167() {
+    let wasm = include_bytes!("wasm/br_table_167.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_168() {
+    let wasm = include_bytes!("wasm/br_table_168.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_169() {
+    let wasm = include_bytes!("wasm/br_table_169.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_170() {
+    let wasm = include_bytes!("wasm/br_table_170.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_171() {
+    let wasm = include_bytes!("wasm/br_table_171.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_172() {
+    let wasm = include_bytes!("wasm/br_table_172.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_table_173() {
+    let wasm = include_bytes!("wasm/br_table_173.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn select_0() {
     let wasm = include_bytes!("wasm/select_0.wasm");
     let module = Parser::new(wasm)
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn select_119() {
+    let wasm = include_bytes!("wasm/select_119.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_120() {
+    let wasm = include_bytes!("wasm/select_120.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_121() {
+    let wasm = include_bytes!("wasm/select_121.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_122() {
+    let wasm = include_bytes!("wasm/select_122.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_123() {
+    let wasm = include_bytes!("wasm/select_123.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_124() {
+    let wasm = include_bytes!("wasm/select_124.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_125() {
+    let wasm = include_bytes!("wasm/select_125.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_126() {
+    let wasm = include_bytes!("wasm/select_126.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_127() {
+    let wasm = include_bytes!("wasm/select_127.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_128() {
+    let wasm = include_bytes!("wasm/select_128.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_129() {
+    let wasm = include_bytes!("wasm/select_129.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_130() {
+    let wasm = include_bytes!("wasm/select_130.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_131() {
+    let wasm = include_bytes!("wasm/select_131.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_132() {
+    let wasm = include_bytes!("wasm/select_132.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_133() {
+    let wasm = include_bytes!("wasm/select_133.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_134() {
+    let wasm = include_bytes!("wasm/select_134.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_135() {
+    let wasm = include_bytes!("wasm/select_135.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_136() {
+    let wasm = include_bytes!("wasm/select_136.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_137() {
+    let wasm = include_bytes!("wasm/select_137.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_138() {
+    let wasm = include_bytes!("wasm/select_138.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_139() {
+    let wasm = include_bytes!("wasm/select_139.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_140() {
+    let wasm = include_bytes!("wasm/select_140.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_141() {
+    let wasm = include_bytes!("wasm/select_141.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_142() {
+    let wasm = include_bytes!("wasm/select_142.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_143() {
+    let wasm = include_bytes!("wasm/select_143.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_144() {
+    let wasm = include_bytes!("wasm/select_144.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_145() {
+    let wasm = include_bytes!("wasm/select_145.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn select_146() {
+    let wasm = include_bytes!("wasm/select_146.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -7453,6 +18663,36 @@ fn f32_bitwise_0() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn f32_bitwise_361() {
+    let wasm = include_bytes!("wasm/f32_bitwise_361.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f32_bitwise_362() {
+    let wasm = include_bytes!("wasm/f32_bitwise_362.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f32_bitwise_363() {
+    let wasm = include_bytes!("wasm/f32_bitwise_363.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -7492,6 +18732,26 @@ fn memory_init_96() {
 }
 
 #[test]
+fn memory_init_128() {
+    let wasm = include_bytes!("wasm/memory_init_128.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_129() {
+    let wasm = include_bytes!("wasm/memory_init_129.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn memory_init_130() {
     let wasm = include_bytes!("wasm/memory_init_130.wasm");
     let module = Parser::new(wasm)
@@ -7516,6 +18776,26 @@ fn memory_init_134() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn memory_init_136() {
+    let wasm = include_bytes!("wasm/memory_init_136.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_137() {
+    let wasm = include_bytes!("wasm/memory_init_137.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -7606,6 +18886,636 @@ fn memory_init_156() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn memory_init_158() {
+    let wasm = include_bytes!("wasm/memory_init_158.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_159() {
+    let wasm = include_bytes!("wasm/memory_init_159.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_160() {
+    let wasm = include_bytes!("wasm/memory_init_160.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_161() {
+    let wasm = include_bytes!("wasm/memory_init_161.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_162() {
+    let wasm = include_bytes!("wasm/memory_init_162.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_163() {
+    let wasm = include_bytes!("wasm/memory_init_163.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_164() {
+    let wasm = include_bytes!("wasm/memory_init_164.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_165() {
+    let wasm = include_bytes!("wasm/memory_init_165.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_166() {
+    let wasm = include_bytes!("wasm/memory_init_166.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_167() {
+    let wasm = include_bytes!("wasm/memory_init_167.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_168() {
+    let wasm = include_bytes!("wasm/memory_init_168.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_169() {
+    let wasm = include_bytes!("wasm/memory_init_169.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_170() {
+    let wasm = include_bytes!("wasm/memory_init_170.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_171() {
+    let wasm = include_bytes!("wasm/memory_init_171.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_172() {
+    let wasm = include_bytes!("wasm/memory_init_172.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_173() {
+    let wasm = include_bytes!("wasm/memory_init_173.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_174() {
+    let wasm = include_bytes!("wasm/memory_init_174.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_175() {
+    let wasm = include_bytes!("wasm/memory_init_175.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_176() {
+    let wasm = include_bytes!("wasm/memory_init_176.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_177() {
+    let wasm = include_bytes!("wasm/memory_init_177.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_178() {
+    let wasm = include_bytes!("wasm/memory_init_178.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_179() {
+    let wasm = include_bytes!("wasm/memory_init_179.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_180() {
+    let wasm = include_bytes!("wasm/memory_init_180.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_181() {
+    let wasm = include_bytes!("wasm/memory_init_181.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_182() {
+    let wasm = include_bytes!("wasm/memory_init_182.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_183() {
+    let wasm = include_bytes!("wasm/memory_init_183.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_184() {
+    let wasm = include_bytes!("wasm/memory_init_184.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_185() {
+    let wasm = include_bytes!("wasm/memory_init_185.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_186() {
+    let wasm = include_bytes!("wasm/memory_init_186.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_187() {
+    let wasm = include_bytes!("wasm/memory_init_187.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_188() {
+    let wasm = include_bytes!("wasm/memory_init_188.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_189() {
+    let wasm = include_bytes!("wasm/memory_init_189.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_190() {
+    let wasm = include_bytes!("wasm/memory_init_190.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_191() {
+    let wasm = include_bytes!("wasm/memory_init_191.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_192() {
+    let wasm = include_bytes!("wasm/memory_init_192.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_193() {
+    let wasm = include_bytes!("wasm/memory_init_193.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_194() {
+    let wasm = include_bytes!("wasm/memory_init_194.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_195() {
+    let wasm = include_bytes!("wasm/memory_init_195.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_196() {
+    let wasm = include_bytes!("wasm/memory_init_196.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_197() {
+    let wasm = include_bytes!("wasm/memory_init_197.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_198() {
+    let wasm = include_bytes!("wasm/memory_init_198.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_199() {
+    let wasm = include_bytes!("wasm/memory_init_199.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_200() {
+    let wasm = include_bytes!("wasm/memory_init_200.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_201() {
+    let wasm = include_bytes!("wasm/memory_init_201.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_202() {
+    let wasm = include_bytes!("wasm/memory_init_202.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_203() {
+    let wasm = include_bytes!("wasm/memory_init_203.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_204() {
+    let wasm = include_bytes!("wasm/memory_init_204.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_205() {
+    let wasm = include_bytes!("wasm/memory_init_205.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_206() {
+    let wasm = include_bytes!("wasm/memory_init_206.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_207() {
+    let wasm = include_bytes!("wasm/memory_init_207.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_208() {
+    let wasm = include_bytes!("wasm/memory_init_208.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_209() {
+    let wasm = include_bytes!("wasm/memory_init_209.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_210() {
+    let wasm = include_bytes!("wasm/memory_init_210.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_211() {
+    let wasm = include_bytes!("wasm/memory_init_211.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_212() {
+    let wasm = include_bytes!("wasm/memory_init_212.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_213() {
+    let wasm = include_bytes!("wasm/memory_init_213.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_214() {
+    let wasm = include_bytes!("wasm/memory_init_214.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_215() {
+    let wasm = include_bytes!("wasm/memory_init_215.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_216() {
+    let wasm = include_bytes!("wasm/memory_init_216.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_217() {
+    let wasm = include_bytes!("wasm/memory_init_217.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_218() {
+    let wasm = include_bytes!("wasm/memory_init_218.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_219() {
+    let wasm = include_bytes!("wasm/memory_init_219.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn memory_init_220() {
+    let wasm = include_bytes!("wasm/memory_init_220.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -7762,6 +19672,26 @@ fn elem_11() {
 }
 
 #[test]
+fn elem_14() {
+    let wasm = include_bytes!("wasm/elem_14.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_15() {
+    let wasm = include_bytes!("wasm/elem_15.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn elem_16() {
     let wasm = include_bytes!("wasm/elem_16.wasm");
     let module = Parser::new(wasm)
@@ -7870,6 +19800,216 @@ fn elem_40() {
 }
 
 #[test]
+fn elem_42() {
+    let wasm = include_bytes!("wasm/elem_42.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_43() {
+    let wasm = include_bytes!("wasm/elem_43.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_44() {
+    let wasm = include_bytes!("wasm/elem_44.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_45() {
+    let wasm = include_bytes!("wasm/elem_45.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_46() {
+    let wasm = include_bytes!("wasm/elem_46.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_47() {
+    let wasm = include_bytes!("wasm/elem_47.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_48() {
+    let wasm = include_bytes!("wasm/elem_48.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_49() {
+    let wasm = include_bytes!("wasm/elem_49.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_50() {
+    let wasm = include_bytes!("wasm/elem_50.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_51() {
+    let wasm = include_bytes!("wasm/elem_51.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_52() {
+    let wasm = include_bytes!("wasm/elem_52.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_53() {
+    let wasm = include_bytes!("wasm/elem_53.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_54() {
+    let wasm = include_bytes!("wasm/elem_54.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_55() {
+    let wasm = include_bytes!("wasm/elem_55.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_56() {
+    let wasm = include_bytes!("wasm/elem_56.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_57() {
+    let wasm = include_bytes!("wasm/elem_57.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_58() {
+    let wasm = include_bytes!("wasm/elem_58.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_59() {
+    let wasm = include_bytes!("wasm/elem_59.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_60() {
+    let wasm = include_bytes!("wasm/elem_60.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_61() {
+    let wasm = include_bytes!("wasm/elem_61.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_62() {
+    let wasm = include_bytes!("wasm/elem_62.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn elem_63() {
     let wasm = include_bytes!("wasm/elem_63.wasm");
     let module = Parser::new(wasm)
@@ -7912,6 +20052,46 @@ fn elem_76() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn elem_80() {
+    let wasm = include_bytes!("wasm/elem_80.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_81() {
+    let wasm = include_bytes!("wasm/elem_81.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_82() {
+    let wasm = include_bytes!("wasm/elem_82.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn elem_83() {
+    let wasm = include_bytes!("wasm/elem_83.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -7960,12 +20140,202 @@ fn table_get_0() {
 }
 
 #[test]
+fn table_get_11() {
+    let wasm = include_bytes!("wasm/table_get_11.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_get_12() {
+    let wasm = include_bytes!("wasm/table_get_12.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_get_13() {
+    let wasm = include_bytes!("wasm/table_get_13.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_get_14() {
+    let wasm = include_bytes!("wasm/table_get_14.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_get_15() {
+    let wasm = include_bytes!("wasm/table_get_15.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn f32_0() {
     let wasm = include_bytes!("wasm/f32_0.wasm");
     let module = Parser::new(wasm)
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn f32_2501() {
+    let wasm = include_bytes!("wasm/f32_2501.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f32_2502() {
+    let wasm = include_bytes!("wasm/f32_2502.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f32_2503() {
+    let wasm = include_bytes!("wasm/f32_2503.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f32_2504() {
+    let wasm = include_bytes!("wasm/f32_2504.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f32_2505() {
+    let wasm = include_bytes!("wasm/f32_2505.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f32_2506() {
+    let wasm = include_bytes!("wasm/f32_2506.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f32_2507() {
+    let wasm = include_bytes!("wasm/f32_2507.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f32_2508() {
+    let wasm = include_bytes!("wasm/f32_2508.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f32_2509() {
+    let wasm = include_bytes!("wasm/f32_2509.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f32_2510() {
+    let wasm = include_bytes!("wasm/f32_2510.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f32_2511() {
+    let wasm = include_bytes!("wasm/f32_2511.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn start_0() {
+    let wasm = include_bytes!("wasm/start_0.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn start_1() {
+    let wasm = include_bytes!("wasm/start_1.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn start_2() {
+    let wasm = include_bytes!("wasm/start_2.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -8941,12 +21311,102 @@ fn table_size_0() {
 }
 
 #[test]
+fn table_size_37() {
+    let wasm = include_bytes!("wasm/table_size_37.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_size_38() {
+    let wasm = include_bytes!("wasm/table_size_38.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn table_set_0() {
     let wasm = include_bytes!("wasm/table_set_0.wasm");
     let module = Parser::new(wasm)
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn table_set_19() {
+    let wasm = include_bytes!("wasm/table_set_19.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_set_20() {
+    let wasm = include_bytes!("wasm/table_set_20.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_set_21() {
+    let wasm = include_bytes!("wasm/table_set_21.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_set_22() {
+    let wasm = include_bytes!("wasm/table_set_22.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_set_23() {
+    let wasm = include_bytes!("wasm/table_set_23.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_set_24() {
+    let wasm = include_bytes!("wasm/table_set_24.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_set_25() {
+    let wasm = include_bytes!("wasm/table_set_25.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -8959,12 +21419,362 @@ fn f32_cmp_0() {
 }
 
 #[test]
+fn f32_cmp_2401() {
+    let wasm = include_bytes!("wasm/f32_cmp_2401.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f32_cmp_2402() {
+    let wasm = include_bytes!("wasm/f32_cmp_2402.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f32_cmp_2403() {
+    let wasm = include_bytes!("wasm/f32_cmp_2403.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f32_cmp_2404() {
+    let wasm = include_bytes!("wasm/f32_cmp_2404.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f32_cmp_2405() {
+    let wasm = include_bytes!("wasm/f32_cmp_2405.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f32_cmp_2406() {
+    let wasm = include_bytes!("wasm/f32_cmp_2406.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn br_if_0() {
     let wasm = include_bytes!("wasm/br_if_0.wasm");
     let module = Parser::new(wasm)
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn br_if_89() {
+    let wasm = include_bytes!("wasm/br_if_89.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_90() {
+    let wasm = include_bytes!("wasm/br_if_90.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_91() {
+    let wasm = include_bytes!("wasm/br_if_91.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_92() {
+    let wasm = include_bytes!("wasm/br_if_92.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_93() {
+    let wasm = include_bytes!("wasm/br_if_93.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_94() {
+    let wasm = include_bytes!("wasm/br_if_94.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_95() {
+    let wasm = include_bytes!("wasm/br_if_95.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_96() {
+    let wasm = include_bytes!("wasm/br_if_96.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_97() {
+    let wasm = include_bytes!("wasm/br_if_97.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_98() {
+    let wasm = include_bytes!("wasm/br_if_98.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_99() {
+    let wasm = include_bytes!("wasm/br_if_99.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_100() {
+    let wasm = include_bytes!("wasm/br_if_100.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_101() {
+    let wasm = include_bytes!("wasm/br_if_101.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_102() {
+    let wasm = include_bytes!("wasm/br_if_102.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_103() {
+    let wasm = include_bytes!("wasm/br_if_103.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_104() {
+    let wasm = include_bytes!("wasm/br_if_104.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_105() {
+    let wasm = include_bytes!("wasm/br_if_105.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_106() {
+    let wasm = include_bytes!("wasm/br_if_106.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_107() {
+    let wasm = include_bytes!("wasm/br_if_107.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_108() {
+    let wasm = include_bytes!("wasm/br_if_108.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_109() {
+    let wasm = include_bytes!("wasm/br_if_109.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_110() {
+    let wasm = include_bytes!("wasm/br_if_110.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_111() {
+    let wasm = include_bytes!("wasm/br_if_111.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_112() {
+    let wasm = include_bytes!("wasm/br_if_112.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_113() {
+    let wasm = include_bytes!("wasm/br_if_113.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_114() {
+    let wasm = include_bytes!("wasm/br_if_114.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_115() {
+    let wasm = include_bytes!("wasm/br_if_115.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_116() {
+    let wasm = include_bytes!("wasm/br_if_116.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_if_117() {
+    let wasm = include_bytes!("wasm/br_if_117.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -8986,12 +21796,42 @@ fn ref_func_2() {
 }
 
 #[test]
+fn ref_func_13() {
+    let wasm = include_bytes!("wasm/ref_func_13.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn ref_func_14() {
     let wasm = include_bytes!("wasm/ref_func_14.wasm");
     let module = Parser::new(wasm)
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn ref_func_15() {
+    let wasm = include_bytes!("wasm/ref_func_15.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn ref_func_16() {
+    let wasm = include_bytes!("wasm/ref_func_16.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -9019,6 +21859,96 @@ fn table_fill_0() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn table_fill_36() {
+    let wasm = include_bytes!("wasm/table_fill_36.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_fill_37() {
+    let wasm = include_bytes!("wasm/table_fill_37.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_fill_38() {
+    let wasm = include_bytes!("wasm/table_fill_38.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_fill_39() {
+    let wasm = include_bytes!("wasm/table_fill_39.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_fill_40() {
+    let wasm = include_bytes!("wasm/table_fill_40.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_fill_41() {
+    let wasm = include_bytes!("wasm/table_fill_41.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_fill_42() {
+    let wasm = include_bytes!("wasm/table_fill_42.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_fill_43() {
+    let wasm = include_bytes!("wasm/table_fill_43.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_fill_44() {
+    let wasm = include_bytes!("wasm/table_fill_44.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -9100,6 +22030,26 @@ fn data_8() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn data_9() {
+    let wasm = include_bytes!("wasm/data_9.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn data_10() {
+    let wasm = include_bytes!("wasm/data_10.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -9247,6 +22197,206 @@ fn data_26() {
 }
 
 #[test]
+fn data_41() {
+    let wasm = include_bytes!("wasm/data_41.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn data_42() {
+    let wasm = include_bytes!("wasm/data_42.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn data_43() {
+    let wasm = include_bytes!("wasm/data_43.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn data_44() {
+    let wasm = include_bytes!("wasm/data_44.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn data_45() {
+    let wasm = include_bytes!("wasm/data_45.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn data_46() {
+    let wasm = include_bytes!("wasm/data_46.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn data_47() {
+    let wasm = include_bytes!("wasm/data_47.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn data_48() {
+    let wasm = include_bytes!("wasm/data_48.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn data_49() {
+    let wasm = include_bytes!("wasm/data_49.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn data_50() {
+    let wasm = include_bytes!("wasm/data_50.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn data_51() {
+    let wasm = include_bytes!("wasm/data_51.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn data_52() {
+    let wasm = include_bytes!("wasm/data_52.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn data_53() {
+    let wasm = include_bytes!("wasm/data_53.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn data_54() {
+    let wasm = include_bytes!("wasm/data_54.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn data_55() {
+    let wasm = include_bytes!("wasm/data_55.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn data_56() {
+    let wasm = include_bytes!("wasm/data_56.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn data_57() {
+    let wasm = include_bytes!("wasm/data_57.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn data_58() {
+    let wasm = include_bytes!("wasm/data_58.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn data_59() {
+    let wasm = include_bytes!("wasm/data_59.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn data_60() {
+    let wasm = include_bytes!("wasm/data_60.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn int_literals_0() {
     let wasm = include_bytes!("wasm/int_literals_0.wasm");
     let module = Parser::new(wasm)
@@ -9337,12 +22487,152 @@ fn table_grow_39() {
 }
 
 #[test]
+fn table_grow_43() {
+    let wasm = include_bytes!("wasm/table_grow_43.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_grow_44() {
+    let wasm = include_bytes!("wasm/table_grow_44.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_grow_45() {
+    let wasm = include_bytes!("wasm/table_grow_45.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_grow_46() {
+    let wasm = include_bytes!("wasm/table_grow_46.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_grow_47() {
+    let wasm = include_bytes!("wasm/table_grow_47.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_grow_48() {
+    let wasm = include_bytes!("wasm/table_grow_48.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_grow_49() {
+    let wasm = include_bytes!("wasm/table_grow_49.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn func_ptrs_0() {
     let wasm = include_bytes!("wasm/func_ptrs_0.wasm");
     let module = Parser::new(wasm)
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn func_ptrs_5() {
+    let wasm = include_bytes!("wasm/func_ptrs_5.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_ptrs_6() {
+    let wasm = include_bytes!("wasm/func_ptrs_6.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_ptrs_7() {
+    let wasm = include_bytes!("wasm/func_ptrs_7.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_ptrs_8() {
+    let wasm = include_bytes!("wasm/func_ptrs_8.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_ptrs_9() {
+    let wasm = include_bytes!("wasm/func_ptrs_9.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_ptrs_10() {
+    let wasm = include_bytes!("wasm/func_ptrs_10.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn func_ptrs_11() {
+    let wasm = include_bytes!("wasm/func_ptrs_11.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -9424,6 +22714,46 @@ fn table_init_162() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn table_init_194() {
+    let wasm = include_bytes!("wasm/table_init_194.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_195() {
+    let wasm = include_bytes!("wasm/table_init_195.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_196() {
+    let wasm = include_bytes!("wasm/table_init_196.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_197() {
+    let wasm = include_bytes!("wasm/table_init_197.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -9616,6 +22946,636 @@ fn table_init_238() {
 }
 
 #[test]
+fn table_init_240() {
+    let wasm = include_bytes!("wasm/table_init_240.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_241() {
+    let wasm = include_bytes!("wasm/table_init_241.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_242() {
+    let wasm = include_bytes!("wasm/table_init_242.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_243() {
+    let wasm = include_bytes!("wasm/table_init_243.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_244() {
+    let wasm = include_bytes!("wasm/table_init_244.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_245() {
+    let wasm = include_bytes!("wasm/table_init_245.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_246() {
+    let wasm = include_bytes!("wasm/table_init_246.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_247() {
+    let wasm = include_bytes!("wasm/table_init_247.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_248() {
+    let wasm = include_bytes!("wasm/table_init_248.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_249() {
+    let wasm = include_bytes!("wasm/table_init_249.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_250() {
+    let wasm = include_bytes!("wasm/table_init_250.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_251() {
+    let wasm = include_bytes!("wasm/table_init_251.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_252() {
+    let wasm = include_bytes!("wasm/table_init_252.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_253() {
+    let wasm = include_bytes!("wasm/table_init_253.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_254() {
+    let wasm = include_bytes!("wasm/table_init_254.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_255() {
+    let wasm = include_bytes!("wasm/table_init_255.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_256() {
+    let wasm = include_bytes!("wasm/table_init_256.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_257() {
+    let wasm = include_bytes!("wasm/table_init_257.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_258() {
+    let wasm = include_bytes!("wasm/table_init_258.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_259() {
+    let wasm = include_bytes!("wasm/table_init_259.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_260() {
+    let wasm = include_bytes!("wasm/table_init_260.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_261() {
+    let wasm = include_bytes!("wasm/table_init_261.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_262() {
+    let wasm = include_bytes!("wasm/table_init_262.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_263() {
+    let wasm = include_bytes!("wasm/table_init_263.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_264() {
+    let wasm = include_bytes!("wasm/table_init_264.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_265() {
+    let wasm = include_bytes!("wasm/table_init_265.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_266() {
+    let wasm = include_bytes!("wasm/table_init_266.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_267() {
+    let wasm = include_bytes!("wasm/table_init_267.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_268() {
+    let wasm = include_bytes!("wasm/table_init_268.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_269() {
+    let wasm = include_bytes!("wasm/table_init_269.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_270() {
+    let wasm = include_bytes!("wasm/table_init_270.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_271() {
+    let wasm = include_bytes!("wasm/table_init_271.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_272() {
+    let wasm = include_bytes!("wasm/table_init_272.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_273() {
+    let wasm = include_bytes!("wasm/table_init_273.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_274() {
+    let wasm = include_bytes!("wasm/table_init_274.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_275() {
+    let wasm = include_bytes!("wasm/table_init_275.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_276() {
+    let wasm = include_bytes!("wasm/table_init_276.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_277() {
+    let wasm = include_bytes!("wasm/table_init_277.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_278() {
+    let wasm = include_bytes!("wasm/table_init_278.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_279() {
+    let wasm = include_bytes!("wasm/table_init_279.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_280() {
+    let wasm = include_bytes!("wasm/table_init_280.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_281() {
+    let wasm = include_bytes!("wasm/table_init_281.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_282() {
+    let wasm = include_bytes!("wasm/table_init_282.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_283() {
+    let wasm = include_bytes!("wasm/table_init_283.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_284() {
+    let wasm = include_bytes!("wasm/table_init_284.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_285() {
+    let wasm = include_bytes!("wasm/table_init_285.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_286() {
+    let wasm = include_bytes!("wasm/table_init_286.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_287() {
+    let wasm = include_bytes!("wasm/table_init_287.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_288() {
+    let wasm = include_bytes!("wasm/table_init_288.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_289() {
+    let wasm = include_bytes!("wasm/table_init_289.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_290() {
+    let wasm = include_bytes!("wasm/table_init_290.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_291() {
+    let wasm = include_bytes!("wasm/table_init_291.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_292() {
+    let wasm = include_bytes!("wasm/table_init_292.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_293() {
+    let wasm = include_bytes!("wasm/table_init_293.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_294() {
+    let wasm = include_bytes!("wasm/table_init_294.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_295() {
+    let wasm = include_bytes!("wasm/table_init_295.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_296() {
+    let wasm = include_bytes!("wasm/table_init_296.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_297() {
+    let wasm = include_bytes!("wasm/table_init_297.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_298() {
+    let wasm = include_bytes!("wasm/table_init_298.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_299() {
+    let wasm = include_bytes!("wasm/table_init_299.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_300() {
+    let wasm = include_bytes!("wasm/table_init_300.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_301() {
+    let wasm = include_bytes!("wasm/table_init_301.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_init_302() {
+    let wasm = include_bytes!("wasm/table_init_302.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn table_init_303() {
     let wasm = include_bytes!("wasm/table_init_303.wasm");
     let module = Parser::new(wasm)
@@ -9688,6 +23648,26 @@ fn global_0() {
 }
 
 #[test]
+fn global_59() {
+    let wasm = include_bytes!("wasm/global_59.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_60() {
+    let wasm = include_bytes!("wasm/global_60.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn global_61() {
     let wasm = include_bytes!("wasm/global_61.wasm");
     let module = Parser::new(wasm)
@@ -9706,6 +23686,186 @@ fn global_62() {
 }
 
 #[test]
+fn global_63() {
+    let wasm = include_bytes!("wasm/global_63.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_64() {
+    let wasm = include_bytes!("wasm/global_64.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_65() {
+    let wasm = include_bytes!("wasm/global_65.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_66() {
+    let wasm = include_bytes!("wasm/global_66.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_67() {
+    let wasm = include_bytes!("wasm/global_67.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_68() {
+    let wasm = include_bytes!("wasm/global_68.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_69() {
+    let wasm = include_bytes!("wasm/global_69.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_70() {
+    let wasm = include_bytes!("wasm/global_70.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_71() {
+    let wasm = include_bytes!("wasm/global_71.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_72() {
+    let wasm = include_bytes!("wasm/global_72.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_73() {
+    let wasm = include_bytes!("wasm/global_73.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_74() {
+    let wasm = include_bytes!("wasm/global_74.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_75() {
+    let wasm = include_bytes!("wasm/global_75.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_76() {
+    let wasm = include_bytes!("wasm/global_76.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_77() {
+    let wasm = include_bytes!("wasm/global_77.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_78() {
+    let wasm = include_bytes!("wasm/global_78.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_79() {
+    let wasm = include_bytes!("wasm/global_79.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_80() {
+    let wasm = include_bytes!("wasm/global_80.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn global_81() {
     let wasm = include_bytes!("wasm/global_81.wasm");
     let module = Parser::new(wasm)
@@ -9721,6 +23881,206 @@ fn global_84() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn global_87() {
+    let wasm = include_bytes!("wasm/global_87.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_88() {
+    let wasm = include_bytes!("wasm/global_88.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_89() {
+    let wasm = include_bytes!("wasm/global_89.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_90() {
+    let wasm = include_bytes!("wasm/global_90.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_91() {
+    let wasm = include_bytes!("wasm/global_91.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_92() {
+    let wasm = include_bytes!("wasm/global_92.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_93() {
+    let wasm = include_bytes!("wasm/global_93.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_94() {
+    let wasm = include_bytes!("wasm/global_94.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_95() {
+    let wasm = include_bytes!("wasm/global_95.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_96() {
+    let wasm = include_bytes!("wasm/global_96.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_97() {
+    let wasm = include_bytes!("wasm/global_97.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_98() {
+    let wasm = include_bytes!("wasm/global_98.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_99() {
+    let wasm = include_bytes!("wasm/global_99.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_100() {
+    let wasm = include_bytes!("wasm/global_100.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_101() {
+    let wasm = include_bytes!("wasm/global_101.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_102() {
+    let wasm = include_bytes!("wasm/global_102.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_103() {
+    let wasm = include_bytes!("wasm/global_103.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_104() {
+    let wasm = include_bytes!("wasm/global_104.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_105() {
+    let wasm = include_bytes!("wasm/global_105.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn global_106() {
+    let wasm = include_bytes!("wasm/global_106.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -9931,6 +24291,116 @@ fn f64_0() {
 }
 
 #[test]
+fn f64_2501() {
+    let wasm = include_bytes!("wasm/f64_2501.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f64_2502() {
+    let wasm = include_bytes!("wasm/f64_2502.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f64_2503() {
+    let wasm = include_bytes!("wasm/f64_2503.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f64_2504() {
+    let wasm = include_bytes!("wasm/f64_2504.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f64_2505() {
+    let wasm = include_bytes!("wasm/f64_2505.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f64_2506() {
+    let wasm = include_bytes!("wasm/f64_2506.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f64_2507() {
+    let wasm = include_bytes!("wasm/f64_2507.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f64_2508() {
+    let wasm = include_bytes!("wasm/f64_2508.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f64_2509() {
+    let wasm = include_bytes!("wasm/f64_2509.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f64_2510() {
+    let wasm = include_bytes!("wasm/f64_2510.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn f64_2511() {
+    let wasm = include_bytes!("wasm/f64_2511.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn br_0() {
     let wasm = include_bytes!("wasm/br_0.wasm");
     let module = Parser::new(wasm)
@@ -9940,12 +24410,252 @@ fn br_0() {
 }
 
 #[test]
+fn br_77() {
+    let wasm = include_bytes!("wasm/br_77.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_78() {
+    let wasm = include_bytes!("wasm/br_78.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_79() {
+    let wasm = include_bytes!("wasm/br_79.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_80() {
+    let wasm = include_bytes!("wasm/br_80.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_81() {
+    let wasm = include_bytes!("wasm/br_81.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_82() {
+    let wasm = include_bytes!("wasm/br_82.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_83() {
+    let wasm = include_bytes!("wasm/br_83.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_84() {
+    let wasm = include_bytes!("wasm/br_84.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_85() {
+    let wasm = include_bytes!("wasm/br_85.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_86() {
+    let wasm = include_bytes!("wasm/br_86.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_87() {
+    let wasm = include_bytes!("wasm/br_87.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_88() {
+    let wasm = include_bytes!("wasm/br_88.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_89() {
+    let wasm = include_bytes!("wasm/br_89.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_90() {
+    let wasm = include_bytes!("wasm/br_90.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_91() {
+    let wasm = include_bytes!("wasm/br_91.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_92() {
+    let wasm = include_bytes!("wasm/br_92.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_93() {
+    let wasm = include_bytes!("wasm/br_93.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_94() {
+    let wasm = include_bytes!("wasm/br_94.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_95() {
+    let wasm = include_bytes!("wasm/br_95.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn br_96() {
+    let wasm = include_bytes!("wasm/br_96.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn nop_0() {
     let wasm = include_bytes!("wasm/nop_0.wasm");
     let module = Parser::new(wasm)
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn nop_84() {
+    let wasm = include_bytes!("wasm/nop_84.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn nop_85() {
+    let wasm = include_bytes!("wasm/nop_85.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn nop_86() {
+    let wasm = include_bytes!("wasm/nop_86.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn nop_87() {
+    let wasm = include_bytes!("wasm/nop_87.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -10027,4 +24737,44 @@ fn table_8() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn table_9() {
+    let wasm = include_bytes!("wasm/table_9.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_10() {
+    let wasm = include_bytes!("wasm/table_10.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_11() {
+    let wasm = include_bytes!("wasm/table_11.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn table_12() {
+    let wasm = include_bytes!("wasm/table_12.wasm");
+    let Ok(module) = Parser::new(wasm).read_module() else {
+        // parse errors are accepted
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }

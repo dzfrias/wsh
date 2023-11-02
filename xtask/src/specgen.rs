@@ -42,14 +42,14 @@ fn convert_to_wasm(path: impl AsRef<Path>, out_path: impl AsRef<Path>) -> Result
                 let wasm = fs::read(&path)?;
                 let out = out_path.as_ref().join(name).with_extension("wasm");
                 fs::write(&out, wasm).context("error writing to generated wasm file")?;
-                write_test(out)?;
+                write_test(out, false)?;
             }
             Some("wat") => {
                 let input = fs::read_to_string(&path)?;
                 let wasm = wat::parse_str(&input)?;
                 let out = out_path.as_ref().join(name).with_extension("wasm");
                 fs::write(&out, wasm).context("error writing to generated wasm file")?;
-                write_test(out)?;
+                write_test(out, false)?;
             }
             Some("wast") => {
                 let input = fs::read_to_string(&path)?;
@@ -61,14 +61,20 @@ fn convert_to_wasm(path: impl AsRef<Path>, out_path: impl AsRef<Path>) -> Result
                     Err(_) => continue,
                 };
                 for (i, directive) in wast.directives.into_iter().enumerate() {
+                    let is_invalid = matches!(directive, wast::WastDirective::AssertInvalid { .. });
                     match directive {
-                        wast::WastDirective::Wat(mut module) => {
+                        wast::WastDirective::Wat(mut module)
+                        | wast::WastDirective::AssertInvalid {
+                            span: _,
+                            mut module,
+                            message: _,
+                        } => {
                             let wasm = module.encode()?;
                             let name = format!("{name}_{i}");
                             let out = out_path.as_ref().join(&name).with_extension("wasm");
                             fs::write(&out, wasm)
                                 .context("error writing to generated wasm file")?;
-                            write_test(out)?;
+                            write_test(out, is_invalid)?;
                         }
                         _ => continue,
                     }
@@ -81,7 +87,7 @@ fn convert_to_wasm(path: impl AsRef<Path>, out_path: impl AsRef<Path>) -> Result
     Ok(())
 }
 
-fn write_test(wasm: impl AsRef<Path>) -> Result<()> {
+fn write_test(wasm: impl AsRef<Path>, invalid: bool) -> Result<()> {
     let name = wasm
         .as_ref()
         .file_stem()
@@ -90,8 +96,23 @@ fn write_test(wasm: impl AsRef<Path>) -> Result<()> {
         .unwrap()
         .replace('-', "_");
     let wasm_str = wasm.as_ref().to_str().unwrap();
-    let test = format!(
-        r#"#[test]
+    let test = if invalid {
+        format!(
+            r#"#[test]
+fn {name}() {{
+    let wasm = include_bytes!("{wasm_str}");
+    let Ok(module) = Parser::new(wasm).read_module() else {{
+        // parse errors are accepted
+        return;
+    }};
+    validate(&module).expect_err("module should have a validation error");
+}}
+
+"#
+        )
+    } else {
+        format!(
+            r#"#[test]
 fn {name}() {{
     let wasm = include_bytes!("{wasm_str}");
     let module = Parser::new(wasm).read_module().expect("module should parse with no errors");
@@ -99,7 +120,8 @@ fn {name}() {{
 }}
 
 "#
-    );
+        )
+    };
     let mut file = OpenOptions::new()
         .append(true)
         .open("mod.rs")

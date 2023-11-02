@@ -653,8 +653,8 @@ impl<'a> Parser<'a> {
             .read_instrs(None)
             .context("error reading init instructions")?;
         ensure!(
-            init_expr.len() >= 2,
-            "init expr can must have 2+ instructions"
+            init_expr.len() == 2,
+            "init expr can must have 2 instructions"
         );
         // This is just a sanity check to make sure we didn't read until the end of the buffer (the
         // only other case when `read_instrs` would stop).
