@@ -4,6 +4,7 @@ mod spectests;
 
 use insta::{assert_display_snapshot, assert_snapshot};
 use shwasi_parser::{validate, Parser};
+use test_log::test;
 
 use crate::{inputs::*, pretty_fmt::pretty_fmt};
 

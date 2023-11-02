@@ -14,13 +14,18 @@ pub fn validate(m: &Module) -> Result<()> {
     Validator::new().validate_module(m)
 }
 
+#[derive(Debug, Clone, Copy)]
+// Necessary to distinguish the two because the base funtion frame should have no expected param
+// types
+enum FrameType {
+    Block(BlockType),
+    Function(u32),
+}
+
 /// A WebAssembly control frame.
 #[derive(Debug)]
-struct Frame<'a> {
-    label_ty: &'a [ValType],
-    // Cow here because of lifetime issues when using the single-val blocktype shorthand
-    // See https://webassembly.github.io/spec/core/syntax/instructions.html#syntax-blocktype
-    result: Cow<'a, [ValType]>,
+struct Frame {
+    ty: FrameType,
     init_height: usize,
     /// Handles stack-polymorphic typing.
     unreachable: bool,
@@ -103,7 +108,7 @@ impl From<&ValType> for Operand {
 #[derive(Debug)]
 struct Validator<'a> {
     // These are cached between function validations
-    frames: Vec<Frame<'a>>,
+    frames: Vec<Frame>,
     vals: Vec<Operand>,
     current_func: FuncCtx<'a>,
 
@@ -136,7 +141,7 @@ impl<'a> Validator<'a> {
         }
     }
 
-    #[instrument(level = "debug", skip(self))]
+    #[instrument(level = "debug", skip_all)]
     fn validate_module(mut self, m: &'a Module) -> Result<()> {
         info!("began module validation");
 
@@ -398,12 +403,15 @@ impl<'a> Validator<'a> {
         Ok(())
     }
 
-    #[instrument(level = "debug", skip(self))]
+    #[instrument(level = "debug", skip_all)]
     fn validate_codes(&mut self, codes: &[Code], funcs: &[Function]) -> Result<()> {
         for (code, func) in codes.iter().zip(funcs) {
             debug!("started validating function with index: {func}");
 
-            let ty = self.get_ty(func.index)?;
+            let ty = self
+                .module_tys
+                .get(func.index as usize)
+                .context("code section type not found")?;
             self.current_func.locals = ty.0.clone();
             self.current_func
                 .locals
@@ -412,7 +420,7 @@ impl<'a> Validator<'a> {
                 }));
             self.current_func.result = &ty.1;
             debug!("current function: {:?}", self.current_func);
-            self.push_frame(FrameKind::Function, &[], Cow::Borrowed(&ty.1));
+            self.push_func_frame(func.index)?;
 
             for instr in code.body.instrs() {
                 let instr = code.body.instruction(instr);
@@ -451,7 +459,9 @@ impl<'a> Validator<'a> {
         // Value stack must not be empty
         ensure!(
             self.vals.len() > last_frame.init_height,
-            "stack height mismatch when popping value"
+            "stack height mismatch when popping value: expected > {}, got {}",
+            last_frame.init_height,
+            self.vals.len()
         );
 
         Ok(self
@@ -486,23 +496,80 @@ impl<'a> Validator<'a> {
     }
 
     #[instrument(level = "debug", skip(self))]
-    fn push_frame(&mut self, kind: FrameKind, label_ty: &'a [ValType], result: Cow<'a, [ValType]>) {
+    fn push_frame(&mut self, kind: FrameKind, blockty: BlockType) -> Result<()> {
         self.frames.push(Frame {
-            label_ty,
-            result,
+            ty: FrameType::Block(blockty),
             kind,
             init_height: self.vals.len(),
             unreachable: false,
         });
-        self.push_vals(label_ty);
-        trace!("pushed frame");
+        self.push_vals(self.params(FrameType::Block(blockty))?);
+        debug!("pushed frame");
+
+        Ok(())
     }
 
-    fn pop_frame(&mut self) -> Result<Frame<'a>> {
+    #[instrument(level = "debug", skip(self))]
+    fn push_func_frame(&mut self, idx: u32) -> Result<()> {
+        self.frames.push(Frame {
+            ty: FrameType::Function(idx),
+            kind: FrameKind::Function,
+            init_height: self.vals.len(),
+            unreachable: false,
+        });
+        debug!("pushed function frame");
+
+        Ok(())
+    }
+
+    fn params(&self, blockty: FrameType) -> Result<&'a [ValType]> {
+        let FrameType::Block(blockty) = blockty else {
+            return Ok(&[]);
+        };
+
+        Ok(match blockty {
+            BlockType::Empty | BlockType::Type(_) => &[],
+            BlockType::FuncType(idx) => {
+                let ty = self
+                    .module_tys
+                    .get(idx as usize)
+                    .context("type not found")?;
+                &ty.0
+            }
+        })
+    }
+
+    fn results(&self, blockty: FrameType) -> Result<Cow<'a, [ValType]>> {
+        Ok(match blockty {
+            FrameType::Block(blockty) => match blockty {
+                BlockType::Empty => Cow::Borrowed(&[][..]),
+                BlockType::Type(ty) => Cow::Owned(vec![ty]),
+                BlockType::FuncType(idx) => {
+                    let ty = self
+                        .module_tys
+                        .get(idx as usize)
+                        .context("type not found")?;
+                    Cow::Borrowed(&ty.1)
+                }
+            },
+            FrameType::Function(idx) => Cow::Borrowed(
+                &self
+                    .module_tys
+                    .get(idx as usize)
+                    .context("type not found")?
+                    .1,
+            ),
+        })
+    }
+
+    fn pop_frame(&mut self) -> Result<Frame> {
         debug_assert!(!self.frames.is_empty());
 
         let last_frame = self.frames.last().expect("should have a frame");
-        self.expect_vals(last_frame.result.clone().iter())?;
+        let result = self.results(last_frame.ty)?;
+        self.expect_vals(result.iter()).with_context(|| {
+            format!("error getting result values from frame, expected: {result:?}",)
+        })?;
         let last_frame = self.frames.pop().expect("should have a frame");
         ensure!(
             self.vals.len() == last_frame.init_height,
@@ -510,6 +577,7 @@ impl<'a> Validator<'a> {
             last_frame.init_height,
             self.vals.len()
         );
+        debug!("popped frame: {last_frame:?}");
 
         Ok(last_frame)
     }
@@ -519,10 +587,11 @@ impl<'a> Validator<'a> {
         let last_frame = self.frames.last_mut().expect("should have a frame");
         last_frame.unreachable = true;
         self.vals.truncate(last_frame.init_height);
+        debug!("set current frame unreachable: {last_frame:?}");
     }
 
     #[inline]
-    fn get_frame_n(&self, n: usize) -> Option<&Frame<'a>> {
+    fn get_frame_n(&self, n: usize) -> Option<&Frame> {
         self.frames.get(self.frames.len() - n - 1)
     }
 
@@ -534,11 +603,17 @@ impl<'a> Validator<'a> {
             Instruction::Else => {
                 let frame = self.pop_frame()?;
                 ensure!(frame.kind == FrameKind::If, "unexpected else opcode");
-                self.push_frame(FrameKind::Else, frame.label_ty, frame.result);
+                let blockty = match frame.ty {
+                    FrameType::Block(b) => b,
+                    FrameType::Function(_) => {
+                        panic!("BUG: should not have `FrameType::Function` after `FrameKind::If")
+                    }
+                };
+                self.push_frame(FrameKind::Else, blockty)?;
             }
             Instruction::End => {
                 let frame = self.pop_frame()?;
-                self.push_vals(&frame.result);
+                self.push_vals(&self.results(frame.ty)?);
             }
             Instruction::Return => {
                 let func_ctx = self.current_func.result;
@@ -925,55 +1000,47 @@ impl<'a> Validator<'a> {
                 self.validate_mem_store(memarg, ValType::I64, Some(32))?;
             }
 
-            Instruction::Loop(ref blockty) | Instruction::Block(ref blockty) => {
-                let (labels, results) = match blockty {
-                    BlockType::Empty => (&[][..], Cow::Borrowed(&[][..])),
-                    BlockType::Type(ty) => (&[][..], Cow::Owned(vec![*ty])),
-                    BlockType::FuncType(idx) => {
-                        let ty = self.get_ty(*idx)?;
-                        (&ty.0[..], Cow::Borrowed(&ty.1[..]))
-                    }
-                };
-                self.expect_vals(labels.iter())?;
-                let kind = match instr {
-                    Instruction::Loop(_) => FrameKind::Loop,
-                    Instruction::Block(_) => FrameKind::Block,
-                    _ => unreachable!(),
-                };
-                self.push_frame(kind, labels, results);
+            Instruction::Loop(ref blockty) => {
+                self.expect_vals(self.params(FrameType::Block(*blockty))?.iter())?;
+                self.push_frame(FrameKind::Loop, *blockty)?;
+            }
+            Instruction::Block(ref blockty) => {
+                self.expect_vals(self.params(FrameType::Block(*blockty))?.iter())?;
+                self.push_frame(FrameKind::Block, *blockty)?;
             }
             Instruction::If(blockty) => {
                 self.expect_val(Operand::Exact(ValType::I32))?;
-                let (labels, results) = match blockty {
-                    BlockType::Empty => (&[][..], Cow::Borrowed(&[][..])),
-                    BlockType::Type(ty) => (&[][..], Cow::Owned(vec![ty])),
-                    BlockType::FuncType(idx) => {
-                        let ty = self.get_ty(idx)?;
-                        (&ty.0[..], Cow::Borrowed(&ty.1[..]))
-                    }
-                };
-                self.expect_vals(labels.iter())?;
-                self.push_frame(FrameKind::If, labels, results);
+                self.expect_vals(self.params(FrameType::Block(blockty))?.iter())?;
+                self.push_frame(FrameKind::If, blockty)?;
             }
             Instruction::Br { depth } => {
                 let frame = self
                     .get_frame_n(depth as usize)
                     .context("br to invalid depth")?;
-                self.expect_vals(frame.label_ty.iter())?;
+                match frame.kind {
+                    FrameKind::Loop => {
+                        self.expect_vals(self.params(frame.ty)?.iter())?;
+                    }
+                    _ => {
+                        self.expect_vals(self.results(frame.ty)?.iter())?;
+                    }
+                }
                 self.unreachable();
             }
             Instruction::BrTable(br_tbl) => {
                 self.expect_val(Operand::Exact(ValType::I32))?;
-                let default_labels = self
-                    .get_frame_n(br_tbl.default_depth as usize)
-                    .context("br_table to invalid depth")?
-                    .label_ty;
+                let default_labels = self.params(
+                    self.get_frame_n(br_tbl.default_depth as usize)
+                        .context("br_table to invalid depth")?
+                        .ty,
+                )?;
                 let arity = default_labels.len();
                 for depth in br_tbl.depths {
-                    let vals = self
-                        .get_frame_n(depth as usize)
-                        .context("br_table to invalid depth")?
-                        .label_ty;
+                    let vals = self.params(
+                        self.get_frame_n(depth as usize)
+                            .context("br_table to invalid depth")?
+                            .ty,
+                    )?;
                     ensure!(
                         vals.len() == arity,
                         "br_table arity mismatch, got {depth}, want {arity}"
@@ -988,11 +1055,18 @@ impl<'a> Validator<'a> {
                 let frame = self
                     .get_frame_n(depth as usize)
                     .context("br_if to invalid depth")?;
-                self.expect_vals(frame.label_ty.iter())?;
+                match frame.kind {
+                    FrameKind::Loop => {
+                        self.expect_vals(self.params(frame.ty)?.iter())?;
+                    }
+                    _ => {
+                        self.expect_vals(self.results(frame.ty)?.iter())?;
+                    }
+                }
                 // Need to get new reference for borrowck. Should be the same frame as before as
                 // long as `expect_vals` doesn't push or pop a frame (which it doesn't)
                 let frame = self.get_frame_n(depth as usize).unwrap();
-                self.push_vals(frame.label_ty);
+                self.push_vals(self.params(frame.ty)?);
                 self.unreachable();
             }
 
@@ -1123,7 +1197,10 @@ impl<'a> Validator<'a> {
                     "call.indirect table elem type must be of type funcref, got: {}",
                     table.elem_type
                 );
-                let ty = self.get_ty(type_idx)?;
+                let ty = self
+                    .module_tys
+                    .get(type_idx as usize)
+                    .context("call_indirect type not found")?;
                 self.expect_val(Operand::Exact(ValType::I32))?;
                 self.expect_vals(ty.0.iter())?;
                 self.push_vals(&ty.1);

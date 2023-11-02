@@ -27,3 +27,5 @@ bitflags = "2.4.1"
 [dev-dependencies]
 criterion = "0.5.1"
 insta = "1.34.0"
+test-log = { version = "0.2.13", default-features = false, features = ["trace"] }
+tracing-subscriber = {version = "0.3", default-features = false, features = ["env-filter", "fmt"]}

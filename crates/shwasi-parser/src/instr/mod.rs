@@ -43,7 +43,7 @@ struct InstrInfo {
     payload: u64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum BlockType {
     Empty,
     Type(ValType),
