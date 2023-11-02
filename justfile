@@ -14,7 +14,7 @@ check:
   cargo clippy --workspace
 
 test *ARGS:
-  cargo nextest run --workspace {{ARGS}}
+  RUST_LOG={{log}} RUST_BACKTRACE={{bt}} cargo nextest run --workspace {{ARGS}}
 
 build *ARGS:
   cargo build {{ARGS}}
@@ -33,8 +33,8 @@ bench *ARGS:
 parser *ARGS:
   @just -f ./crates/shwasi-parser/justfile {{ARGS}}
 
-fallback:
-  @just build
-  @just test
-  @just fmt
-  @just check
+@fallback:
+  just build
+  RUST_LOG={{log}} RUST_BACKTRACE={{bt}} just test
+  just fmt
+  just check
