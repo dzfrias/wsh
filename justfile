@@ -22,7 +22,7 @@ build *ARGS:
   @echo built project!
 
 fmt *ARGS:
-  cargo fmt {{ARGS}}
+  cargo fmt {{ARGS}} --all
 
 review:
   @cargo insta review
@@ -32,6 +32,9 @@ bench *ARGS:
 
 parser *ARGS:
   @just -f ./crates/shwasi-parser/justfile {{ARGS}}
+
+xtask *ARGS:
+  cargo xtask {{ARGS}}
 
 @fallback:
   just build

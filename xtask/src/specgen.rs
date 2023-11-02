@@ -103,12 +103,8 @@ fn write_test(wasm: impl AsRef<Path>, invalid: bool) -> Result<()> {
     let test = if invalid {
         format!(
             r#"#[test]
-fn {name}() {{
-    let wasm = include_bytes!("{wasm_str}");
-    let Ok(module) = Parser::new(wasm).read_module() else {{
-        // parse errors are accepted
-        return;
-    }};
+fn invalid_{name}() {{
+    let Ok(module) = Parser::new(include_bytes!("{wasm_str}")).read_module() else {{ return; }};
     validate(&module).expect_err("module should have a validation error");
 }}
 
@@ -118,8 +114,7 @@ fn {name}() {{
         format!(
             r#"#[test]
 fn {name}() {{
-    let wasm = include_bytes!("{wasm_str}");
-    let module = Parser::new(wasm).read_module().expect("module should parse with no errors");
+    let module = Parser::new(include_bytes!("{wasm_str}")).read_module().expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
 }}
 
