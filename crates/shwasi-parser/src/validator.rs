@@ -1336,7 +1336,7 @@ impl<'a> Validator<'a> {
         });
         ensure!(
             1 << memarg.align <= size / 8,
-            "memory load operation alignment must not be larger than natural alignment"
+            "memory load operation alignment must not be larger than natural alignment, got {memarg:?}, size: {size}, type: {valtype}"
         );
         self.expect_val(Operand::Exact(ValType::I32))?;
         self.push_val(Operand::Exact(valtype));

@@ -5,6 +5,7 @@ export RUST_LOG := log
 set fallback
 
 alias mkt := mktest
+alias val-mkt := val-mktest
 
 default: parent
 
@@ -43,6 +44,21 @@ val-crash NAME:
   echo "pub const {{uppercase(NAME)}}: &[u8] = include_bytes!(\"./inputs/{{NAME}}.wasm\");" >> ../inputs.rs
   printf "\n\n#[test]\nfn {{NAME}}() {\n    let module = Parser::new({{uppercase(NAME)}}).read_module().unwrap();\n    validate(&module).expect(\"validation should not fail\");\n}" >> ../tests.rs
   echo "created crash validator test, {{NAME}}.wasm!"
+
+val-mktest NAME KIND="good":
+  #!/bin/bash
+  set -euo pipefail
+  touch ./tests/inputs/dumbwasm/{{NAME}}.dumbwasm
+  cd ./tests/inputs
+  touch {{NAME}}.wasm
+  echo "pub const {{uppercase(NAME)}}: &[u8] = include_bytes!(\"./inputs/{{NAME}}.wasm\");" >> ../inputs.rs
+  echo created test, {{NAME}}.dumbwasm!
+  if [[ {{KIND}} == "good" ]]; then
+    printf "\n\n#[test]\nfn {{NAME}}() {\n    let module = Parser::new({{uppercase(NAME)}}).read_module().unwrap();\n    validate(&module).expect(\"validation should not fail\");\n}" >> ../tests.rs
+  else
+    printf "\n\n#[test]\nfn {{NAME}}() {\n    let module = Parser::new({{uppercase(NAME)}}).read_module().unwrap();\n    assert_display_snapshot!(validate(&module).unwrap_err().root_cause(), @\"\");\n}" >> ../tests.rs
+  fi
+  $EDITOR ./dumbwasm/{{NAME}}.dumbwasm
 
 build:
   cd tests/inputs && ls dumbwasm | xargs -I{} dumbwasm ./dumbwasm/{}

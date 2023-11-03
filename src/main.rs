@@ -4,7 +4,7 @@ use std::fs;
 
 use anyhow::{Context, Result};
 use clap::Parser as CliParser;
-use shwasi_parser::Parser;
+use shwasi_parser::{validate, Parser};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 use crate::cli::Cli;
@@ -21,8 +21,8 @@ fn main() -> Result<()> {
     // Logging setup
     let fmt_layer = fmt::layer();
     let filter_layer = EnvFilter::try_from_default_env()
-        .or_else(|_| EnvFilter::try_new("info"))
-        .expect("\"info\" should be a valid directive");
+        .or_else(|_| EnvFilter::try_new("warn"))
+        .expect("\"warn\" should be a valid directive");
     tracing_subscriber::registry()
         .with(filter_layer)
         .with(fmt_layer)
@@ -33,8 +33,8 @@ fn main() -> Result<()> {
 
     let parser = Parser::new(&input);
     let module = parser.read_module()?;
-
-    println!("{}", module.codes[0].body);
+    validate(&module).context("invalid module")?;
+    println!("module is valid!");
 
     Ok(())
 }

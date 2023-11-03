@@ -4,7 +4,7 @@ use std::{
 };
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use shwasi_parser::Parser;
+use shwasi_parser::{validate, Parser};
 
 #[derive(Debug)]
 struct BenchTarget {
@@ -44,12 +44,24 @@ fn run_benchmarks(c: &mut Criterion) {
     get_bench_inputs("./benches/inputs", &mut targets);
     get_bench_inputs("./tests/spectests/wasm", &mut targets);
 
+    for BenchTarget { path, wasm } in &targets {
+        let name = path.file_stem().unwrap().to_str().unwrap();
+        c.bench_function(&format!("parser:{name}"), |b| {
+            b.iter(|| {
+                let parser = Parser::new(wasm);
+                criterion::black_box(parser.read_module().expect("should be able to read module"));
+            });
+        });
+    }
+    println!("finished benchmarks for parser");
     for BenchTarget { path, wasm } in targets {
         let name = path.file_stem().unwrap().to_str().unwrap();
-        c.bench_function(name, |b| {
+        c.bench_function(&format!("validator:{name}"), |b| {
+            let module = Parser::new(&wasm)
+                .read_module()
+                .expect("should be able to read moudle");
             b.iter(|| {
-                let parser = Parser::new(&wasm);
-                criterion::black_box(parser.read_module().expect("should be able to read module"));
+                criterion::black_box(validate(&module).expect("module should be valid"));
             });
         });
     }
