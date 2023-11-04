@@ -12,18 +12,19 @@
 //!
 //! Here is a super simple WebAssembly module, in dumbwasm!
 //!
-//! ```dumbasm
+//! ```dumbwasm
 //! magic
 //! version
+//!
 //! type {
 //!   (anything in parens is skipped by the transpiler)
 //!   [
-//!     form.func 1 (params) i32 1 (result) i32,
+//!     ;; The square brackets automatically count up the number of items (delimited by a comma)!
+//!     form.func [] [i32],
 //!   ]
 //! }
 //! function {
-//!   ;; Equivalent to writing `[0]`! The square brackets automatically count up
-//!   ;; the number of items!
+//!   ;; Equivalent to writing `[0]`!
 //!   1 (number of funcs)
 //!   0 (index)
 //! }
@@ -80,21 +81,13 @@
 //! Literals of many forms are allowed in the text format. Primarily, this means numbers, strings,
 //! and vectors.
 //!
-//! The following number literals are supported:
+//! For numbers, you can specifiy a type after the literal. For example, `10<i32>` will be written
+//! as a signed 32-bit integer, as opposed to unsigned (the default). The type of literals like
+//! `-10` and `10.2` are inferred from the literal itself. This syntax is also applicable to hex
+//! and binary literal syntax!
 //!
-//! | Literal | Example |
-//! |---------|---------|
-//! | u32     | `10`    |
-//! | u64     | `U10`   |
-//! | s32     | `s10`   |
-//! | s64     | `S10`   |
-//! | u8      | `b5`    |
-//! | f32     | `f10.5` |
-//! | f64     | `F10.5` |
-//! | v128    | `v10`   |
-//! | s33     | `a10`   |
-//!
-//! TOOD: strings, vectors
+//! For strings, you can just put whatever you want in quotes! "hello world" will be encoded with
+//! its size as the first bytes, followed by UTF-8.
 //!
 //! ### Aliases
 //!
@@ -102,7 +95,7 @@
 //! hand if you were to make a WebAssembly binary. For example, `i32` directly translates to the
 //! number `0x7f`, no matter the context! You could even put `0x7f` in place of the magic value!
 //!
-//! Below is a table of such translations:
+//! Below is a table of such translations (not including instructions):
 //!
 //! | Syntax       | Output | Usage               |
 //! |--------------|--------|---------------------|
