@@ -7,7 +7,7 @@ use crate::{
     ValType, F32, F64,
 };
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 #[repr(u8)]
 pub enum Instruction {
     Unreachable = 0,

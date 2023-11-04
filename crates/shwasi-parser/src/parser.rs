@@ -660,11 +660,11 @@ impl<'a> Parser<'a> {
         // only other case when `read_instrs` would stop).
         let last = init_expr.last().unwrap();
         ensure!(
-            init_expr.opcode(last) == Opcode::End,
+            last.opcode() == Opcode::End,
             "init expr must end with an end instruction"
         );
         let instr = init_expr.first().unwrap();
-        let expr = match init_expr.instruction(instr) {
+        let expr = match instr {
             Instruction::I32Const(val) => InitExpr::I32Const(val),
             Instruction::I64Const(val) => InitExpr::I64Const(val),
             Instruction::F32Const(val) => InitExpr::F32Const(val),
@@ -988,7 +988,7 @@ impl<'a> Parser<'a> {
                             buffer.len()
                         );
                         buffer.shrink();
-                        buffer.add_instr(Instruction::End);
+                        buffer.push(Instruction::End);
                         return Ok(buffer);
                     }
                     stack.pop();
@@ -1179,7 +1179,7 @@ impl<'a> Parser<'a> {
             };
 
             trace!("read instruction: `{instr}`");
-            buffer.add_instr(instr);
+            buffer.push(instr);
         }
 
         buffer.shrink();

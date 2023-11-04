@@ -1,16 +1,13 @@
 mod instruction;
 mod opcode;
 
-use std::{fmt, mem};
+use std::{fmt, iter::FusedIterator, mem};
 
 use num_enum::TryFromPrimitive;
 
 pub use self::instruction::Instruction;
 pub use self::opcode::{is_prefix_byte, Opcode};
-use crate::module::{RefType, ValType, F32, F64};
-
-#[derive(Debug, Clone, Copy, Default, Hash)]
-pub struct InstrHandle(u32);
+use crate::{module::ValType, RefType, F32, F64};
 
 #[derive(Debug, Clone, Default)]
 pub struct InstrBuffer {
@@ -19,22 +16,23 @@ pub struct InstrBuffer {
     selects: Vec<Vec<ValType>>,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct MemArg {
     pub offset: u32,
     pub align: u32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BrTable {
     pub depths: Vec<u32>,
     pub default_depth: u32,
 }
 
 #[derive(Debug)]
-pub struct Instrs {
+pub struct Instrs<'a> {
+    buffer: &'a InstrBuffer,
     cap: usize,
-    current: u32,
+    current: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -43,7 +41,7 @@ struct InstrInfo {
     payload: u64,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BlockType {
     Empty,
     Type(ValType),
@@ -70,13 +68,6 @@ impl InstrBuffer {
         self.infos.shrink_to_fit();
     }
 
-    pub fn opcode(&self, instr: InstrHandle) -> Opcode {
-        let info = self.get_info(instr);
-        // SAFETY: the discriminant is a valid opcode because opcodes discriminants match up with
-        // instruction discriminants, and info.discriminant must come from a valid instruction.
-        info.opcode
-    }
-
     pub fn len(&self) -> usize {
         self.infos.len()
     }
@@ -85,36 +76,23 @@ impl InstrBuffer {
         self.len() == 0
     }
 
-    pub fn instrs(&self) -> Instrs {
+    pub fn iter(&self) -> Instrs {
         Instrs {
+            buffer: self,
             cap: self.len(),
             current: 0,
         }
     }
 
-    pub fn last(&self) -> Option<InstrHandle> {
-        if self.is_empty() {
-            return None;
-        }
-        Some(InstrHandle(self.len() as u32 - 1))
+    pub fn last(&self) -> Option<Instruction> {
+        self.get(self.len() - 1)
     }
 
-    pub fn first(&self) -> Option<InstrHandle> {
-        if self.is_empty() {
-            return None;
-        }
-        Some(InstrHandle(0))
+    pub fn first(&self) -> Option<Instruction> {
+        self.get(0)
     }
 
-    pub fn get(&self, n: usize) -> Option<InstrHandle> {
-        if n >= self.len() {
-            return None;
-        }
-
-        Some(InstrHandle(n as u32))
-    }
-
-    pub fn add_instr(&mut self, instr: Instruction) {
+    pub fn push(&mut self, instr: Instruction) {
         // The instruction's discriminant (a u8) is used to encode the instruction type. This will
         // differentiate between two instrucitons and their payloads. It can later be turned into
         // an Opcode through casting.
@@ -353,10 +331,10 @@ impl InstrBuffer {
         });
     }
 
-    pub fn instruction(&self, instr: InstrHandle) -> Instruction {
-        let info = self.get_info(instr);
+    pub fn get(&self, idx: usize) -> Option<Instruction> {
+        let info = self.get_info(idx)?;
 
-        match info.opcode {
+        let instr = match info.opcode {
             Opcode::Unreachable => Instruction::Unreachable,
             Opcode::Nop => Instruction::Nop,
             Opcode::Else => Instruction::Else,
@@ -701,42 +679,84 @@ impl InstrBuffer {
                 let types = &self.selects[info.payload as usize];
                 Instruction::SelectT(types.clone())
             }
-        }
+        };
+
+        Some(instr)
     }
 
-    fn get_info(&self, instr: InstrHandle) -> &InstrInfo {
-        &self.infos[instr.0 as usize]
+    fn get_info(&self, instr: usize) -> Option<&InstrInfo> {
+        self.infos.get(instr)
     }
 }
 
-impl Iterator for Instrs {
-    type Item = InstrHandle;
+impl<'a> Iterator for Instrs<'a> {
+    type Item = Instruction;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.cap == self.current as usize {
+        if self.cap == self.current {
             return None;
         }
 
-        let instr = InstrHandle(self.current);
+        let instr = self.current;
         self.current += 1;
-        Some(instr)
+        Some(self.buffer.get(instr).unwrap())
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.len();
+        (len, Some(len))
+    }
+}
+
+impl FusedIterator for Instrs<'_> {}
+
+impl ExactSizeIterator for Instrs<'_> {
+    fn len(&self) -> usize {
+        self.cap - self.current
+    }
+}
+
+impl DoubleEndedIterator for Instrs<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.cap == self.current {
+            return None;
+        }
+
+        self.cap -= 1;
+        Some(self.buffer.get(self.cap).unwrap())
+    }
+}
+
+impl<'a> IntoIterator for &'a InstrBuffer {
+    type Item = Instruction;
+    type IntoIter = Instrs<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut InstrBuffer {
+    type Item = Instruction;
+    type IntoIter = Instrs<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 
 impl fmt::Display for InstrBuffer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut indent = String::new();
-        for instr in self.instrs() {
-            let instruction = self.instruction(instr);
-
-            if self.opcode(instr) == Opcode::End {
+        for instruction in self.iter() {
+            if instruction.opcode() == Opcode::End {
                 indent.truncate(indent.len().saturating_sub(2));
             }
 
             writeln!(f, "{indent}{instruction}")?;
 
             if matches!(
-                self.opcode(instr),
+                instruction.opcode(),
                 Opcode::If | Opcode::Block | Opcode::Loop
             ) {
                 indent.push_str("  ");

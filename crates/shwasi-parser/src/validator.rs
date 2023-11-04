@@ -477,8 +477,7 @@ impl<'a> Validator<'a> {
             debug!("current function: {:?}", self.current_func);
             self.push_func_frame(func.index)?;
 
-            for instr in code.body.instrs() {
-                let instr = code.body.instruction(instr);
+            for instr in &code.body {
                 self.validate_instr(instr)?;
             }
 
