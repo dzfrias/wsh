@@ -32,6 +32,7 @@ jobs:
       - run: cargo install cargo-fuzz
       - run: cargo fuzz run parse --fuzz-dir ./crates/shwasi-parser/fuzz -- -max_total_time=60
       - run: cargo fuzz run module --fuzz-dir ./crates/shwasi-parser/fuzz -- -max_total_time=60
+      - run: cargo fuzz run validate --fuzz-dir ./crates/shwasi-parser/fuzz -- -max_total_time=60
 
   checkfmt:
     name: checkfmt
