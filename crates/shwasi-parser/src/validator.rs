@@ -503,6 +503,7 @@ impl<'a> Validator<'a> {
         }
     }
 
+    #[inline]
     fn push_val(&mut self, val: Operand) {
         self.vals.push(val);
     }
@@ -679,7 +680,11 @@ impl<'a> Validator<'a> {
     }
 
     fn validate_instr(&mut self, instr: Instruction) -> Result<()> {
+        // Make sure that this is not called in optimized builds. This improves performance by
+        // around 6%.
+        #[cfg(debug_assertions)]
         debug!("got instruction: {instr:?}");
+
         match instr {
             Instruction::Unreachable => self.unreachable(),
             Instruction::Nop => {}
@@ -1337,9 +1342,13 @@ impl<'a> Validator<'a> {
                 self.expect_val(Operand::Exact(ValType::I32))?;
             }
         }
-        trace!("values: {:?}", self.vals);
-        trace!("frames: {:?}", self.frames);
-        debug!("validated instruction");
+
+        #[cfg(debug_assertions)]
+        {
+            trace!("values: {:?}", self.vals);
+            trace!("frames: {:?}", self.frames);
+            debug!("validated instruction");
+        }
 
         Ok(())
     }
