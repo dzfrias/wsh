@@ -49,6 +49,10 @@ impl<'a> Parser<'a> {
             "did not finish reading module, still have {} bytes to read",
             self.bufsize as u64 - self.offset()
         );
+        ensure!(
+            self.module.functions.len() == self.module.codes.len(),
+            "function signatures do not match up with code section"
+        );
 
         Ok(self.module)
     }
@@ -139,6 +143,7 @@ impl<'a> Parser<'a> {
         while self.offset() < self.bufsize as u64 {
             let section_code: SectionCode =
                 self.read_u8()?.try_into().context("invalid section code")?;
+            debug!("found section: {section_code}");
             let size = self.read_u32_leb128()?;
             let end = self.offset() + size as u64;
             ensure!(end <= self.bufsize as u64, "section extends past end");
@@ -151,8 +156,17 @@ impl<'a> Parser<'a> {
             }
             match section_code {
                 SectionCode::Custom => {
-                    // skip custom sections, for now
+                    let name = self
+                        .read_str()
+                        .context("error reading custom section name")?;
+                    debug!("got custom section name: {name}");
+                    ensure!(
+                        self.offset() <= end,
+                        "custom section extends past section end"
+                    );
+                    // Skip custom sections, for now
                     self.buf.set_position(end);
+                    debug!("skipped custom section");
                 }
                 SectionCode::Type => self
                     .read_type_section()
@@ -488,7 +502,9 @@ impl<'a> Parser<'a> {
             function_bodies as usize == self.module.functions.len(),
             "should have the same amount of function bodies as types"
         );
+        let mut total_locals = 0u64;
         for _ in 0..function_bodies {
+            debug!("began reading function body");
             let body_size = self.read_u32_leb128()?;
             // By the end of this function, we should hit this offset exactly.
             let end_offset = self.offset() + body_size as u64;
@@ -498,6 +514,11 @@ impl<'a> Parser<'a> {
             for _ in 0..local_decls {
                 // Number of locals of this type
                 let type_count = self.read_u32_leb128()?;
+                total_locals += type_count as u64;
+                ensure!(
+                    u32::try_from(total_locals).is_ok(),
+                    "too many locals in function, got: {total_locals}"
+                );
                 let valtype = self.read_type().context("error reading local type")?;
                 locals.push(NumLocals {
                     num: type_count,
@@ -508,6 +529,10 @@ impl<'a> Parser<'a> {
                 .read_instrs(Some(end_offset))
                 .context("error reading code section function")?;
             ensure!(self.offset() == end_offset, "did not read all instructions");
+            ensure!(
+                body.last() == Some(Instruction::End),
+                "function body did not end with `end` instruction"
+            );
             let code = Code { locals, body };
             debug!(
                 "got code with locals: {:?} and {} instrs",
@@ -885,6 +910,10 @@ impl<'a> Parser<'a> {
 
                 Opcode::DataDrop => {
                     let data_idx = self.read_u32_leb128()?;
+                    ensure!(
+                        self.module.data_count.is_some(),
+                        "`data.drop` requires data count section"
+                    );
                     Instruction::DataDrop { data_idx }
                 }
                 Opcode::ElemDrop => {
@@ -903,6 +932,10 @@ impl<'a> Parser<'a> {
                     let data_idx = self.read_u32_leb128()?;
                     let placeholder = self.read_u8()?;
                     ensure!(placeholder == 0x00, "placeholder byte must be 0x00");
+                    ensure!(
+                        self.module.data_count.is_some(),
+                        "`memory.init` requires data count section"
+                    );
                     Instruction::MemoryInit { data_idx }
                 }
                 Opcode::RefFunc => {

@@ -17,6 +17,7 @@ code {
       [] (locals)
       ;; placeholder byte should never be 0x01
       memory.size 0x01
+      end
     }
   ]
 }

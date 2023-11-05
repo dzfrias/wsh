@@ -4,7 +4,7 @@ expression: pretty_fmt(&module)
 ---
 types
 ---
-0: (i32) -> (i32)
+0: () -> ()
 
 functions
 ---
@@ -16,7 +16,8 @@ codes
 i32.const 10
 i32.const 20
 i32.add
-return
+drop
+end
 
 
 

@@ -18,9 +18,9 @@ code {
       [] (locals)
       memory.size 0x00
       memory.grow 0x00
-      memory.init 0 (data idx) 0x00
       memory.copy 0x00 0x00
       memory.fill 0x00
+      end
     }
   ]
 }

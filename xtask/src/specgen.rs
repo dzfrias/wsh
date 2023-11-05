@@ -65,15 +65,26 @@ fn convert_to_wasm(path: impl AsRef<Path>, out_path: impl AsRef<Path>) -> Result
                     Err(_) => continue,
                 };
                 for (i, directive) in wast.directives.into_iter().enumerate() {
-                    let is_invalid = matches!(directive, wast::WastDirective::AssertInvalid { .. });
+                    let is_invalid = matches!(
+                        directive,
+                        wast::WastDirective::AssertInvalid { .. }
+                            | wast::WastDirective::AssertMalformed { .. }
+                    );
                     match directive {
                         wast::WastDirective::Wat(mut module)
                         | wast::WastDirective::AssertInvalid {
                             span: _,
                             mut module,
                             message: _,
+                        }
+                        | wast::WastDirective::AssertMalformed {
+                            span: _,
+                            mut module,
+                            message: _,
                         } => {
-                            let wasm = module.encode()?;
+                            let Ok(wasm) = module.encode() else {
+                                continue;
+                            };
                             let name = format!("{name}_{i}");
                             let out = out_path.as_ref().join(&name).with_extension("wasm");
                             fs::write(&out, wasm)

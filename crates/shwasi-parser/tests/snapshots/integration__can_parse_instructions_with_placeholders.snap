@@ -15,9 +15,9 @@ codes
 0: locals: []
 memory.size
 memory.grow
-memory.init 0
 memory.copy
 memory.fill
+end
 
 
 

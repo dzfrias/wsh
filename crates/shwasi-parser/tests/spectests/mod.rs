@@ -1012,6 +1012,14 @@ fn invalid_func_91() {
 }
 
 #[test]
+fn invalid_func_92() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/func_92.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn func_93() {
     let module = Parser::new(include_bytes!("wasm/func_93.wasm"))
         .read_module()
@@ -3065,6 +3073,1590 @@ fn align_153() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn invalid_utf8_import_module_0() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_0.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_1() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_1.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_2() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_2.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_3() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_3.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_4() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_4.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_5() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_5.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_6() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_6.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_7() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_7.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_8() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_8.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_9() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_9.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_10() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_10.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_11() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_11.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_12() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_12.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_13() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_13.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_14() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_14.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_15() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_15.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_16() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_16.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_17() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_17.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_18() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_18.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_19() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_19.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_20() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_20.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_21() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_21.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_22() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_22.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_23() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_23.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_24() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_24.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_25() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_25.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_26() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_26.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_27() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_27.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_28() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_28.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_29() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_29.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_30() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_30.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_31() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_31.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_32() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_32.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_33() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_33.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_34() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_34.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_35() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_35.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_36() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_36.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_37() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_37.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_38() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_38.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_39() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_39.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_40() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_40.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_41() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_41.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_42() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_42.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_43() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_43.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_44() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_44.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_45() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_45.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_46() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_46.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_47() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_47.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_48() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_48.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_49() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_49.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_50() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_50.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_51() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_51.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_52() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_52.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_53() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_53.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_54() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_54.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_55() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_55.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_56() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_56.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_57() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_57.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_58() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_58.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_59() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_59.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_60() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_60.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_61() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_61.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_62() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_62.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_63() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_63.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_64() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_64.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_65() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_65.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_66() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_66.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_67() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_67.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_68() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_68.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_69() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_69.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_70() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_70.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_71() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_71.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_72() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_72.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_73() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_73.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_74() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_74.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_75() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_75.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_76() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_76.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_77() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_77.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_78() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_78.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_79() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_79.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_80() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_80.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_81() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_81.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_82() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_82.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_83() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_83.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_84() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_84.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_85() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_85.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_86() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_86.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_87() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_87.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_88() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_88.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_89() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_89.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_90() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_90.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_91() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_91.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_92() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_92.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_93() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_93.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_94() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_94.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_95() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_95.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_96() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_96.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_97() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_97.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_98() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_98.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_99() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_99.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_100() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_100.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_101() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_101.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_102() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_102.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_103() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_103.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_104() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_104.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_105() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_105.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_106() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_106.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_107() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_107.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_108() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_108.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_109() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_109.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_110() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_110.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_111() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_111.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_112() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_112.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_113() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_113.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_114() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_114.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_115() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_115.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_116() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_116.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_117() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_117.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_118() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_118.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_119() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_119.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_120() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_120.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_121() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_121.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_122() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_122.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_123() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_123.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_124() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_124.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_125() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_125.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_126() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_126.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_127() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_127.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_128() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_128.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_129() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_129.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_130() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_130.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_131() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_131.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_132() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_132.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_133() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_133.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_134() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_134.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_135() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_135.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_136() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_136.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_137() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_137.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_138() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_138.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_139() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_139.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_140() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_140.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_141() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_141.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_142() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_142.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_143() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_143.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_144() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_144.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_145() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_145.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_146() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_146.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_147() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_147.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_148() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_148.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_149() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_149.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_150() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_150.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_151() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_151.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_152() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_152.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_153() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_153.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_154() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_154.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_155() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_155.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_156() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_156.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_157() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_157.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_158() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_158.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_159() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_159.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_160() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_160.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_161() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_161.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_162() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_162.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_163() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_163.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_164() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_164.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_165() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_165.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_166() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_166.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_167() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_167.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_168() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_168.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_169() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_169.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_170() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_170.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_171() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_171.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_172() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_172.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_173() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_173.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_174() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_174.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_module_175() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-module_175.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -12762,11 +14354,451 @@ fn binary_3() {
 }
 
 #[test]
+fn invalid_binary_4() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_4.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_5() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_5.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_6() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_6.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_7() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_7.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_8() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_8.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_9() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_9.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_10() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_10.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_11() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_11.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_12() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_12.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_13() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_13.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_14() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_14.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_15() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_15.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_16() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_16.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_17() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_17.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_18() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_18.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_19() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_19.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_20() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_20.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_21() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_21.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_22() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_22.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_23() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_23.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_24() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_24.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_25() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_25.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_26() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_26.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_27() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_27.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_28() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_28.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_29() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_29.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_30() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_30.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_31() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_31.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_32() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_32.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_33() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_33.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_34() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_34.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_35() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_35.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_36() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_36.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_37() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_37.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_38() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_38.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_39() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_39.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_40() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_40.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_41() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_41.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_42() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_42.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_43() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_43.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_44() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_44.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_45() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_45.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_46() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_46.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_47() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_47.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_48() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_48.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_49() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_49.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_50() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_50.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_51() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_51.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_52() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_52.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_53() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_53.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_54() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_54.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn binary_55() {
     let module = Parser::new(include_bytes!("wasm/binary_55.wasm"))
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn invalid_binary_56() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_56.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_57() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_57.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_58() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_58.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_59() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_59.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -12783,6 +14815,54 @@ fn binary_61() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn invalid_binary_62() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_62.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_63() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_63.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_64() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_64.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_65() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_65.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_66() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_66.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_67() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_67.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -12810,11 +14890,91 @@ fn binary_70() {
 }
 
 #[test]
+fn invalid_binary_71() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_71.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_72() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_72.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn binary_73() {
     let module = Parser::new(include_bytes!("wasm/binary_73.wasm"))
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn invalid_binary_74() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_74.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_75() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_75.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_76() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_76.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_77() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_77.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_78() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_78.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_79() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_79.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_80() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_80.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_81() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_81.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -12826,11 +14986,83 @@ fn binary_82() {
 }
 
 #[test]
+fn invalid_binary_83() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_83.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_84() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_84.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_85() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_85.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_86() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_86.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn binary_87() {
     let module = Parser::new(include_bytes!("wasm/binary_87.wasm"))
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn invalid_binary_88() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_88.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_89() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_89.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_90() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_90.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_91() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_91.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_92() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_92.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -12842,11 +15074,43 @@ fn binary_93() {
 }
 
 #[test]
+fn invalid_binary_94() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_94.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_95() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_95.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn binary_96() {
     let module = Parser::new(include_bytes!("wasm/binary_96.wasm"))
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn invalid_binary_97() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_97.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_98() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_98.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -12858,11 +15122,67 @@ fn binary_99() {
 }
 
 #[test]
+fn invalid_binary_100() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_100.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_101() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_101.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_102() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_102.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn binary_103() {
     let module = Parser::new(include_bytes!("wasm/binary_103.wasm"))
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn invalid_binary_104() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_104.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_105() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_105.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_106() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_106.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_107() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_107.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -12874,11 +15194,27 @@ fn binary_108() {
 }
 
 #[test]
+fn invalid_binary_109() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_109.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn binary_110() {
     let module = Parser::new(include_bytes!("wasm/binary_110.wasm"))
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn invalid_binary_111() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary_111.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -15224,11 +17560,467 @@ fn binary_leb128_24() {
 }
 
 #[test]
+fn invalid_binary_leb128_25() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_25.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_26() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_26.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_27() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_27.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_28() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_28.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_29() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_29.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_30() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_30.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_31() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_31.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_32() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_32.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_33() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_33.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_34() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_34.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_35() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_35.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_36() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_36.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_37() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_37.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_38() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_38.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_39() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_39.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_40() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_40.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_41() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_41.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_42() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_42.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_43() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_43.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_44() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_44.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_45() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_45.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_46() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_46.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_47() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_47.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_48() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_48.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_49() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_49.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_50() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_50.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_51() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_51.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_52() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_52.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_53() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_53.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_54() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_54.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_55() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_55.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_56() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_56.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_57() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_57.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_58() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_58.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_59() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_59.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_60() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_60.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_61() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_61.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_62() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_62.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_63() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_63.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_64() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_64.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_65() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_65.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_66() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_66.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_67() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_67.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_68() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_68.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_69() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_69.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_70() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_70.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_71() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_71.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_72() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_72.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_73() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_73.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_74() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_74.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_75() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_75.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_76() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_76.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_77() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_77.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_78() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_78.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_79() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_79.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_binary_leb128_80() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_80.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn binary_leb128_81() {
     let module = Parser::new(include_bytes!("wasm/binary-leb128_81.wasm"))
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn invalid_binary_leb128_82() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_82.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -15285,6 +18077,1774 @@ fn binary_leb128_89() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn invalid_binary_leb128_90() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/binary-leb128_90.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_0() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_0.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_1() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_1.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_2() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_2.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_3() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_3.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_4() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_4.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_5() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_5.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_6() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_6.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_7() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_7.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_8() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_8.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_9() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_9.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_10() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_10.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_11() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_11.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_12() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_12.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_13() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_13.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_14() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_14.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_15() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_15.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_16() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_16.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_17() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_17.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_18() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_18.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_19() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_19.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_20() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_20.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_21() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_21.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_22() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_22.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_23() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_23.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_24() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_24.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_25() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_25.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_26() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_26.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_27() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_27.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_28() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_28.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_29() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_29.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_30() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_30.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_31() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_31.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_32() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_32.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_33() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_33.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_34() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_34.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_35() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_35.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_36() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_36.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_37() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_37.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_38() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_38.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_39() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_39.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_40() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_40.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_41() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_41.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_42() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_42.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_43() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_43.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_44() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_44.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_45() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_45.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_46() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_46.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_47() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_47.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_48() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_48.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_49() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_49.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_50() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_50.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_51() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_51.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_52() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_52.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_53() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_53.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_54() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_54.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_55() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_55.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_56() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_56.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_57() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_57.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_58() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_58.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_59() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_59.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_60() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_60.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_61() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_61.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_62() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_62.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_63() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_63.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_64() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_64.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_65() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_65.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_66() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_66.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_67() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_67.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_68() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_68.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_69() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_69.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_70() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_70.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_71() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_71.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_72() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_72.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_73() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_73.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_74() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_74.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_75() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_75.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_76() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_76.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_77() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_77.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_78() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_78.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_79() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_79.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_80() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_80.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_81() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_81.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_82() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_82.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_83() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_83.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_84() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_84.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_85() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_85.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_86() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_86.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_87() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_87.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_88() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_88.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_89() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_89.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_90() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_90.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_91() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_91.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_92() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_92.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_93() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_93.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_94() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_94.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_95() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_95.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_96() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_96.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_97() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_97.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_98() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_98.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_99() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_99.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_100() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_100.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_101() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_101.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_102() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_102.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_103() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_103.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_104() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_104.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_105() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_105.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_106() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_106.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_107() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_107.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_108() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_108.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_109() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_109.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_110() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_110.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_111() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_111.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_112() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_112.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_113() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_113.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_114() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_114.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_115() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_115.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_116() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_116.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_117() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_117.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_118() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_118.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_119() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_119.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_120() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_120.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_121() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_121.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_122() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_122.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_123() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_123.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_124() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_124.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_125() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_125.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_126() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_126.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_127() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_127.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_128() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_128.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_129() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_129.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_130() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_130.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_131() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_131.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_132() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_132.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_133() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_133.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_134() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_134.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_135() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_135.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_136() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_136.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_137() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_137.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_138() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_138.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_139() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_139.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_140() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_140.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_141() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_141.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_142() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_142.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_143() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_143.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_144() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_144.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_145() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_145.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_146() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_146.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_147() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_147.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_148() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_148.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_149() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_149.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_150() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_150.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_151() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_151.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_152() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_152.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_153() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_153.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_154() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_154.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_155() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_155.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_156() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_156.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_157() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_157.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_158() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_158.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_159() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_159.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_160() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_160.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_161() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_161.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_162() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_162.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_163() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_163.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_164() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_164.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_165() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_165.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_166() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_166.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_167() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_167.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_168() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_168.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_169() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_169.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_170() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_170.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_171() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_171.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_172() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_172.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_173() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_173.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_174() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_174.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_custom_section_id_175() {
+    let Ok(module) =
+        Parser::new(include_bytes!("wasm/utf8-custom-section-id_175.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -15725,6 +20285,1590 @@ fn select_147() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn invalid_utf8_import_field_0() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_0.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_1() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_1.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_2() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_2.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_3() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_3.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_4() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_4.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_5() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_5.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_6() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_6.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_7() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_7.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_8() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_8.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_9() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_9.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_10() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_10.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_11() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_11.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_12() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_12.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_13() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_13.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_14() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_14.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_15() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_15.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_16() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_16.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_17() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_17.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_18() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_18.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_19() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_19.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_20() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_20.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_21() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_21.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_22() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_22.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_23() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_23.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_24() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_24.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_25() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_25.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_26() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_26.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_27() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_27.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_28() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_28.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_29() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_29.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_30() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_30.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_31() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_31.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_32() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_32.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_33() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_33.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_34() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_34.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_35() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_35.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_36() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_36.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_37() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_37.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_38() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_38.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_39() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_39.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_40() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_40.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_41() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_41.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_42() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_42.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_43() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_43.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_44() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_44.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_45() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_45.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_46() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_46.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_47() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_47.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_48() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_48.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_49() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_49.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_50() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_50.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_51() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_51.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_52() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_52.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_53() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_53.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_54() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_54.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_55() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_55.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_56() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_56.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_57() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_57.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_58() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_58.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_59() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_59.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_60() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_60.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_61() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_61.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_62() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_62.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_63() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_63.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_64() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_64.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_65() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_65.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_66() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_66.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_67() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_67.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_68() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_68.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_69() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_69.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_70() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_70.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_71() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_71.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_72() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_72.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_73() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_73.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_74() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_74.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_75() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_75.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_76() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_76.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_77() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_77.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_78() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_78.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_79() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_79.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_80() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_80.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_81() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_81.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_82() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_82.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_83() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_83.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_84() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_84.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_85() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_85.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_86() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_86.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_87() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_87.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_88() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_88.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_89() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_89.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_90() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_90.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_91() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_91.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_92() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_92.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_93() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_93.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_94() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_94.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_95() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_95.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_96() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_96.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_97() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_97.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_98() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_98.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_99() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_99.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_100() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_100.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_101() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_101.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_102() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_102.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_103() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_103.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_104() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_104.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_105() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_105.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_106() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_106.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_107() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_107.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_108() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_108.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_109() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_109.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_110() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_110.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_111() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_111.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_112() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_112.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_113() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_113.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_114() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_114.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_115() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_115.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_116() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_116.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_117() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_117.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_118() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_118.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_119() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_119.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_120() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_120.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_121() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_121.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_122() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_122.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_123() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_123.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_124() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_124.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_125() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_125.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_126() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_126.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_127() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_127.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_128() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_128.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_129() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_129.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_130() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_130.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_131() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_131.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_132() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_132.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_133() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_133.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_134() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_134.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_135() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_135.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_136() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_136.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_137() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_137.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_138() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_138.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_139() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_139.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_140() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_140.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_141() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_141.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_142() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_142.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_143() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_143.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_144() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_144.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_145() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_145.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_146() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_146.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_147() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_147.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_148() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_148.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_149() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_149.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_150() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_150.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_151() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_151.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_152() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_152.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_153() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_153.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_154() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_154.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_155() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_155.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_156() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_156.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_157() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_157.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_158() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_158.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_159() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_159.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_160() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_160.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_161() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_161.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_162() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_162.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_163() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_163.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_164() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_164.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_165() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_165.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_166() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_166.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_167() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_167.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_168() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_168.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_169() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_169.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_170() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_170.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_171() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_171.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_172() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_172.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_173() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_173.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_174() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_174.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_utf8_import_field_175() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/utf8-import-field_175.wasm")).read_module()
+    else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -18896,6 +25040,14 @@ fn address_0() {
 }
 
 #[test]
+fn invalid_address_92() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/address_92.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn address_93() {
     let module = Parser::new(include_bytes!("wasm/address_93.wasm"))
         .read_module()
@@ -20104,11 +26256,43 @@ fn global_81() {
 }
 
 #[test]
+fn invalid_global_82() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/global_82.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_global_83() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/global_83.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
 fn global_84() {
     let module = Parser::new(include_bytes!("wasm/global_84.wasm"))
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn invalid_global_85() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/global_85.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_global_86() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/global_86.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
@@ -20293,6 +26477,70 @@ fn custom_2() {
         .read_module()
         .expect("module should parse with no errors");
     validate(&module).expect("module should validate with no errors");
+}
+
+#[test]
+fn invalid_custom_3() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/custom_3.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_custom_4() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/custom_4.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_custom_5() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/custom_5.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_custom_6() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/custom_6.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_custom_7() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/custom_7.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_custom_8() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/custom_8.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_custom_9() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/custom_9.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
+}
+
+#[test]
+fn invalid_custom_10() {
+    let Ok(module) = Parser::new(include_bytes!("wasm/custom_10.wasm")).read_module() else {
+        return;
+    };
+    validate(&module).expect_err("module should have a validation error");
 }
 
 #[test]
