@@ -1202,12 +1202,9 @@ impl<'a> Parser<'a> {
                 Opcode::I64Extend32S => Instruction::I64Extend32S,
                 Opcode::SelectT => {
                     let num_types = self.read_u32_leb128()?;
-                    let mut types = vec![];
-                    for _ in 0..num_types {
-                        let ty = self.read_type()?;
-                        types.push(ty);
-                    }
-                    Instruction::SelectT(types)
+                    ensure!(num_types == 1, "select only supports one type");
+                    let ty = self.read_type()?;
+                    Instruction::SelectT(ty)
                 }
             };
 

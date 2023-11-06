@@ -228,6 +228,7 @@ impl<'a> Validator<'a> {
         Ok(())
     }
 
+    #[inline]
     fn get_ty(&self, idx: u32) -> Result<&'a FuncType> {
         // Type must exist
         self.funcs
@@ -540,7 +541,17 @@ impl<'a> Validator<'a> {
         Ok(Operand::Exact(got))
     }
 
-    fn expect_vals(&mut self, expected: &[ValType]) -> Result<Vec<Operand>> {
+    fn expect_vals(&mut self, expected: &[ValType]) -> Result<()> {
+        for expected in expected.iter().rev() {
+            self.expect_val(expected.into())?;
+        }
+
+        Ok(())
+    }
+
+    /// Version of `expect_vals` that collects the values that are popped. This is kept as a
+    /// seperate function for optimization purposes.
+    fn expect_vals_collect(&mut self, expected: &[ValType]) -> Result<Vec<Operand>> {
         let mut operands = vec![];
         for expected in expected.iter().rev() {
             let op = self.expect_val(expected.into())?;
@@ -675,10 +686,10 @@ impl<'a> Validator<'a> {
 
     #[inline]
     fn get_frame_n(&self, n: usize) -> Option<&Frame> {
-        self.frames
-            .get(self.frames.len().checked_sub(n)?.checked_sub(1)?)
+        self.frames.get((self.frames.len() - 1).checked_sub(n)?)
     }
 
+    #[inline]
     fn validate_instr(&mut self, instr: Instruction) -> Result<()> {
         // Make sure that this is not called in optimized builds. This improves performance by
         // around 6%.
@@ -1010,11 +1021,9 @@ impl<'a> Validator<'a> {
             }
             Instruction::SelectT(t) => {
                 self.expect_val(Operand::Exact(ValType::I32))?;
-                // SelectT only allows one operand at this time
-                ensure!(t.len() == 1, "typed select must have one operand");
-                self.expect_val(Operand::Exact(t[0]))?;
-                self.expect_val(Operand::Exact(t[0]))?;
-                self.push_val(Operand::Exact(t[0]));
+                self.expect_val(Operand::Exact(t))?;
+                self.expect_val(Operand::Exact(t))?;
+                self.push_val(Operand::Exact(t));
             }
             Instruction::I32Load(memarg) => {
                 self.validate_mem_load(memarg, ValType::I32, None)?;
@@ -1135,7 +1144,7 @@ impl<'a> Validator<'a> {
                         "br_table arity mismatch, got {}, want {arity}",
                         vals.len()
                     );
-                    for pushed in self.expect_vals(&vals)?.into_iter().rev() {
+                    for pushed in self.expect_vals_collect(&vals)?.into_iter().rev() {
                         self.push_val(pushed);
                     }
                 }

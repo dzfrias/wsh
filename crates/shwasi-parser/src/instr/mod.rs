@@ -13,7 +13,6 @@ use crate::{module::ValType, RefType, F32, F64};
 pub struct InstrBuffer {
     infos: Vec<InstrInfo>,
     br_tables: Vec<BrTable>,
-    selects: Vec<Vec<ValType>>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -53,7 +52,6 @@ impl InstrBuffer {
         Self {
             infos: vec![],
             br_tables: vec![],
-            selects: vec![],
         }
     }
 
@@ -319,10 +317,7 @@ impl InstrBuffer {
                 self.br_tables.push(br_table);
                 self.br_tables.len() as u64 - 1
             }
-            Instruction::SelectT(types) => {
-                self.selects.push(types);
-                self.selects.len() as u64 - 1
-            }
+            Instruction::SelectT(ty) => ty as u64,
         };
 
         self.infos.push(InstrInfo {
@@ -332,9 +327,21 @@ impl InstrBuffer {
     }
 
     pub fn get(&self, idx: usize) -> Option<Instruction> {
-        let info = self.get_info(idx)?;
+        if idx >= self.len() {
+            return None;
+        }
+        // SAFETY: we just verified that the index is within the bounds
+        Some(unsafe { self.get_unchecked(idx) })
+    }
 
-        let instr = match info.opcode {
+    /// Get an instruction from the buffer.
+    ///
+    /// # Safety
+    /// This function has undefined behavior when `idx` is >= to `self.len()`.
+    pub unsafe fn get_unchecked(&self, idx: usize) -> Instruction {
+        let info = self.infos.get_unchecked(idx);
+
+        match info.opcode {
             Opcode::Unreachable => Instruction::Unreachable,
             Opcode::Nop => Instruction::Nop,
             Opcode::Else => Instruction::Else,
@@ -676,16 +683,10 @@ impl InstrBuffer {
             Opcode::I64Extend16S => Instruction::I64Extend16S,
             Opcode::I64Extend32S => Instruction::I64Extend32S,
             Opcode::SelectT => {
-                let types = &self.selects[info.payload as usize];
-                Instruction::SelectT(types.clone())
+                let ty = ValType::try_from_primitive(info.payload as u8).unwrap();
+                Instruction::SelectT(ty)
             }
-        };
-
-        Some(instr)
-    }
-
-    fn get_info(&self, instr: usize) -> Option<&InstrInfo> {
-        self.infos.get(instr)
+        }
     }
 }
 
@@ -699,7 +700,8 @@ impl<'a> Iterator for Instrs<'a> {
 
         let instr = self.current;
         self.current += 1;
-        Some(self.buffer.get(instr).unwrap())
+        // SAFETY: we know that the length could not have changed, so instr is within the bounds.
+        Some(unsafe { self.buffer.get_unchecked(instr) })
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {

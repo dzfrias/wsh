@@ -1,7 +1,5 @@
 use std::fmt;
 
-use itertools::Itertools;
-
 use crate::{
     BlockType, BrTable, DataIdx, ElemIdx, FuncIdx, MemArg, Opcode, RefType, TableIdx, TypeIdx,
     ValType, F32, F64,
@@ -158,7 +156,7 @@ pub enum Instruction {
     I64Extend8S = 145,
     I64Extend16S = 146,
     I64Extend32S = 147,
-    SelectT(Vec<ValType>) = 148,
+    SelectT(ValType) = 148,
     I32Load(MemArg) = 149,
     I64Load(MemArg) = 150,
     F32Load(MemArg) = 151,
@@ -534,8 +532,8 @@ impl fmt::Display for Instruction {
                 }
                 write!(f, "{} (default)", br_table.default_depth)
             }
-            Instruction::SelectT(types) => {
-                write!(f, " {}", types.iter().join(" "))
+            Instruction::SelectT(ty) => {
+                write!(f, " {ty}")
             }
         }
     }
