@@ -1,18 +1,11 @@
-use std::{borrow::Cow, collections::HashSet, fmt, iter};
+use std::{borrow::Cow, fmt, iter};
 
-use anyhow::{bail, ensure, Context, Result};
-use tracing::{debug, info, instrument, trace};
+use anyhow::{ensure, Context, Result};
+use tracing::{debug, instrument, trace};
 
 use crate::{
-    BlockType, Code, Data, Element, ElementKind, Export, ExternalKind, FuncType, Function, Global,
-    GlobalType, Import, ImportKind, InitExpr, Instruction, Limit, MemArg, Memory, Module, RefType,
-    TableType, ValType,
+    validator::Validator, BlockType, Code, Function, Instruction, MemArg, RefType, ValType,
 };
-
-/// Validate a WebAssembly module.
-pub fn validate(m: &Module) -> Result<()> {
-    Validator::new().validate_module(m)
-}
 
 // Necessary to distinguish the two because the base funtion frame should have no param types
 #[derive(Debug, Clone, Copy)]
@@ -101,400 +94,58 @@ impl From<&ValType> for Operand {
     }
 }
 
+/// A validator for a single function.
 #[derive(Debug)]
-struct ValidatorGlobal<'a> {
-    ty: &'a GlobalType,
-    // Some globals can only be referenced if they've been imported, so this field keeps track of
-    // that
-    is_imported: bool,
-}
+pub struct FuncValidator<'a> {
+    validator: &'a Validator<'a>,
 
-/// A validator for a WebAssembly module.
-///
-/// Contains the current state of validation for the module.
-#[derive(Debug)]
-struct Validator<'a> {
-    // These are cached between function validations
+    // TODO: reuse the same vector across all functions?
     frames: Vec<Frame>,
     vals: Vec<Operand>,
     current_func: FuncCtx<'a>,
-
-    /// Types decalred in the module.
-    module_tys: &'a [FuncType],
-    elems: &'a [Element],
-
-    /// Functions, either imported or declared in the module.
-    funcs: Vec<&'a FuncType>,
-    tables: Vec<&'a TableType>,
-    mems: Vec<&'a Memory>,
-    globals: Vec<ValidatorGlobal<'a>>,
-    // Used to determine if a `RefFunc` instruction is valid. For now, a function is "declared" if
-    // it is exported or if it is present in an InitExpr.
-    declared_funcs: HashSet<u32>,
-    datas_found: usize,
 }
 
-impl<'a> Validator<'a> {
-    pub fn new() -> Self {
+impl<'a> FuncValidator<'a> {
+    /// Create a function validator, using a shared reference to the module validator.
+    pub fn new(validator: &'a Validator<'a>) -> Self {
         Self {
-            module_tys: &[],
-            frames: vec![],
+            validator,
+            frames: Vec::new(),
+            vals: Vec::new(),
             current_func: FuncCtx {
-                locals: vec![],
+                locals: Vec::new(),
                 result: &[],
             },
-
-            vals: vec![],
-            declared_funcs: HashSet::new(),
-            funcs: vec![],
-            tables: vec![],
-            mems: vec![],
-            globals: vec![],
-            datas_found: 0,
-            elems: &[],
         }
     }
 
-    #[instrument(level = "debug", skip_all)]
-    fn validate_module(mut self, m: &'a Module) -> Result<()> {
-        info!("began module validation");
+    /// Validate a function.
+    pub fn validate(&mut self, code: &Code, func: &Function) -> Result<()> {
+        debug!("started validating function with index: {func}");
 
-        self.module_tys = &m.types;
-        self.elems = &m.elements;
-
-        self.validate_imports(&m.imports)
-            .context("error validating module imports")?;
-
-        for func in &m.functions {
-            let ty = m
-                .types
-                .get(func.index as usize)
-                .context("function type not found in functions section")?;
-            self.funcs.push(ty);
-        }
-        self.tables.extend(&m.tables);
-        self.mems.extend(&m.memories);
-        self.datas_found = m.datas.len();
-
-        // Validate globals before adding them to validator to prevent self-referencing
-        self.valdate_globals(&m.globals)
-            .context("error validating module globals")?;
-        self.globals
-            .extend(m.globals.iter().map(|g| ValidatorGlobal {
-                ty: &g.kind,
-                is_imported: false,
+        let ty = self
+            .validator
+            .module_tys
+            .get(func.index as usize)
+            .context("code section type not found")?;
+        // Locals begin with function parameters
+        self.current_func.locals = ty.0.clone();
+        self.current_func
+            .locals
+            // Should be flattened because `code.locals` contains the number of locals of a
+            // certain type
+            .extend(code.locals.iter().flat_map(|num_locals| {
+                iter::repeat(num_locals.locals_type).take(num_locals.num as usize)
             }));
+        self.current_func.result = &ty.1;
+        debug!("current function: {:?}", self.current_func);
+        self.push_func_frame(func.index)?;
 
-        trace!("begin current module state");
-        trace!("module_tys: {:?}", self.module_tys);
-        trace!("elems: {:?}", self.elems);
-        trace!("funcs: {:?}", self.funcs);
-        trace!("datas_found: {}", self.datas_found);
-        trace!("globals: {:?}", self.globals);
-        trace!("end current module state");
-
-        self.validate_elems(&m.elements)
-            .context("error validating module elements")?;
-        self.validate_tables(&m.tables)
-            .context("error validating module tables")?;
-        self.validate_memories(&m.memories)
-            .context("error validating module memories")?;
-        self.validate_datas(&m.datas)
-            .context("error validating module datas")?;
-
-        if let Some(start) = m.start {
-            let ty = self
-                .funcs
-                .get(start as usize)
-                .context("start function not found")?;
-            ensure!(ty.0.is_empty(), "start function params not zero");
-            ensure!(ty.1.is_empty(), "start function results not zero");
-            debug!("validated start function: {start}");
-        }
-
-        self.validate_exports(&m.exports)
-            .context("error validating module exports")?;
-
-        self.validate_codes(&m.codes, &m.functions)
-            .context("error vaildating module codes")?;
-
-        // Multi-memories not supported
-        ensure!(
-            self.mems.len() <= 1,
-            "too many memores, only one is supported"
-        );
-
-        info!("finisehd module validation");
-        Ok(())
-    }
-
-    #[inline]
-    fn get_ty(&self, idx: u32) -> Result<&'a FuncType> {
-        // Type must exist
-        self.funcs
-            .get(idx as usize)
-            .copied()
-            .context("function type not found")
-    }
-
-    #[instrument(level = "debug", skip(self))]
-    fn validate_imports(&mut self, imports: &'a [Import]) -> Result<()> {
-        for import in imports {
-            match &import.kind {
-                ImportKind::Function(idx) => {
-                    let ty = self
-                        .module_tys
-                        .get(*idx as usize)
-                        .context("function type not found")?;
-                    self.funcs.push(ty);
-                }
-                ImportKind::Table(table) => {
-                    self.validate_limit(&table.limit)
-                        .context("invalid imported table")?;
-                    self.tables.push(table);
-                }
-                ImportKind::Memory(mem) => {
-                    self.validate_mem(mem).context("invalid imported memory")?;
-                    self.mems.push(mem);
-                }
-                ImportKind::Global(global) => self.globals.push(ValidatorGlobal {
-                    ty: global,
-                    is_imported: true,
-                }),
-            }
-            debug!("validated import: {import}");
+        for instr in &code.body {
+            self.validate_instr(instr)?;
         }
 
         Ok(())
-    }
-
-    #[allow(clippy::unused_self)]
-    fn validate_limit(&self, limit: &Limit) -> Result<()> {
-        let Some(max) = limit.max else {
-            return Ok(());
-        };
-        ensure!(limit.initial <= max, "invalid limit: {limit}");
-        Ok(())
-    }
-
-    #[instrument(level = "debug", skip(self))]
-    fn validate_tables(&self, tables: &[TableType]) -> Result<()> {
-        for tbl in tables {
-            self.validate_limit(&tbl.limit)
-                .context("invalid table limit")?;
-            debug!("validated table: {tbl}");
-        }
-
-        Ok(())
-    }
-
-    #[instrument(level = "debug", skip(self))]
-    fn validate_memories(&self, mems: &[Memory]) -> Result<()> {
-        for mem in mems {
-            self.validate_mem(mem)?;
-        }
-
-        Ok(())
-    }
-
-    #[instrument(level = "debug", skip(self))]
-    fn validate_mem(&self, mem: &Memory) -> Result<()> {
-        // Memory limit must be less than 4GB
-        const MAX: u64 = (1u64 << 32) / 65536;
-
-        if let Some(max) = mem.limit.max {
-            let max = max as u64;
-            ensure!(max <= MAX, "memory too large: {max}");
-        }
-        let initial = mem.limit.initial as u64;
-        ensure!(initial <= MAX, "memory too large: {initial}");
-
-        self.validate_limit(&mem.limit)
-            .context("invalid limit for memory")?;
-
-        debug!("validated memory: {mem}");
-        Ok(())
-    }
-
-    #[instrument(level = "debug", skip(self))]
-    fn validate_datas(&mut self, datas: &[Data]) -> Result<()> {
-        for init in datas.iter().filter_map(|data| data.offset) {
-            ensure!(!self.mems.is_empty(), "no memory to copy data section to");
-            // Data offset into memory must be an integer
-            self.validate_init_expr(init, Operand::Exact(ValType::I32))
-                .context("invalid offset expr for data")?;
-            debug!("validated data offset: {init}");
-        }
-
-        Ok(())
-    }
-
-    fn validate_init_expr(&mut self, init: InitExpr, operand: Operand) -> Result<()> {
-        let Operand::Exact(expected) = operand else {
-            return Ok(());
-        };
-
-        let ty = match init {
-            InitExpr::I32Const(_) => ValType::I32,
-            InitExpr::I64Const(_) => ValType::I64,
-            InitExpr::F32Const(_) => ValType::F32,
-            InitExpr::F64Const(_) => ValType::F64,
-            InitExpr::ConstGlobalGet(idx) => {
-                // Global must exist
-                let global = self
-                    .globals
-                    .get(idx as usize)
-                    .context("init expr global not found")?;
-                ensure!(
-                    global.is_imported && !global.ty.mutable,
-                    "cannot initialize with-non imported mutable global const expr"
-                );
-                global.ty.content_type
-            }
-            InitExpr::RefNull(t) => match t {
-                RefType::Func => ValType::Func,
-                RefType::Extern => ValType::Extern,
-            },
-            InitExpr::RefFunc(idx) => {
-                ensure!(
-                    self.funcs.get(idx as usize).is_some(),
-                    "init expr function reference not found"
-                );
-                // Function is "declared"
-                self.declared_funcs.insert(idx);
-                ValType::Func
-            }
-        };
-
-        ensure!(
-            expected == ty,
-            "unexepected init expr type: {expected} != {ty}"
-        );
-
-        debug!("validated init expr {init} => {ty}");
-        Ok(())
-    }
-
-    #[instrument(level = "debug", skip(self))]
-    fn valdate_globals(&mut self, globals: &[Global]) -> Result<()> {
-        for global in globals {
-            // Global init expr must match global type
-            self.validate_init_expr(global.init, Operand::Exact(global.kind.content_type))
-                .context("invalid global init expr")?;
-            debug!("validated global: {global}");
-        }
-
-        Ok(())
-    }
-
-    #[instrument(level = "debug", skip(self))]
-    fn validate_elems(&mut self, elements: &[Element]) -> Result<()> {
-        for elem in elements {
-            debug!("started validating element");
-
-            if let ElementKind::Active { tbl_idx, offset } = elem.kind {
-                let Some(tbl) = self.tables.get(tbl_idx as usize) else {
-                    bail!("table not found: {tbl_idx}");
-                };
-                // Elem type must match table type
-                ensure!(
-                    tbl.elem_type == elem.types,
-                    "elem type mismatch: {} != {}",
-                    tbl.elem_type,
-                    elem.types
-                );
-                // Offset must be an integer
-                self.validate_init_expr(offset, Operand::Exact(ValType::I32))
-                    .context("invalid element init expr")?;
-            }
-
-            for init in &elem.elems {
-                // Init expr must match elem type (either funcref or externref)
-                self.validate_init_expr(*init, Operand::Exact(elem.types.into()))
-                    .context("invalid value for element")?;
-            }
-            debug!("validated element: {elem}");
-        }
-
-        Ok(())
-    }
-
-    #[instrument(level = "debug", skip(self))]
-    fn validate_exports(&mut self, exports: &[Export]) -> Result<()> {
-        let mut seen_exports = Vec::with_capacity(exports.len());
-        for export in exports {
-            // Exports must be unique
-            ensure!(
-                !seen_exports.contains(&export.field),
-                "duplicate export of {}",
-                export.field
-            );
-            let idx = export.external_idx as usize;
-            match export.kind {
-                ExternalKind::Function => {
-                    ensure!(
-                        self.funcs.get(idx).is_some(),
-                        "export function type not found"
-                    );
-                    self.declared_funcs.insert(export.external_idx);
-                }
-                ExternalKind::Table => {
-                    ensure!(self.tables.get(idx).is_some(), "export table not found");
-                }
-                ExternalKind::Memory => {
-                    ensure!(self.mems.get(idx).is_some(), "export memory not found");
-                }
-                ExternalKind::Global => {
-                    ensure!(self.globals.get(idx).is_some(), "export global not found");
-                }
-            }
-            seen_exports.push(export.field);
-            debug!("validated export: {export}");
-            trace!("seen exports: {seen_exports:?}");
-        }
-
-        Ok(())
-    }
-
-    #[instrument(level = "debug", skip_all)]
-    fn validate_codes(&mut self, codes: &[Code], funcs: &[Function]) -> Result<()> {
-        for (code, func) in codes.iter().zip(funcs) {
-            debug!("started validating function with index: {func}");
-
-            let ty = self
-                .module_tys
-                .get(func.index as usize)
-                .context("code section type not found")?;
-            // Locals begin with function parameters
-            self.current_func.locals = ty.0.clone();
-            self.current_func
-                .locals
-                // Should be flattened because `code.locals` contains the number of locals of a
-                // certain type
-                .extend(code.locals.iter().flat_map(|num_locals| {
-                    iter::repeat(num_locals.locals_type).take(num_locals.num as usize)
-                }));
-            self.current_func.result = &ty.1;
-            debug!("current function: {:?}", self.current_func);
-            self.push_func_frame(func.index)?;
-
-            for instr in &code.body {
-                self.validate_instr(instr)?;
-            }
-
-            // The frames, values, the current function are cached between code blocks, they must
-            // be reset.
-            self.reset_code_state();
-        }
-        Ok(())
-    }
-
-    fn reset_code_state(&mut self) {
-        self.frames.clear();
-        self.vals.clear();
-        self.current_func.locals.clear();
-        self.current_func.result = &[];
-        trace!("reset code state");
     }
 
     fn push_vals(&mut self, label_ty: &[ValType]) {
@@ -509,7 +160,33 @@ impl<'a> Validator<'a> {
         self.vals.push(val);
     }
 
-    fn pop_val(&mut self) -> Result<Operand> {
+    fn pop_val(&mut self, expected: Option<ValType>) -> Result<Operand> {
+        // Since most instructions will pop a value, we optimize for that case by eagerly popping.
+        // If this assumption is incorrect, we go to the slow path.
+        //
+        // Credits to wasmparser for this optimization.
+        let popped = match self.vals.pop() {
+            Some(Operand::Exact(actual_ty)) => {
+                if Some(actual_ty) == expected {
+                    if let Some(control) = self.frames.last() {
+                        if self.vals.len() >= control.init_height {
+                            return Ok(Operand::Exact(actual_ty));
+                        }
+                    }
+                }
+                Some(Operand::Exact(actual_ty))
+            }
+            other => other,
+        };
+
+        self._pop_val(expected, popped)
+    }
+
+    /// Cold path of `pop_val`.
+    #[cold]
+    fn _pop_val(&mut self, expected: Option<ValType>, popped: Option<Operand>) -> Result<Operand> {
+        self.vals.extend(popped);
+
         let last_frame = self.frames.last_mut().expect("should have a frame");
         if self.vals.len() == last_frame.init_height && last_frame.unreachable {
             return Ok(Operand::Any);
@@ -521,19 +198,15 @@ impl<'a> Validator<'a> {
             last_frame.init_height,
             self.vals.len()
         );
-
-        Ok(self
+        let got = self
             .vals
             .pop()
-            .expect("should have an operand on the stack"))
-    }
+            .expect("should have an operand on the stack");
 
-    fn expect_val(&mut self, expected: Operand) -> Result<Operand> {
-        let got = self.pop_val()?;
         let Operand::Exact(got) = got else {
             return Ok(Operand::Any);
         };
-        let Operand::Exact(expected) = expected else {
+        let Some(expected) = expected else {
             return Ok(Operand::Exact(got));
         };
         ensure!(got == expected, "unexpected type: {expected} != {got}");
@@ -541,9 +214,9 @@ impl<'a> Validator<'a> {
         Ok(Operand::Exact(got))
     }
 
-    fn expect_vals(&mut self, expected: &[ValType]) -> Result<()> {
+    fn pop_vals(&mut self, expected: &[ValType]) -> Result<()> {
         for expected in expected.iter().rev() {
-            self.expect_val(expected.into())?;
+            self.pop_val(Some(*expected))?;
         }
 
         Ok(())
@@ -551,10 +224,10 @@ impl<'a> Validator<'a> {
 
     /// Version of `expect_vals` that collects the values that are popped. This is kept as a
     /// seperate function for optimization purposes.
-    fn expect_vals_collect(&mut self, expected: &[ValType]) -> Result<Vec<Operand>> {
+    fn pop_vals_collect(&mut self, expected: &[ValType]) -> Result<Vec<Operand>> {
         let mut operands = vec![];
         for expected in expected.iter().rev() {
-            let op = self.expect_val(expected.into())?;
+            let op = self.pop_val(Some(*expected))?;
             operands.push(op);
         }
 
@@ -593,6 +266,7 @@ impl<'a> Validator<'a> {
             BlockType::Empty | BlockType::Type(_) => &[],
             BlockType::FuncType(idx) => {
                 let ty = self
+                    .validator
                     .module_tys
                     .get(idx as usize)
                     .context("type not found")?;
@@ -607,6 +281,7 @@ impl<'a> Validator<'a> {
             FrameType::Function(idx) => {
                 return Ok(Cow::Borrowed(
                     &self
+                        .validator
                         .module_tys
                         .get(idx as usize)
                         .context("type not found")?
@@ -621,6 +296,7 @@ impl<'a> Validator<'a> {
             BlockType::Type(t) => Cow::Owned(vec![t]),
             BlockType::FuncType(idx) => {
                 let ty = self
+                    .validator
                     .module_tys
                     .get(idx as usize)
                     .context("type not found")?;
@@ -639,6 +315,7 @@ impl<'a> Validator<'a> {
                 BlockType::Type(ty) => Cow::Owned(vec![ty]),
                 BlockType::FuncType(idx) => {
                     let ty = self
+                        .validator
                         .module_tys
                         .get(idx as usize)
                         .context("type not found")?;
@@ -647,6 +324,7 @@ impl<'a> Validator<'a> {
             },
             FrameType::Function(idx) => Cow::Borrowed(
                 &self
+                    .validator
                     .module_tys
                     .get(idx as usize)
                     .context("type not found")?
@@ -660,7 +338,7 @@ impl<'a> Validator<'a> {
 
         let last_frame = self.frames.last().expect("should have a frame");
         let result = self.end_types(last_frame.ty)?;
-        self.expect_vals(&result).with_context(|| {
+        self.pop_vals(&result).with_context(|| {
             format!("error getting result values from frame, expected: {result:?}",)
         })?;
         let last_frame = self.frames.pop().expect("should have a frame");
@@ -689,6 +367,7 @@ impl<'a> Validator<'a> {
         self.frames.get((self.frames.len() - 1).checked_sub(n)?)
     }
 
+    // Inlined because validate_instr is a hot function that has very few call sites
     #[inline]
     fn validate_instr(&mut self, instr: Instruction) -> Result<()> {
         // Make sure that this is not called in optimized builds. This improves performance by
@@ -710,14 +389,14 @@ impl<'a> Validator<'a> {
             }
             Instruction::Return => {
                 let func_ctx = self.current_func.result;
-                self.expect_vals(func_ctx)?;
+                self.pop_vals(func_ctx)?;
                 self.unreachable();
             }
-            Instruction::Drop => drop(self.pop_val()?),
+            Instruction::Drop => drop(self.pop_val(None)?),
             Instruction::Select => {
-                self.expect_val(Operand::Exact(ValType::I32))?;
-                let val1 = self.pop_val()?;
-                let val2 = self.pop_val()?;
+                self.pop_val(Some(ValType::I32))?;
+                let val1 = self.pop_val(None)?;
+                let val2 = self.pop_val(None)?;
                 ensure!(
                     val1.matches(val2),
                     "select operands must be the same type, got {val1} and {val2}"
@@ -732,11 +411,11 @@ impl<'a> Validator<'a> {
 
             // itestop
             Instruction::I32Eqz => {
-                self.expect_val(Operand::Exact(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
                 self.push_val(Operand::Exact(ValType::I32));
             }
             Instruction::I64Eqz => {
-                self.expect_val(Operand::Exact(ValType::I64))?;
+                self.pop_val(Some(ValType::I64))?;
                 self.push_val(Operand::Exact(ValType::I32));
             }
 
@@ -751,8 +430,8 @@ impl<'a> Validator<'a> {
             | Instruction::I32LeU
             | Instruction::I32GeS
             | Instruction::I32GeU => {
-                self.expect_val(Operand::Exact(ValType::I32))?;
-                self.expect_val(Operand::Exact(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
                 self.push_val(Operand::Exact(ValType::I32));
             }
             Instruction::I64Eq
@@ -765,8 +444,8 @@ impl<'a> Validator<'a> {
             | Instruction::I64LeU
             | Instruction::I64GeS
             | Instruction::I64GeU => {
-                self.expect_val(Operand::Exact(ValType::I64))?;
-                self.expect_val(Operand::Exact(ValType::I64))?;
+                self.pop_val(Some(ValType::I64))?;
+                self.pop_val(Some(ValType::I64))?;
                 self.push_val(Operand::Exact(ValType::I32));
             }
 
@@ -777,8 +456,8 @@ impl<'a> Validator<'a> {
             | Instruction::F32Gt
             | Instruction::F32Le
             | Instruction::F32Ge => {
-                self.expect_val(Operand::Exact(ValType::F32))?;
-                self.expect_val(Operand::Exact(ValType::F32))?;
+                self.pop_val(Some(ValType::F32))?;
+                self.pop_val(Some(ValType::F32))?;
                 self.push_val(Operand::Exact(ValType::I32));
             }
             Instruction::F64Eq
@@ -787,18 +466,18 @@ impl<'a> Validator<'a> {
             | Instruction::F64Gt
             | Instruction::F64Le
             | Instruction::F64Ge => {
-                self.expect_val(Operand::Exact(ValType::F64))?;
-                self.expect_val(Operand::Exact(ValType::F64))?;
+                self.pop_val(Some(ValType::F64))?;
+                self.pop_val(Some(ValType::F64))?;
                 self.push_val(Operand::Exact(ValType::I32));
             }
 
             // iunop
             Instruction::I32Clz | Instruction::I32Ctz | Instruction::I32Popcnt => {
-                self.expect_val(Operand::Exact(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
                 self.push_val(Operand::Exact(ValType::I32));
             }
             Instruction::I64Clz | Instruction::I64Ctz | Instruction::I64Popcnt => {
-                self.expect_val(Operand::Exact(ValType::I64))?;
+                self.pop_val(Some(ValType::I64))?;
                 self.push_val(Operand::Exact(ValType::I64));
             }
 
@@ -818,8 +497,8 @@ impl<'a> Validator<'a> {
             | Instruction::I32ShrU
             | Instruction::I32Rotl
             | Instruction::I32Rotr => {
-                self.expect_val(Operand::Exact(ValType::I32))?;
-                self.expect_val(Operand::Exact(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
                 self.push_val(Operand::Exact(ValType::I32));
             }
             Instruction::I64Add
@@ -837,8 +516,8 @@ impl<'a> Validator<'a> {
             | Instruction::I64ShrU
             | Instruction::I64Rotl
             | Instruction::I64Rotr => {
-                self.expect_val(Operand::Exact(ValType::I64))?;
-                self.expect_val(Operand::Exact(ValType::I64))?;
+                self.pop_val(Some(ValType::I64))?;
+                self.pop_val(Some(ValType::I64))?;
                 self.push_val(Operand::Exact(ValType::I64));
             }
 
@@ -850,7 +529,7 @@ impl<'a> Validator<'a> {
             | Instruction::F32Trunc
             | Instruction::F32Nearest
             | Instruction::F32Sqrt => {
-                self.expect_val(Operand::Exact(ValType::F32))?;
+                self.pop_val(Some(ValType::F32))?;
                 self.push_val(Operand::Exact(ValType::F32));
             }
             Instruction::F64Abs
@@ -860,7 +539,7 @@ impl<'a> Validator<'a> {
             | Instruction::F64Trunc
             | Instruction::F64Nearest
             | Instruction::F64Sqrt => {
-                self.expect_val(Operand::Exact(ValType::F64))?;
+                self.pop_val(Some(ValType::F64))?;
                 self.push_val(Operand::Exact(ValType::F64));
             }
 
@@ -872,8 +551,8 @@ impl<'a> Validator<'a> {
             | Instruction::F32Min
             | Instruction::F32Max
             | Instruction::F32Copysign => {
-                self.expect_val(Operand::Exact(ValType::F32))?;
-                self.expect_val(Operand::Exact(ValType::F32))?;
+                self.pop_val(Some(ValType::F32))?;
+                self.pop_val(Some(ValType::F32))?;
                 self.push_val(Operand::Exact(ValType::F32));
             }
             Instruction::F64Add
@@ -883,136 +562,136 @@ impl<'a> Validator<'a> {
             | Instruction::F64Min
             | Instruction::F64Max
             | Instruction::F64Copysign => {
-                self.expect_val(Operand::Exact(ValType::F64))?;
-                self.expect_val(Operand::Exact(ValType::F64))?;
+                self.pop_val(Some(ValType::F64))?;
+                self.pop_val(Some(ValType::F64))?;
                 self.push_val(Operand::Exact(ValType::F64));
             }
 
             Instruction::I32WrapI64 => {
-                self.expect_val(Operand::Exact(ValType::I64))?;
+                self.pop_val(Some(ValType::I64))?;
                 self.push_val(Operand::Exact(ValType::I32));
             }
             Instruction::I32TruncF32S | Instruction::I32TruncF32U => {
-                self.expect_val(Operand::Exact(ValType::F32))?;
+                self.pop_val(Some(ValType::F32))?;
                 self.push_val(Operand::Exact(ValType::I32));
             }
             Instruction::I32TruncF64S | Instruction::I32TruncF64U => {
-                self.expect_val(Operand::Exact(ValType::F64))?;
+                self.pop_val(Some(ValType::F64))?;
                 self.push_val(Operand::Exact(ValType::I32));
             }
 
             Instruction::I64ExtendI32S | Instruction::I64ExtendI32U => {
-                self.expect_val(Operand::Exact(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
                 self.push_val(Operand::Exact(ValType::I64));
             }
             Instruction::I64TruncF32S | Instruction::I64TruncF32U => {
-                self.expect_val(Operand::Exact(ValType::F32))?;
+                self.pop_val(Some(ValType::F32))?;
                 self.push_val(Operand::Exact(ValType::I64));
             }
             Instruction::I64TruncF64S | Instruction::I64TruncF64U => {
-                self.expect_val(Operand::Exact(ValType::F64))?;
+                self.pop_val(Some(ValType::F64))?;
                 self.push_val(Operand::Exact(ValType::I64));
             }
             Instruction::F32ConvertI32S | Instruction::F32ConvertI32U => {
-                self.expect_val(Operand::Exact(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
                 self.push_val(Operand::Exact(ValType::F32));
             }
             Instruction::F32ConvertI64S | Instruction::F32ConvertI64U => {
-                self.expect_val(Operand::Exact(ValType::I64))?;
+                self.pop_val(Some(ValType::I64))?;
                 self.push_val(Operand::Exact(ValType::F32));
             }
             Instruction::F32DemoteF64 => {
-                self.expect_val(Operand::Exact(ValType::F64))?;
+                self.pop_val(Some(ValType::F64))?;
                 self.push_val(Operand::Exact(ValType::F32));
             }
             Instruction::F64ConvertI32S | Instruction::F64ConvertI32U => {
-                self.expect_val(Operand::Exact(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
                 self.push_val(Operand::Exact(ValType::F64));
             }
             Instruction::F64ConvertI64S | Instruction::F64ConvertI64U => {
-                self.expect_val(Operand::Exact(ValType::I64))?;
+                self.pop_val(Some(ValType::I64))?;
                 self.push_val(Operand::Exact(ValType::F64));
             }
             Instruction::F64PromoteF32 => {
-                self.expect_val(Operand::Exact(ValType::F32))?;
+                self.pop_val(Some(ValType::F32))?;
                 self.push_val(Operand::Exact(ValType::F64));
             }
             Instruction::I32ReinterpretF32 => {
-                self.expect_val(Operand::Exact(ValType::F32))?;
+                self.pop_val(Some(ValType::F32))?;
                 self.push_val(Operand::Exact(ValType::I32));
             }
             Instruction::I64ReinterpretF64 => {
-                self.expect_val(Operand::Exact(ValType::F64))?;
+                self.pop_val(Some(ValType::F64))?;
                 self.push_val(Operand::Exact(ValType::I64));
             }
             Instruction::F32ReinterpretI32 => {
-                self.expect_val(Operand::Exact(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
                 self.push_val(Operand::Exact(ValType::F32));
             }
             Instruction::F64ReinterpretI64 => {
-                self.expect_val(Operand::Exact(ValType::I64))?;
+                self.pop_val(Some(ValType::I64))?;
                 self.push_val(Operand::Exact(ValType::F64));
             }
             Instruction::I32TruncSatF32S | Instruction::I32TruncSatF32U => {
-                self.expect_val(Operand::Exact(ValType::F32))?;
+                self.pop_val(Some(ValType::F32))?;
                 self.push_val(Operand::Exact(ValType::I32));
             }
             Instruction::I32TruncSatF64S | Instruction::I32TruncSatF64U => {
-                self.expect_val(Operand::Exact(ValType::F64))?;
+                self.pop_val(Some(ValType::F64))?;
                 self.push_val(Operand::Exact(ValType::I32));
             }
             Instruction::I64TruncSatF32S | Instruction::I64TruncSatF32U => {
-                self.expect_val(Operand::Exact(ValType::F32))?;
+                self.pop_val(Some(ValType::F32))?;
                 self.push_val(Operand::Exact(ValType::I64));
             }
             Instruction::I64TruncSatF64S | Instruction::I64TruncSatF64U => {
-                self.expect_val(Operand::Exact(ValType::F64))?;
+                self.pop_val(Some(ValType::F64))?;
                 self.push_val(Operand::Exact(ValType::I64));
             }
             Instruction::I32Extend8S | Instruction::I32Extend16S => {
-                self.expect_val(Operand::Exact(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
                 self.push_val(Operand::Exact(ValType::I32));
             }
             Instruction::I64Extend8S | Instruction::I64Extend16S | Instruction::I64Extend32S => {
-                self.expect_val(Operand::Exact(ValType::I64))?;
+                self.pop_val(Some(ValType::I64))?;
                 self.push_val(Operand::Exact(ValType::I64));
             }
 
             // Memory operations
             Instruction::MemorySize => {
-                ensure!(self.mems.len() == 1, "memory not found");
+                ensure!(self.validator.mems.len() == 1, "memory not found");
                 self.push_val(Operand::Exact(ValType::I32));
             }
             Instruction::MemoryGrow => {
-                ensure!(self.mems.len() == 1, "memory not found");
-                self.expect_val(Operand::Exact(ValType::I32))?;
+                ensure!(self.validator.mems.len() == 1, "memory not found");
+                self.pop_val(Some(ValType::I32))?;
                 self.push_val(Operand::Exact(ValType::I32));
             }
             Instruction::MemoryCopy | Instruction::MemoryFill => {
-                ensure!(self.mems.len() == 1, "memory not found");
-                self.expect_val(Operand::Exact(ValType::I32))?;
-                self.expect_val(Operand::Exact(ValType::I32))?;
-                self.expect_val(Operand::Exact(ValType::I32))?;
+                ensure!(self.validator.mems.len() == 1, "memory not found");
+                self.pop_val(Some(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
             }
             Instruction::MemoryInit { data_idx } => {
-                ensure!(self.mems.len() == 1, "memory not found");
+                ensure!(self.validator.mems.len() == 1, "memory not found");
                 ensure!(
-                    (data_idx as usize) < self.datas_found,
+                    (data_idx as usize) < self.validator.datas_found,
                     "data not found: {data_idx}"
                 );
-                self.expect_val(Operand::Exact(ValType::I32))?;
-                self.expect_val(Operand::Exact(ValType::I32))?;
-                self.expect_val(Operand::Exact(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
             }
             Instruction::DataDrop { data_idx } => {
                 ensure!(
-                    (data_idx as usize) < self.datas_found,
+                    (data_idx as usize) < self.validator.datas_found,
                     "data not found: {data_idx}"
                 );
             }
 
             Instruction::RefIsNull => {
-                let val = self.expect_val(Operand::Any)?;
+                let val = self.pop_val(None)?;
                 ensure!(
                     val.is_ref() || val.is_any(),
                     "ref.is_null must be called on a reference type, got {val}"
@@ -1020,9 +699,9 @@ impl<'a> Validator<'a> {
                 self.push_val(Operand::Exact(ValType::I32));
             }
             Instruction::SelectT(t) => {
-                self.expect_val(Operand::Exact(ValType::I32))?;
-                self.expect_val(Operand::Exact(t))?;
-                self.expect_val(Operand::Exact(t))?;
+                self.pop_val(Some(ValType::I32))?;
+                self.pop_val(Some(t))?;
+                self.pop_val(Some(t))?;
                 self.push_val(Operand::Exact(t));
             }
             Instruction::I32Load(memarg) => {
@@ -1097,16 +776,16 @@ impl<'a> Validator<'a> {
 
             // Control instructions
             Instruction::Loop(blockty) => {
-                self.expect_vals(self.start_types(blockty)?)?;
+                self.pop_vals(self.start_types(blockty)?)?;
                 self.push_frame(FrameKind::Loop, blockty)?;
             }
             Instruction::Block(blockty) => {
-                self.expect_vals(self.start_types(blockty)?)?;
+                self.pop_vals(self.start_types(blockty)?)?;
                 self.push_frame(FrameKind::Block, blockty)?;
             }
             Instruction::If(blockty) => {
-                self.expect_val(Operand::Exact(ValType::I32))?;
-                self.expect_vals(self.start_types(blockty)?)?;
+                self.pop_val(Some(ValType::I32))?;
+                self.pop_vals(self.start_types(blockty)?)?;
                 self.push_frame(FrameKind::If, blockty)?;
             }
             Instruction::Else => {
@@ -1124,11 +803,11 @@ impl<'a> Validator<'a> {
                 let frame = self
                     .get_frame_n(depth as usize)
                     .context("br to invalid depth")?;
-                self.expect_vals(&self.labels(frame)?)?;
+                self.pop_vals(&self.labels(frame)?)?;
                 self.unreachable();
             }
             Instruction::BrTable(br_tbl) => {
-                self.expect_val(Operand::Exact(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
                 let default_labels = self.labels(
                     self.get_frame_n(br_tbl.default_depth as usize)
                         .context("br_table to invalid depth")?,
@@ -1144,19 +823,19 @@ impl<'a> Validator<'a> {
                         "br_table arity mismatch, got {}, want {arity}",
                         vals.len()
                     );
-                    for pushed in self.expect_vals_collect(&vals)?.into_iter().rev() {
+                    for pushed in self.pop_vals_collect(&vals)?.into_iter().rev() {
                         self.push_val(pushed);
                     }
                 }
-                self.expect_vals(&default_labels)?;
+                self.pop_vals(&default_labels)?;
                 self.unreachable();
             }
             Instruction::BrIf { depth } => {
-                self.expect_val(Operand::Exact(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
                 let frame = self
                     .get_frame_n(depth as usize)
                     .context("br_if to invalid depth")?;
-                self.expect_vals(&self.labels(frame)?)?;
+                self.pop_vals(&self.labels(frame)?)?;
                 // Need to get new reference for borrowck. Should be the same frame as before as
                 // long as `expect_vals` doesn't push or pop a frame (which it doesn't)
                 let frame = self.get_frame_n(depth as usize).unwrap();
@@ -1170,8 +849,8 @@ impl<'a> Validator<'a> {
             Instruction::F64Const(_) => self.push_val(Operand::Exact(ValType::F64)),
 
             Instruction::Call { func_idx } => {
-                let ty = self.get_ty(func_idx)?;
-                self.expect_vals(&ty.0)?;
+                let ty = self.validator.get_ty(func_idx)?;
+                self.pop_vals(&ty.0)?;
                 self.push_vals(&ty.1);
             }
 
@@ -1189,7 +868,7 @@ impl<'a> Validator<'a> {
                     .locals
                     .get(idx as usize)
                     .context("local.set out of bounds")?;
-                self.expect_val(Operand::Exact(ty))?;
+                self.pop_val(Some(ty))?;
             }
             Instruction::LocalTee { idx } => {
                 let ty = *self
@@ -1197,11 +876,12 @@ impl<'a> Validator<'a> {
                     .locals
                     .get(idx as usize)
                     .context("local.tee out of bounds")?;
-                self.expect_val(Operand::Exact(ty))?;
+                self.pop_val(Some(ty))?;
                 self.push_val(Operand::Exact(ty));
             }
             Instruction::GlobalGet { idx } => {
                 let ty = self
+                    .validator
                     .globals
                     .get(idx as usize)
                     .context("global.get out of bounds")?
@@ -1211,74 +891,79 @@ impl<'a> Validator<'a> {
             }
             Instruction::GlobalSet { idx } => {
                 let ty = self
+                    .validator
                     .globals
                     .get(idx as usize)
                     .context("global.set out of bounds")?
                     .ty;
                 ensure!(ty.mutable, "cannot global set on an immutable global");
-                self.expect_val(Operand::Exact(ty.content_type))?;
+                self.pop_val(Some(ty.content_type))?;
             }
             Instruction::ElemDrop { elem_idx } => {
                 ensure!(
-                    (elem_idx as usize) < self.elems.len(),
+                    (elem_idx as usize) < self.validator.elems.len(),
                     "elem not found: {elem_idx}"
                 );
             }
             Instruction::RefFunc { func_idx } => {
                 ensure!(
-                    (func_idx as usize) < self.funcs.len(),
+                    (func_idx as usize) < self.validator.funcs.len(),
                     "function type not found: {func_idx}"
                 );
                 ensure!(
-                    self.declared_funcs.contains(&func_idx),
+                    self.validator.declared_funcs.contains(&func_idx),
                     "ref_func: no declared initializers found for function at index {func_idx}"
                 );
                 self.push_val(Operand::Exact(ValType::Func));
             }
             Instruction::TableGet { table } => {
                 let ty = self
+                    .validator
                     .tables
                     .get(table as usize)
                     .context("table.get targets invalid table")?
                     .elem_type;
-                self.expect_val(Operand::Exact(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
                 self.push_val(Operand::Exact(ty.into()));
             }
             Instruction::TableSet { table } => {
                 let ty = self
+                    .validator
                     .tables
                     .get(table as usize)
                     .context("table.set targets invalid table")?
                     .elem_type;
-                self.expect_val(Operand::Exact(ty.into()))?;
-                self.expect_val(Operand::Exact(ValType::I32))?;
+                self.pop_val(Some(ty.into()))?;
+                self.pop_val(Some(ValType::I32))?;
             }
             Instruction::TableGrow { table } => {
                 let ty = self
+                    .validator
                     .tables
                     .get(table as usize)
                     .context("table.grow targets invalid table")?
                     .elem_type;
-                self.expect_val(Operand::Exact(ValType::I32))?;
-                self.expect_val(Operand::Exact(ty.into()))?;
+                self.pop_val(Some(ValType::I32))?;
+                self.pop_val(Some(ty.into()))?;
                 self.push_val(Operand::Exact(ValType::I32));
             }
             Instruction::TableSize { table } => {
                 ensure!(
-                    self.tables.len() > table as usize,
+                    self.validator.tables.len() > table as usize,
                     "table.size table not found: {table}"
                 );
                 self.push_val(Operand::Exact(ValType::I32));
             }
             Instruction::TableFill { table } => {
                 let ty = self
+                    .validator
                     .tables
                     .get(table as usize)
                     .context("table.fill targets invalid table")?
                     .elem_type;
-                self.expect_val(Operand::Exact(ValType::I32))?;
-                self.expect_val(Operand::Exact(ty.into()))?;
-                self.expect_val(Operand::Exact(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
+                self.pop_val(Some(ty.into()))?;
+                self.pop_val(Some(ValType::I32))?;
             }
             Instruction::RefNull { ty } => {
                 self.push_val(Operand::Exact(ty.into()));
@@ -1288,6 +973,7 @@ impl<'a> Validator<'a> {
                 table_idx,
             } => {
                 let table = &self
+                    .validator
                     .tables
                     .get(table_idx as usize)
                     .context("call.indirect table not found")?;
@@ -1297,11 +983,12 @@ impl<'a> Validator<'a> {
                     table.elem_type
                 );
                 let ty = self
+                    .validator
                     .module_tys
                     .get(type_idx as usize)
                     .context("call_indirect type not found")?;
-                self.expect_val(Operand::Exact(ValType::I32))?;
-                self.expect_vals(&ty.0)?;
+                self.pop_val(Some(ValType::I32))?;
+                self.pop_vals(&ty.0)?;
                 self.push_vals(&ty.1);
             }
             Instruction::TableCopy {
@@ -1309,46 +996,46 @@ impl<'a> Validator<'a> {
                 dst_table,
             } => {
                 ensure!(
-                    self.tables.len() > src_table as usize,
+                    self.validator.tables.len() > src_table as usize,
                     "table.copy src table not found: {src_table}"
                 );
                 ensure!(
-                    self.tables.len() > dst_table as usize,
+                    self.validator.tables.len() > dst_table as usize,
                     "table.copy dst table not found: {dst_table}"
                 );
-                let src_ty = self.tables[src_table as usize].elem_type;
-                let dst_ty = self.tables[dst_table as usize].elem_type;
+                let src_ty = self.validator.tables[src_table as usize].elem_type;
+                let dst_ty = self.validator.tables[dst_table as usize].elem_type;
                 ensure!(
                     src_ty == dst_ty,
                     "table.copy src and dst types must match, got {src_ty} and {dst_ty}"
                 );
-                self.expect_val(Operand::Exact(ValType::I32))?;
-                self.expect_val(Operand::Exact(ValType::I32))?;
-                self.expect_val(Operand::Exact(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
             }
             Instruction::TableInit {
                 elem_idx,
                 table_idx,
             } => {
                 ensure!(
-                    (table_idx as usize) < self.tables.len(),
+                    (table_idx as usize) < self.validator.tables.len(),
                     "table not found: {table_idx}"
                 );
                 ensure!(
-                    (elem_idx as usize) < self.elems.len(),
+                    (elem_idx as usize) < self.validator.elems.len(),
                     "elem not found: {elem_idx}"
                 );
-                let table = &self.tables[table_idx as usize];
-                let elem = &self.elems[elem_idx as usize];
+                let table = &self.validator.tables[table_idx as usize];
+                let elem = &self.validator.elems[elem_idx as usize];
                 ensure!(
                     table.elem_type == elem.types,
                     "table.init table and elem types must match, got {} and {}",
                     table.elem_type,
                     elem.types
                 );
-                self.expect_val(Operand::Exact(ValType::I32))?;
-                self.expect_val(Operand::Exact(ValType::I32))?;
-                self.expect_val(Operand::Exact(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
+                self.pop_val(Some(ValType::I32))?;
             }
         }
 
@@ -1369,7 +1056,7 @@ impl<'a> Validator<'a> {
         valtype: ValType,
         size_override: Option<u32>,
     ) -> Result<()> {
-        ensure!(self.mems.len() == 1, "memory not found");
+        ensure!(self.validator.mems.len() == 1, "memory not found");
         let size = size_override.unwrap_or_else(|| match valtype {
             ValType::I32 | ValType::F32 => 32,
             ValType::I64 | ValType::F64 => 64,
@@ -1379,7 +1066,7 @@ impl<'a> Validator<'a> {
             1 << memarg.align <= size / 8,
             "memory load operation alignment must not be larger than natural alignment, got {memarg:?}, size: {size}"
         );
-        self.expect_val(Operand::Exact(ValType::I32))?;
+        self.pop_val(Some(ValType::I32))?;
         self.push_val(Operand::Exact(valtype));
 
         debug!("validated memory load instruction");
@@ -1393,7 +1080,7 @@ impl<'a> Validator<'a> {
         valtype: ValType,
         size_override: Option<u32>,
     ) -> Result<()> {
-        ensure!(self.mems.len() == 1, "memory not found");
+        ensure!(self.validator.mems.len() == 1, "memory not found");
         let size = size_override.unwrap_or_else(|| match valtype {
             ValType::I32 | ValType::F32 => 32,
             ValType::I64 | ValType::F64 => 64,
@@ -1403,8 +1090,8 @@ impl<'a> Validator<'a> {
             1 << memarg.align <= size / 8,
             "memory store operation alignment must not be larger than natural alignment, got {memarg:?}, size: {size}"
         );
-        self.expect_val(Operand::Exact(valtype))?;
-        self.expect_val(Operand::Exact(ValType::I32))?;
+        self.pop_val(Some(valtype))?;
+        self.pop_val(Some(ValType::I32))?;
 
         debug!("validated memory store instruction");
         Ok(())

@@ -725,7 +725,10 @@ impl DoubleEndedIterator for Instrs<'_> {
         }
 
         self.cap -= 1;
-        Some(self.buffer.get(self.cap).unwrap())
+        // SAFETY: this will be within the bounds, as self.current can never exceed the length, and
+        // cap can never exceed it either (since we know the length is unchanged since the creation
+        // of this struct).
+        Some(unsafe { self.buffer.get_unchecked(self.cap) })
     }
 }
 
