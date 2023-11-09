@@ -675,7 +675,7 @@ impl<'a> Parser<'a> {
             .context("error reading init expr")?;
         // Advance the buffer to what the reader has read
         self.buf
-            .set_position(self.offset() + init_expr_reader.offset() as u64);
+            .set_position(self.offset() + init_expr_reader.offset());
         ensure!(
             init_expr.len() == 2,
             "init expr can must have 2 instructions"
