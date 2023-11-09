@@ -5,7 +5,7 @@ use std::fs;
 use anyhow::{Context, Result};
 use clap::Parser as CliParser;
 use shwasi_parser::{validate, Parser};
-use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
 
 use crate::cli::Cli;
 
@@ -20,9 +20,10 @@ fn main() -> Result<()> {
 
     // Logging setup
     let fmt_layer = fmt::layer();
-    let filter_layer = EnvFilter::try_from_default_env()
-        .or_else(|_| EnvFilter::try_new("warn"))
-        .expect("\"warn\" should be a valid directive");
+    let filter_layer = EnvFilter::builder()
+        .with_default_directive(LevelFilter::WARN.into())
+        .from_env()
+        .context("error reading logging directives")?;
     tracing_subscriber::registry()
         .with(filter_layer)
         .with(fmt_layer)
