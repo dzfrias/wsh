@@ -42,7 +42,6 @@ fn get_bench_inputs(path: impl AsRef<Path>, targets: &mut Vec<BenchTarget>) {
 fn run_benchmarks(c: &mut Criterion) {
     let mut targets = vec![];
     get_bench_inputs("./benches/inputs", &mut targets);
-    get_bench_inputs("./tests/spectests/wasm", &mut targets);
 
     for BenchTarget { path, wasm } in &targets {
         let name = path.file_stem().unwrap().to_str().unwrap();

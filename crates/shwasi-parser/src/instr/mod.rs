@@ -1,7 +1,7 @@
 mod instruction;
 mod opcode;
 
-use std::{fmt, iter::FusedIterator, mem};
+use std::{fmt, iter::FusedIterator, mem, sync::Arc};
 
 use num_enum::TryFromPrimitive;
 
@@ -24,12 +24,12 @@ pub struct MemArg {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BrTable {
-    pub depths: Vec<u32>,
+    pub depths: Arc<[u32]>,
     pub default_depth: u32,
 }
 
 #[derive(Debug)]
-pub struct Instrs<'a> {
+pub struct InstrsIter<'a> {
     buffer: &'a InstrBuffer,
     cap: usize,
     current: usize,
@@ -76,8 +76,8 @@ impl InstrBuffer {
         self.len() == 0
     }
 
-    pub fn iter(&self) -> Instrs {
-        Instrs {
+    pub fn iter(&self) -> InstrsIter {
+        InstrsIter {
             buffer: self,
             cap: self.len(),
             current: 0,
@@ -697,7 +697,7 @@ impl InstrBuffer {
     }
 }
 
-impl<'a> Iterator for Instrs<'a> {
+impl<'a> Iterator for InstrsIter<'a> {
     type Item = Instruction;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -717,15 +717,15 @@ impl<'a> Iterator for Instrs<'a> {
     }
 }
 
-impl FusedIterator for Instrs<'_> {}
+impl FusedIterator for InstrsIter<'_> {}
 
-impl ExactSizeIterator for Instrs<'_> {
+impl ExactSizeIterator for InstrsIter<'_> {
     fn len(&self) -> usize {
         self.cap - self.current
     }
 }
 
-impl DoubleEndedIterator for Instrs<'_> {
+impl DoubleEndedIterator for InstrsIter<'_> {
     fn next_back(&mut self) -> Option<Self::Item> {
         if self.cap == self.current {
             return None;
@@ -741,7 +741,7 @@ impl DoubleEndedIterator for Instrs<'_> {
 
 impl<'a> IntoIterator for &'a InstrBuffer {
     type Item = Instruction;
-    type IntoIter = Instrs<'a>;
+    type IntoIter = InstrsIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
@@ -750,7 +750,7 @@ impl<'a> IntoIterator for &'a InstrBuffer {
 
 impl<'a> IntoIterator for &'a mut InstrBuffer {
     type Item = Instruction;
-    type IntoIter = Instrs<'a>;
+    type IntoIter = InstrsIter<'a>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()

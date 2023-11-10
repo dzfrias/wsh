@@ -121,7 +121,7 @@ impl<'a> InstrReader<'a> {
 
         let default = self.read_u32_leb128()?;
         Ok(BrTable {
-            depths: targets,
+            depths: targets.into(),
             default_depth: default,
         })
     }

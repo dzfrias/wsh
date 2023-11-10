@@ -527,7 +527,7 @@ impl fmt::Display for Instruction {
 
             Instruction::BrTable(br_table) => {
                 write!(f, " {} (depths)", br_table.depths.len())?;
-                for depth in &br_table.depths {
+                for depth in br_table.depths.iter() {
                     write!(f, " {depth}")?;
                 }
                 write!(f, "{} (default)", br_table.default_depth)

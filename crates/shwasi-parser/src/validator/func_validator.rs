@@ -815,9 +815,9 @@ impl<'a> FuncValidator<'a> {
                         .context("br_table to invalid depth")?,
                 )?;
                 let arity = default_labels.len();
-                for depth in br_tbl.depths {
+                for depth in br_tbl.depths.iter() {
                     let vals = self.labels(
-                        self.get_frame_n(depth as usize)
+                        self.get_frame_n(*depth as usize)
                             .context("br_table to invalid depth")?,
                     )?;
                     ensure!(
