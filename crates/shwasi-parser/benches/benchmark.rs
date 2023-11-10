@@ -49,7 +49,7 @@ fn run_benchmarks(c: &mut Criterion) {
         c.bench_function(&format!("parser:{name}"), |b| {
             b.iter(|| {
                 let parser = Parser::new(wasm);
-                criterion::black_box(parser.read_module().expect("should be able to read module"));
+                parser.read_module().expect("should be able to read module");
             });
         });
     }
@@ -61,7 +61,7 @@ fn run_benchmarks(c: &mut Criterion) {
                 .read_module()
                 .expect("should be able to read moudle");
             b.iter(|| {
-                criterion::black_box(validate(&module).expect("module should be valid"));
+                validate(&module).expect("module should be valid");
             });
         });
     }

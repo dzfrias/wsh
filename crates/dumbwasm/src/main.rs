@@ -16,12 +16,17 @@ use crate::cli::{Cli, Color};
 fn main() -> Result<()> {
     let args = Cli::parse();
     let input = fs::read_to_string(&args.file).context("error reading input file to string")?;
-    let stem = args.file.file_stem().expect("should have file stem");
+    let stem = args
+        .file
+        .file_stem()
+        .expect("should have file stem if it was read successfully");
 
     let out = match parse(&input) {
         Ok(buf) => buf,
         Err(err) => {
             print_err(&input, err, &args);
+            // We use exit here to avoid printing the anyhow backtrace
+            #[allow(clippy::exit)]
             process::exit(1);
         }
     };

@@ -1,7 +1,9 @@
 use std::{borrow::Cow, fmt, iter};
 
 use anyhow::{ensure, Context, Result};
-use tracing::{debug, instrument, trace};
+#[cfg(debug_assertions)]
+use tracing::trace;
+use tracing::{debug, instrument};
 
 use crate::{
     validator::Validator, BlockType, Code, Function, Instruction, MemArg, RefType, ValType,

@@ -52,4 +52,4 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@nightly
       - run: rustup component add clippy
-      - run: cargo clippy --workspace
+      - run: cargo clippy --workspace --all-targets

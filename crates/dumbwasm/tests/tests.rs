@@ -68,6 +68,7 @@ macro_rules! dumbwasm_test_failing {
             let dir = TempDir::new(stringify!($name)).expect("could not create temp dir");
             let mut f = File::create(dir.path().join("input.dumbwasm"))
                 .expect("could not create temp file");
+            #[allow(clippy::string_lit_as_bytes)]
             f.write_all($input.as_bytes())
                 .expect("could not write to temp file");
             let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
