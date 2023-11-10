@@ -6,12 +6,12 @@ edition = "2021"
 [dependencies]
 anyhow.workspace = true
 clap = { version = "4.4.6", features = ["derive"] }
-dhat = "0.3.2"
+dhat = { version = "0.3.2", optional = true }
 shwasi-parser = { path = "crates/shwasi-parser" }
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 
 [features]
-dhat-heap = []
+dhat-heap = ["dhat"]
 
 [workspace]
 members = [
