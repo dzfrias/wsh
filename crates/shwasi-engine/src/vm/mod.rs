@@ -1,5 +1,7 @@
 #![allow(dead_code, clippy::match_same_arms)]
 
+mod ops;
+
 use std::{mem, rc::Rc};
 
 use shwasi_parser::{
@@ -7,8 +9,8 @@ use shwasi_parser::{
 };
 use thiserror::Error;
 
+use self::ops::*;
 use crate::{
-    ops::*,
     store::{Addr, GlobalInst},
     value::Value,
     FuncInst, Instance, StoreData, StoreMut,
