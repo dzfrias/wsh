@@ -9,7 +9,7 @@ use anyhow::{Context, Result};
 
 use crate::cli::Specgen;
 
-const SPEC_PATH: &str = "./crates/shwasi-parser/tests/spectests";
+const SPEC_PATH: &str = "./tests/spectests";
 
 pub fn specgen(_args: &Specgen) -> Result<()> {
     env::set_current_dir(SPEC_PATH)

@@ -1,6 +1,5 @@
 mod inputs;
 mod pretty_fmt;
-mod spectests;
 
 use insta::{assert_display_snapshot, assert_snapshot};
 use shwasi_parser::{validate, Parser};

@@ -1,3 +1,3 @@
-[submodule "crates/shwasi-parser/tests/testsuite"]
-	path = crates/shwasi-parser/tests/spectests/testsuite
+[submodule "tests/spectests/testsuite"]
+	path = tests/spectests/testsuite
 	url = https://github.com/WebAssembly/testsuite

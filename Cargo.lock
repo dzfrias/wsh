@@ -1117,6 +1117,7 @@ dependencies = [
  "clap",
  "dhat",
  "shwasi-parser",
+ "test-log",
  "tracing-subscriber",
 ]
 

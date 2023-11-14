@@ -3,6 +3,10 @@ name = "shwasi"
 version = "0.1.0"
 edition = "2021"
 
+[[test]]
+name = "integration"
+path = "tests/tests.rs"
+
 [dependencies]
 anyhow.workspace = true
 clap = { version = "4.4.6", features = ["derive"] }
@@ -25,9 +29,13 @@ members = [
 [profile.release]
 debug = 1
 
+[dev-dependencies]
+test-log.workspace = true
+
 [workspace.dependencies]
 anyhow = "1.0.75"
 thiserror = "1.0.50"
+test-log = { version = "0.2.13", default-features = false, features = ["trace"] }
 
 [workspace.lints.clippy]
 all = "warn"
