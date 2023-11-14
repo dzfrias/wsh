@@ -2,7 +2,7 @@ mod error;
 mod instance;
 mod ops;
 mod store;
-mod values;
+mod value;
 mod vm;
 
 pub use instance::*;

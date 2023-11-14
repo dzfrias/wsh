@@ -40,9 +40,9 @@ impl Instance {
     ///
     /// This will allocate the module's imports into the store, and allocate the module's different
     /// sections, and run the module's start function, if present.
-    pub fn instantiate(
-        mut module: Module,
-        store: &mut Store,
+    pub fn instantiate<'a>(
+        mut module: Module<'a>,
+        store: &mut Store<'a>,
         externs: &[ExternVal],
     ) -> Result<Rc<Self>> {
         validate(&module).map_err(Error::Validation)?;
@@ -168,9 +168,9 @@ impl Instance {
             store.mut_.elems.len() - 1
         }));
         inst.data_addrs.extend(module.datas.iter().map(|data| {
-            let inst = DataInst(data.data.to_vec());
-            store.mut_.datas.push(inst);
-            store.mut_.datas.len() - 1
+            let inst = DataInst(data.data);
+            store.data.datas.push(inst);
+            store.data.datas.len() - 1
         }));
 
         let inst = Rc::new(inst);

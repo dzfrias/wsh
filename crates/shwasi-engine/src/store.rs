@@ -6,20 +6,21 @@ use shwasi_parser::{Code, FuncType, GlobalType, Memory, RefType, TableType};
 
 use crate::{
     instance::Instance,
-    values::{Ref, Value},
+    value::{Ref, Value},
     PAGE_SIZE,
 };
 
 /// A WebAssembly store, holding all global data of given module.
 #[derive(Debug, Default)]
-pub struct Store {
-    pub data: StoreData,
+pub struct Store<'a> {
+    pub data: StoreData<'a>,
     pub mut_: StoreMut,
 }
 
 #[derive(Debug, Default)]
-pub struct StoreData {
+pub struct StoreData<'a> {
     pub functions: Vec<FuncInst>,
+    pub datas: Vec<DataInst<'a>>,
 
     pub(crate) types: HashMap<ExternVal, Extern>,
 }
@@ -28,12 +29,11 @@ pub struct StoreData {
 pub struct StoreMut {
     pub memories: Vec<MemInst>,
     pub globals: Vec<GlobalInst>,
-    pub datas: Vec<DataInst>,
     pub elems: Vec<ElemInst>,
     pub tables: Vec<TableInst>,
 }
 
-impl Store {
+impl Store<'_> {
     /// Create a new, empty [`Store`].
     pub fn new() -> Self {
         Self::default()
@@ -82,6 +82,7 @@ pub struct MemInst {
 }
 
 impl MemInst {
+    /// Get the size of the memory in pages.
     #[inline]
     pub fn size(&self) -> usize {
         self.data.len() / PAGE_SIZE
@@ -133,7 +134,7 @@ pub struct ExportInst {
 
 /// An instance of a WebAssembly data segment.
 #[derive(Debug)]
-pub struct DataInst(pub Vec<u8>);
+pub struct DataInst<'a>(pub &'a [u8]);
 
 /// An address into a [`Store`].
 pub type Addr = usize;
@@ -160,13 +161,6 @@ impl ElemInst {
     #[inline]
     pub fn elem_drop(&mut self) {
         self.elems.clear();
-    }
-}
-
-impl DataInst {
-    #[inline]
-    pub fn data_drop(&mut self) {
-        self.0.clear();
     }
 }
 
