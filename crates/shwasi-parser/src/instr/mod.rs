@@ -9,6 +9,7 @@ pub use self::instruction::Instruction;
 pub use self::opcode::{is_prefix_byte, Opcode};
 use crate::{module::ValType, RefType, F32, F64};
 
+/// A buffer containing [`Instruction`]s.
 #[derive(Debug, Clone, Default)]
 pub struct InstrBuffer {
     infos: Vec<InstrInfo>,
@@ -18,18 +19,24 @@ pub struct InstrBuffer {
     block_elses: Vec<(Block, Option<usize>)>,
 }
 
+/// A memory argument for a load or store instruction.
+///
+/// See [the spec](https://webassembly.github.io/spec/core/binary/instructions.html#memory-instructions)
+/// for more information on the instructions that use this.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct MemArg {
     pub offset: u32,
     pub align: u32,
 }
 
+/// The immediates of a [`Instruction::BrTable`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct BrTable {
     pub depths: Arc<[u32]>,
     pub default_depth: u32,
 }
 
+/// An iterator over the instructions in an [`InstrBuffer`].
 #[derive(Debug)]
 pub struct InstrsIter<'a> {
     buffer: &'a InstrBuffer,
@@ -37,12 +44,7 @@ pub struct InstrsIter<'a> {
     current: usize,
 }
 
-#[derive(Debug, Clone)]
-struct InstrInfo {
-    opcode: Opcode,
-    payload: u32,
-}
-
+/// The type of a block-related instruction.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BlockType {
     Empty,
@@ -50,13 +52,32 @@ pub enum BlockType {
     FuncType(u32),
 }
 
+/// The immediate of a [`Instruction::Block`], [`Instruction::Loop`], or [`Instruction::If`].
+///
+/// Note that `end` does not appear in the spec. It is used to keep track of the end of the block,
+/// and is an index into the [`InstrBuffer`].
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Block {
     pub ty: BlockType,
     pub end: usize,
 }
 
+/// Internally used in order to encode instructions efficiently in the buffer.
+#[derive(Debug, Clone)]
+struct InstrInfo {
+    opcode: Opcode,
+    /// The payload of the instruction. This is used to encode the immediates of an instruction.
+    ///
+    /// Instructions with no immediates will have a payload of 0. Instructions with a **four-bytes**
+    /// or less immediate will have their payload be the immediate.
+    ///
+    /// Otherwise, `payload` is a pointer to a different vector in the buffer that contains the
+    /// information.
+    payload: u32,
+}
+
 impl InstrBuffer {
+    /// Create a new, empty [`InstrBuffer`].
     pub fn new() -> Self {
         Self {
             infos: vec![],
@@ -67,6 +88,7 @@ impl InstrBuffer {
         }
     }
 
+    /// Create a new [`InstrBuffer`] with the given [`Instruction`] capacity.
     pub fn with_capacity(cap: usize) -> Self {
         Self {
             infos: Vec::with_capacity(cap),
@@ -74,18 +96,22 @@ impl InstrBuffer {
         }
     }
 
+    /// Shrink the capacity of the buffer to fit its length.
     pub fn shrink(&mut self) {
         self.infos.shrink_to_fit();
     }
 
+    /// Get the number of instructions in the buffer.
     pub fn len(&self) -> usize {
         self.infos.len()
     }
 
+    /// Check if the buffer is empty.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    /// Create an iterator over the instructions in the buffer.
     pub fn iter(&self) -> InstrsIter {
         InstrsIter {
             buffer: self,
@@ -94,14 +120,17 @@ impl InstrBuffer {
         }
     }
 
+    /// Get the last instruction in the buffer.
     pub fn last(&self) -> Option<Instruction> {
         self.get(self.len() - 1)
     }
 
+    /// Get the first instruction in the buffer.
     pub fn first(&self) -> Option<Instruction> {
         self.get(0)
     }
 
+    /// Push an instruction into to the buffer.
     pub fn push(&mut self, instr: Instruction) {
         // The instruction's discriminant (a u8) is used to encode the instruction type. This will
         // differentiate between two instrucitons and their payloads. It can later be turned into
@@ -343,6 +372,9 @@ impl InstrBuffer {
         });
     }
 
+    /// Get an instruction at the given index.
+    ///
+    /// This method will return [`None`] if the index is out of bounds.
     pub fn get(&self, idx: usize) -> Option<Instruction> {
         if idx >= self.len() {
             return None;
@@ -354,7 +386,7 @@ impl InstrBuffer {
     /// Get an instruction from the buffer.
     ///
     /// # Safety
-    /// This function has undefined behavior when `idx` is >= to `self.len()`.
+    /// This function has undefined behavior when `idx >= self.len()`.
     pub unsafe fn get_unchecked(&self, idx: usize) -> Instruction {
         let info = self.infos.get_unchecked(idx);
 
@@ -699,6 +731,11 @@ impl InstrBuffer {
         }
     }
 
+    /// Patch the `end` pointer of an instruction, by index.
+    ///
+    /// # Panics
+    /// Panics if the instruction at `idx` is not an [`Instruction::Block`], [`Instruction::If`],
+    /// or [`Instruction::Loop`].
     pub fn patch_end(&mut self, idx: usize, new_end: usize) {
         let info = &self.infos[idx];
         match info.opcode {
@@ -714,6 +751,10 @@ impl InstrBuffer {
         }
     }
 
+    /// Patch the `else` pointer of an instruction, by index.
+    ///
+    /// # Panics
+    /// Panics if the instruction at `idx` is not an [`Instruction::If`].
     pub fn patch_else(&mut self, idx: usize, new_else_: usize) {
         let info = &self.infos[idx];
         match info.opcode {
