@@ -1,5 +1,6 @@
 mod error;
 mod instance;
+mod ops;
 mod store;
 mod values;
 mod vm;

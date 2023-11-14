@@ -1,8 +1,8 @@
 use std::fmt;
 
 use crate::{
-    BlockType, BrTable, DataIdx, ElemIdx, FuncIdx, MemArg, Opcode, RefType, TableIdx, TypeIdx,
-    ValType, F32, F64,
+    Block, BlockType, BrTable, DataIdx, ElemIdx, FuncIdx, MemArg, Opcode, RefType, TableIdx,
+    TypeIdx, ValType, F32, F64,
 };
 
 #[derive(Debug, PartialEq)]
@@ -180,9 +180,12 @@ pub enum Instruction {
     I64Store8(MemArg) = 169,
     I64Store16(MemArg) = 170,
     I64Store32(MemArg) = 171,
-    Block(BlockType) = 172,
-    Loop(BlockType) = 173,
-    If(BlockType) = 174,
+    Block(Block) = 172,
+    Loop(Block) = 173,
+    If {
+        block: Block,
+        else_: Option<usize>,
+    } = 174,
     Br {
         depth: u32,
     } = 175,
@@ -453,23 +456,23 @@ impl fmt::Display for Instruction {
                 write!(f, " {} (align) {} (offset)", memarg.align, memarg.offset)
             }
 
-            Instruction::Block(blockty) | Instruction::Loop(blockty) | Instruction::If(blockty) => {
-                match blockty {
-                    BlockType::Empty => Ok(()),
-                    BlockType::Type(val_type) => {
-                        let write = match val_type {
-                            ValType::I32 => "i32",
-                            ValType::I64 => "i64",
-                            ValType::F32 => "f32",
-                            ValType::F64 => "f64",
-                            ValType::Func => "funcref",
-                            ValType::Extern => "externref",
-                        };
-                        write!(f, " {write}")
-                    }
-                    BlockType::FuncType(functype) => write!(f, " {functype} (functype)"),
+            Instruction::Block(blockty)
+            | Instruction::Loop(blockty)
+            | Instruction::If { block: blockty, .. } => match blockty.ty {
+                BlockType::Empty => Ok(()),
+                BlockType::Type(val_type) => {
+                    let write = match val_type {
+                        ValType::I32 => "i32",
+                        ValType::I64 => "i64",
+                        ValType::F32 => "f32",
+                        ValType::F64 => "f64",
+                        ValType::Func => "funcref",
+                        ValType::Extern => "externref",
+                    };
+                    write!(f, " {write}")
                 }
-            }
+                BlockType::FuncType(functype) => write!(f, " {functype} (functype)"),
+            },
 
             Instruction::Br { depth } | Instruction::BrIf { depth } => {
                 write!(f, " {depth} (depth)")

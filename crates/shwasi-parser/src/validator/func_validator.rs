@@ -6,7 +6,7 @@ use tracing::trace;
 use tracing::{debug, instrument};
 
 use crate::{
-    validator::Validator, BlockType, Code, Function, Instruction, MemArg, RefType, ValType,
+    validator::Validator, Block, BlockType, Code, Function, Instruction, MemArg, RefType, ValType,
 };
 
 // Necessary to distinguish the two because the base funtion frame should have no param types
@@ -777,15 +777,18 @@ impl<'a> FuncValidator<'a> {
             }
 
             // Control instructions
-            Instruction::Loop(blockty) => {
+            Instruction::Loop(Block { ty: blockty, .. }) => {
                 self.pop_vals(self.start_types(blockty)?)?;
                 self.push_frame(FrameKind::Loop, blockty)?;
             }
-            Instruction::Block(blockty) => {
+            Instruction::Block(Block { ty: blockty, .. }) => {
                 self.pop_vals(self.start_types(blockty)?)?;
                 self.push_frame(FrameKind::Block, blockty)?;
             }
-            Instruction::If(blockty) => {
+            Instruction::If {
+                block: Block { ty: blockty, .. },
+                ..
+            } => {
                 self.pop_val(Some(ValType::I32))?;
                 self.pop_vals(self.start_types(blockty)?)?;
                 self.push_frame(FrameKind::If, blockty)?;

@@ -6,8 +6,8 @@ use num_enum::TryFromPrimitive;
 use tracing::{debug, instrument, trace};
 
 use crate::{
-    is_prefix_byte, BlockType, BrTable, InstrBuffer, Instruction, MemArg, Module, Opcode, RefType,
-    ValType, F32, F64,
+    is_prefix_byte, Block, BlockType, BrTable, InstrBuffer, Instruction, MemArg, Module, Opcode,
+    RefType, ValType, F32, F64,
 };
 
 #[derive(Debug)]
@@ -353,8 +353,8 @@ impl<'a> InstrReader<'a> {
                     let b1 = self.read_u32_leb128()?;
                     let b2 = self.read_u32_leb128()?;
                     Instruction::TableCopy {
-                        src_table: b1,
-                        dst_table: b2,
+                        src_table: b2,
+                        dst_table: b1,
                     }
                 }
                 Opcode::TableInit => {
@@ -378,19 +378,34 @@ impl<'a> InstrReader<'a> {
                     Instruction::RefNull { ty: reftype }
                 }
                 Opcode::If => {
-                    stack.push(opcode);
+                    stack.push((opcode, buffer.len()));
                     let block_type = self.read_blocktype()?;
-                    Instruction::If(block_type)
+                    Instruction::If {
+                        block: Block {
+                            ty: block_type,
+                            end: 0,
+                        },
+                        else_: None,
+                    }
                 }
                 Opcode::Block => {
-                    stack.push(opcode);
+                    stack.push((opcode, buffer.len()));
                     let block_type = self.read_blocktype()?;
-                    Instruction::Block(block_type)
+
+                    Instruction::Block(Block {
+                        ty: block_type,
+                        end: 0,
+                    })
                 }
                 Opcode::Loop => {
-                    stack.push(opcode);
+                    stack.push((opcode, buffer.len()));
                     let block_type = self.read_blocktype()?;
-                    Instruction::Loop(block_type)
+                    Instruction::Loop(Block {
+                        ty: block_type,
+                        // The end of the loop is the beginning of the loop. `br 0`, for example,
+                        // is equivalent to a continue instruction for a loop.
+                        end: buffer.len(),
+                    })
                 }
                 Opcode::BrTable => {
                     let br_table = self.read_br_table()?;
@@ -398,21 +413,32 @@ impl<'a> InstrReader<'a> {
                 }
 
                 Opcode::End => {
-                    if stack.is_empty() {
-                        trace!(
-                            "returned early with end instruction, got buffer of size {}",
-                            buffer.len()
-                        );
-                        buffer.shrink();
-                        buffer.push(Instruction::End);
-                        return Ok(buffer);
+                    match stack.pop() {
+                        Some((opcode, idx)) if opcode != Opcode::Loop => {
+                            // Because the parser is a single pass, we don't know the end of the
+                            // block until we hit the end instruction. So, we need to patch it in
+                            // the instruction buffer.
+                            buffer.patch_end(idx, buffer.len());
+                        }
+                        None => {
+                            trace!(
+                                "returned early with end instruction, got buffer of size {}",
+                                buffer.len()
+                            );
+                            buffer.shrink();
+                            buffer.push(Instruction::End);
+                            return Ok(buffer);
+                        }
+                        _ => {}
                     }
-                    stack.pop();
                     Instruction::End
                 }
 
                 Opcode::Else => {
-                    ensure!(stack.last().is_some_and(|opcode| *opcode == Opcode::If));
+                    ensure!(stack
+                        .last()
+                        .is_some_and(|(opcode, _)| *opcode == Opcode::If));
+                    buffer.patch_else(stack.last().unwrap().1, buffer.len());
                     Instruction::Else
                 }
 

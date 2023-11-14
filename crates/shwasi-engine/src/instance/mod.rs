@@ -58,6 +58,7 @@ impl Instance {
 
         for (extern_val, import) in externs.iter().zip(module.imports.iter()) {
             let ty = store
+                .data
                 .types
                 .get(extern_val)
                 .ok_or(Error::ExternNotFound(*extern_val))?;
@@ -87,7 +88,7 @@ impl Instance {
         inst.types = module.types;
 
         // Allocate indices, as FuncInst's can only be put in store after module is put in an Rc
-        let fsi_min = store.functions.len();
+        let fsi_min = store.data.functions.len();
         let fsi_max = fsi_min + module.functions.len();
         for addr in fsi_min..fsi_max {
             inst.func_addrs.push(addr);
@@ -97,23 +98,28 @@ impl Instance {
             .extend(module.memories.into_iter().map(|mem| {
                 let init = mem.limit.initial as usize * PAGE_SIZE;
                 // Create the memory based on the initial size
-                store.memories.push(MemInst {
+                store.mut_.memories.push(MemInst {
                     ty: mem.clone(),
                     data: vec![0; init],
                 });
-                let addr = store.memories.len() - 1;
-                store.types.insert(ExternVal::Mem(addr), Extern::Mem(mem));
+                let addr = store.mut_.memories.len() - 1;
+                store
+                    .data
+                    .types
+                    .insert(ExternVal::Mem(addr), Extern::Mem(mem));
                 addr
             }));
         inst.global_addrs
             .extend(module.globals.into_iter().map(|global| {
-                let value = vm::eval_const_expr(&store.globals, &imported_globals, &global.init);
-                store.globals.push(GlobalInst {
+                let value =
+                    vm::eval_const_expr(&store.mut_.globals, &imported_globals, &global.init);
+                store.mut_.globals.push(GlobalInst {
                     ty: global.kind.clone(),
                     value,
                 });
-                let addr = store.globals.len() - 1;
+                let addr = store.mut_.globals.len() - 1;
                 store
+                    .data
                     .types
                     .insert(ExternVal::Global(addr), Extern::Global(global.kind));
                 addr
@@ -125,9 +131,10 @@ impl Instance {
                     ty: table.clone(),
                     elements: vec![None; init as usize],
                 };
-                store.tables.push(inst);
-                let addr = store.tables.len() - 1;
+                store.mut_.tables.push(inst);
+                let addr = store.mut_.tables.len() - 1;
                 store
+                    .data
                     .types
                     .insert(ExternVal::Table(addr), Extern::Table(table));
                 addr
@@ -153,19 +160,17 @@ impl Instance {
                     .elems
                     .iter()
                     .map(|init| {
-                        vm::eval_const_expr(&store.globals, &imported_globals, init)
-                            .to_ref()
-                            .expect("should not happen due to validation")
+                        vm::eval_const_expr(&store.mut_.globals, &imported_globals, init).as_ref()
                     })
                     .collect(),
             };
-            store.elems.push(inst);
-            store.elems.len() - 1
+            store.mut_.elems.push(inst);
+            store.mut_.elems.len() - 1
         }));
         inst.data_addrs.extend(module.datas.iter().map(|data| {
             let inst = DataInst(data.data.to_vec());
-            store.datas.push(inst);
-            store.datas.len() - 1
+            store.mut_.datas.push(inst);
+            store.mut_.datas.len() - 1
         }));
 
         let inst = Rc::new(inst);
@@ -182,29 +187,29 @@ impl Instance {
             );
             let func_inst = FuncInst::Module(ModuleFunc {
                 ty: ty.clone(),
-                body: code,
+                code,
                 inst: Rc::clone(&inst),
             });
-            store.functions.push(func_inst);
-            store.types.insert(
-                ExternVal::Func(store.functions.len() - 1),
+            store.data.functions.push(func_inst);
+            store.data.types.insert(
+                ExternVal::Func(store.data.functions.len() - 1),
                 Extern::Func(ty.clone()),
             );
         }
 
         // Initialize tables with element segments
         for (elem_addr, elem) in inst.elem_addrs.iter().zip(&module.elements) {
-            let elem_inst = &mut store.elems[*elem_addr];
+            let elem_inst = &mut store.mut_.elems[*elem_addr];
             match elem.kind {
                 ElementKind::Passive => {}
                 ElementKind::Declarative => elem_inst.elem_drop(),
                 ElementKind::Active { tbl_idx, offset } => {
-                    let offset = vm::eval_const_expr(&store.globals, &imported_globals, &offset)
-                        .to_u32()
-                        .expect("should not happen due to validation");
+                    let offset =
+                        vm::eval_const_expr(&store.mut_.globals, &imported_globals, &offset)
+                            .as_u32();
                     for (i, func_idx) in elem_inst.elems.iter().enumerate() {
                         let funcaddr = inst.func_addrs[*func_idx];
-                        store.tables[inst.table_addrs[tbl_idx as usize]].elements
+                        store.mut_.tables[inst.table_addrs[tbl_idx as usize]].elements
                             [offset as usize + i] = Some(funcaddr);
                     }
                     elem_inst.elem_drop();
@@ -216,10 +221,9 @@ impl Instance {
             let Some(offset_expr) = &data.offset else {
                 continue;
             };
-            let offset = vm::eval_const_expr(&store.globals, &imported_globals, offset_expr)
-                .to_u32()
-                .expect("should not happen due to validation") as usize;
-            let mem = &mut store.memories[inst.mem_addrs[0]];
+            let offset = vm::eval_const_expr(&store.mut_.globals, &imported_globals, offset_expr)
+                .as_u32() as usize;
+            let mem = &mut store.mut_.memories[inst.mem_addrs[0]];
             mem.data[offset..offset + data.data.len()].copy_from_slice(data.data);
         }
 

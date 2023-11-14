@@ -7,21 +7,30 @@ use shwasi_parser::{Code, FuncType, GlobalType, Memory, RefType, TableType};
 use crate::{
     instance::Instance,
     values::{Ref, Value},
+    PAGE_SIZE,
 };
 
 /// A WebAssembly store, holding all global data of given module.
-///
-/// Each field of the store can be retrieved with an [`Addr`].
 #[derive(Debug, Default)]
 pub struct Store {
+    pub data: StoreData,
+    pub mut_: StoreMut,
+}
+
+#[derive(Debug, Default)]
+pub struct StoreData {
     pub functions: Vec<FuncInst>,
-    pub tables: Vec<TableInst>,
-    pub memories: Vec<MemInst>,
-    pub globals: Vec<GlobalInst>,
-    pub elems: Vec<ElemInst>,
-    pub datas: Vec<DataInst>,
 
     pub(crate) types: HashMap<ExternVal, Extern>,
+}
+
+#[derive(Debug, Default)]
+pub struct StoreMut {
+    pub memories: Vec<MemInst>,
+    pub globals: Vec<GlobalInst>,
+    pub datas: Vec<DataInst>,
+    pub elems: Vec<ElemInst>,
+    pub tables: Vec<TableInst>,
 }
 
 impl Store {
@@ -54,7 +63,7 @@ pub type HostFuncInner = Box<dyn Fn()>;
 #[derive(Debug)]
 pub struct ModuleFunc {
     pub ty: FuncType,
-    pub body: Code,
+    pub code: Code,
     pub inst: Rc<Instance>,
 }
 
@@ -70,6 +79,35 @@ pub struct TableInst {
 pub struct MemInst {
     pub ty: Memory,
     pub data: Vec<u8>,
+}
+
+impl MemInst {
+    #[inline]
+    pub fn size(&self) -> usize {
+        self.data.len() / PAGE_SIZE
+    }
+
+    pub fn grow(&mut self, new: usize) -> Option<usize> {
+        let sz = self.data.len() / PAGE_SIZE;
+        if let Some(max) = self.ty.limit.max {
+            if (max as usize) < sz + new {
+                return None;
+            }
+        }
+        // 4GB limit
+        if sz + new > ((1u64 << 32) / PAGE_SIZE as u64) as usize {
+            return None;
+        }
+        self.data.resize((sz + new) * PAGE_SIZE, 0);
+        Some(sz)
+    }
+}
+
+impl TableInst {
+    #[inline]
+    pub fn size(&self) -> usize {
+        self.elements.len()
+    }
 }
 
 /// An instance of a WebAssembly global.
@@ -119,8 +157,16 @@ pub enum Extern {
 }
 
 impl ElemInst {
+    #[inline]
     pub fn elem_drop(&mut self) {
         self.elems.clear();
+    }
+}
+
+impl DataInst {
+    #[inline]
+    pub fn data_drop(&mut self) {
+        self.0.clear();
     }
 }
 

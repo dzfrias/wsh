@@ -14,6 +14,8 @@ pub struct InstrBuffer {
     infos: Vec<InstrInfo>,
     br_tables: Vec<BrTable>,
     u64s: Vec<u64>,
+    blocks: Vec<Block>,
+    block_elses: Vec<(Block, Option<usize>)>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -48,12 +50,20 @@ pub enum BlockType {
     FuncType(u32),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Block {
+    pub ty: BlockType,
+    pub end: usize,
+}
+
 impl InstrBuffer {
     pub fn new() -> Self {
         Self {
             infos: vec![],
             br_tables: vec![],
             u64s: vec![],
+            blocks: vec![],
+            block_elses: vec![],
         }
     }
 
@@ -272,9 +282,11 @@ impl InstrBuffer {
             | Instruction::I64Store16(n)
             | Instruction::I64Store32(n) => unsafe { self.alloc_u64(mem::transmute(n)) },
 
-            Instruction::Block(block) | Instruction::Loop(block) | Instruction::If(block) => unsafe {
-                self.alloc_u64(mem::transmute(block))
-            },
+            Instruction::Block(block) | Instruction::Loop(block) => self.alloc_block(block),
+            Instruction::If { block, else_ } => {
+                self.block_elses.push((block, else_));
+                self.block_elses.len() as u32 - 1
+            }
 
             Instruction::Br { depth: n }
             | Instruction::BrIf { depth: n }
@@ -491,14 +503,11 @@ impl InstrBuffer {
             Opcode::I64TruncSatF64S => Instruction::I64TruncSatF64S,
             Opcode::I64TruncSatF64U => Instruction::I64TruncSatF64U,
 
-            Opcode::Block => {
-                Instruction::Block(unsafe { mem::transmute(self.u64s[info.payload as usize]) })
-            }
-            Opcode::Loop => {
-                Instruction::Loop(unsafe { mem::transmute(self.u64s[info.payload as usize]) })
-            }
+            Opcode::Block => Instruction::Block(self.blocks[info.payload as usize]),
+            Opcode::Loop => Instruction::Loop(self.blocks[info.payload as usize]),
             Opcode::If => {
-                Instruction::If(unsafe { mem::transmute(self.u64s[info.payload as usize]) })
+                let (block, else_) = self.block_elses[info.payload as usize];
+                Instruction::If { block, else_ }
             }
 
             Opcode::I32Load => {
@@ -690,10 +699,42 @@ impl InstrBuffer {
         }
     }
 
+    pub fn patch_end(&mut self, idx: usize, new_end: usize) {
+        let info = &self.infos[idx];
+        match info.opcode {
+            Opcode::Block | Opcode::Loop => {
+                let block = &mut self.blocks[info.payload as usize];
+                block.end = new_end;
+            }
+            Opcode::If => {
+                let (block, _) = &mut self.block_elses[info.payload as usize];
+                block.end = new_end;
+            }
+            _ => panic!("cannot patch end of {}", info.opcode),
+        }
+    }
+
+    pub fn patch_else(&mut self, idx: usize, new_else_: usize) {
+        let info = &self.infos[idx];
+        match info.opcode {
+            Opcode::If => {
+                let (_, else_) = &mut self.block_elses[info.payload as usize];
+                *else_ = Some(new_else_);
+            }
+            _ => panic!("cannot patch else of {}", info.opcode),
+        }
+    }
+
     #[inline(always)]
     fn alloc_u64(&mut self, u64: u64) -> u32 {
         self.u64s.push(u64);
         self.u64s.len() as u32 - 1
+    }
+
+    #[inline(always)]
+    fn alloc_block(&mut self, block: Block) -> u32 {
+        self.blocks.push(block);
+        self.blocks.len() as u32 - 1
     }
 }
 
@@ -754,6 +795,18 @@ impl<'a> IntoIterator for &'a mut InstrBuffer {
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
+    }
+}
+
+impl FromIterator<Instruction> for InstrBuffer {
+    fn from_iter<T: IntoIterator<Item = Instruction>>(iter: T) -> Self {
+        let iter = iter.into_iter();
+        let size_hint = iter.size_hint();
+        let mut buffer = Self::with_capacity(size_hint.1.unwrap_or(size_hint.0));
+        for instr in iter {
+            buffer.push(instr);
+        }
+        buffer
     }
 }
 
