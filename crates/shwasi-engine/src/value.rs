@@ -1,9 +1,9 @@
 use std::mem;
 
-use shwasi_parser::{RefType, ValType};
+use shwasi_parser::ValType;
 
 /// A reference.
-pub type Ref = usize;
+pub type Ref = Option<usize>;
 
 /// A WebAssembly value.
 #[derive(Debug, Clone, PartialEq, Copy)]
@@ -12,7 +12,6 @@ pub enum Value {
     I64(u64),
     F32(f32),
     F64(f64),
-    NullRef(RefType),
     /// A reference to a function.
     Ref(Ref),
     /// A reference to an extern.
@@ -75,7 +74,7 @@ impl Value {
     #[inline]
     pub fn as_ref(self) -> Ref {
         match self {
-            Self::Ref(ref_) => ref_,
+            Self::Ref(ref_) | Self::ExternRef(ref_) => ref_,
             _ => panic!("Expected Ref, found {:?}", self),
         }
     }
@@ -95,7 +94,7 @@ impl Value {
     }
 
     pub fn is_null(&self) -> bool {
-        matches!(self, Self::NullRef(_))
+        matches!(self, Self::Ref(None) | Self::ExternRef(None))
     }
 
     #[inline]
@@ -105,8 +104,19 @@ impl Value {
             ValType::I64 => Self::I64(0),
             ValType::F32 => Self::F32(0.0),
             ValType::F64 => Self::F64(0.0),
-            ValType::Func => Self::Ref(0),
-            ValType::Extern => Self::ExternRef(0),
+            ValType::Func => Self::Ref(None),
+            ValType::Extern => Self::ExternRef(None),
+        }
+    }
+
+    pub fn ty(&self) -> ValType {
+        match self {
+            Self::I32(_) => ValType::I32,
+            Self::I64(_) => ValType::I64,
+            Self::F32(_) => ValType::F32,
+            Self::F64(_) => ValType::F64,
+            Self::Ref(_) => ValType::Func,
+            Self::ExternRef(_) => ValType::Extern,
         }
     }
 }

@@ -1,6 +1,9 @@
 use thiserror::Error;
 
-use crate::store::{Extern, ExternVal};
+use crate::{
+    store::{Extern, ExternVal},
+    vm::Trap,
+};
 
 /// A error that can occur during instantiation or at runtime.
 #[derive(Debug, Error)]
@@ -14,6 +17,12 @@ pub enum Error {
     BadExternType { want: Extern, got: Extern },
     #[error("validation error: {0}")]
     Validation(anyhow::Error),
+    #[error("trap: {0}")]
+    Trap(Trap),
+    #[error("function not found {0}")]
+    FunctionNotFound(String),
+    #[error("attempting to call non-function ({0:?})")]
+    AttemptingToCallNonFunction(ExternVal),
 }
 
 /// A convenience type alias for `Result<T, Error>`.

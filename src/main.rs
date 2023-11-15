@@ -4,7 +4,8 @@ use std::fs;
 
 use anyhow::{Context, Result};
 use clap::Parser as CliParser;
-use shwasi_parser::{validate, Parser};
+use shwasi_engine::{Instance, Store};
+use shwasi_parser::Parser;
 use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
 
 use crate::cli::Cli;
@@ -34,8 +35,11 @@ fn main() -> Result<()> {
 
     let parser = Parser::new(&input);
     let module = parser.read_module()?;
-    validate(&module).context("invalid module")?;
-    println!("module is valid!");
+    let mut store = Store::default();
+    let instance = Instance::instantiate(&mut store, module, &[])?;
+    let fib = instance.get_func::<u32, u32>(&mut store, "fib")?;
+    let result = fib.call(&mut store, 10)?;
+    dbg!(result);
 
     Ok(())
 }

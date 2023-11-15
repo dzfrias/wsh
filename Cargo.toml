@@ -12,6 +12,7 @@ anyhow.workspace = true
 clap = { version = "4.4.6", features = ["derive"] }
 dhat = { version = "0.3.2", optional = true }
 shwasi-parser = { path = "crates/shwasi-parser" }
+shwasi-engine = { path = "crates/shwasi-engine" }
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 
 [features]

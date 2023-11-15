@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+mod wasm_func;
 
 use std::rc::Rc;
 
@@ -6,13 +6,14 @@ use shwasi_parser::{
     validate, Code, ElementKind, ExternalKind, FuncType, ImportKind, InstrBuffer, Module,
 };
 
+pub use self::wasm_func::*;
 use crate::{
     error::{Error, Result},
     store::{
         Addr, DataInst, ElemInst, ExportInst, Extern, ExternVal, FuncInst, GlobalInst, MemInst,
         ModuleFunc, Store, TableInst,
     },
-    vm,
+    vm::{self, Vm},
 };
 
 /// Memory page size in WebAssembly.
@@ -20,19 +21,58 @@ pub const PAGE_SIZE: usize = 65536;
 
 /// An instance of a WebAssembly [`Module`].
 ///
-/// This can be interacted with by calling functions, getting and setting globals, and
-/// reading/writing memory.
-#[derive(Debug, Default)]
+/// These are cheap to clone, and should be passed around freely.
+#[derive(Debug, Default, Clone)]
 pub struct Instance {
-    pub types: Vec<FuncType>,
-    pub exports: Vec<ExportInst>,
+    inner: Rc<InstanceInner>,
+}
 
-    pub func_addrs: Vec<Addr>,
-    pub table_addrs: Vec<Addr>,
-    pub mem_addrs: Vec<Addr>,
-    pub global_addrs: Vec<Addr>,
-    pub elem_addrs: Vec<Addr>,
-    pub data_addrs: Vec<Addr>,
+/// Inner representation of an [`Instance`].
+#[derive(Debug, Default)]
+struct InstanceInner {
+    types: Vec<FuncType>,
+    exports: Vec<ExportInst>,
+
+    func_addrs: Vec<Addr>,
+    table_addrs: Vec<Addr>,
+    mem_addrs: Vec<Addr>,
+    global_addrs: Vec<Addr>,
+    elem_addrs: Vec<Addr>,
+    data_addrs: Vec<Addr>,
+}
+
+impl Instance {
+    pub fn types(&self) -> &[FuncType] {
+        &self.inner.types
+    }
+
+    pub fn exports(&self) -> &[ExportInst] {
+        &self.inner.exports
+    }
+
+    pub fn func_addrs(&self) -> &[Addr] {
+        &self.inner.func_addrs
+    }
+
+    pub fn table_addrs(&self) -> &[Addr] {
+        &self.inner.table_addrs
+    }
+
+    pub fn mem_addrs(&self) -> &[Addr] {
+        &self.inner.mem_addrs
+    }
+
+    pub fn global_addrs(&self) -> &[Addr] {
+        &self.inner.global_addrs
+    }
+
+    pub fn elem_addrs(&self) -> &[Addr] {
+        &self.inner.elem_addrs
+    }
+
+    pub fn data_addrs(&self) -> &[Addr] {
+        &self.inner.data_addrs
+    }
 }
 
 impl Instance {
@@ -41,10 +81,10 @@ impl Instance {
     /// This will allocate the module's imports into the store, and allocate the module's different
     /// sections, and run the module's start function, if present.
     pub fn instantiate<'a>(
-        mut module: Module<'a>,
         store: &mut Store<'a>,
+        mut module: Module<'a>,
         externs: &[ExternVal],
-    ) -> Result<Rc<Self>> {
+    ) -> Result<Self> {
         validate(&module).map_err(Error::Validation)?;
 
         if module.imports.len() != externs.len() {
@@ -54,7 +94,7 @@ impl Instance {
             });
         }
 
-        let mut inst = Self::default();
+        let mut inst = InstanceInner::default();
 
         for (extern_val, import) in externs.iter().zip(module.imports.iter()) {
             let ty = store
@@ -173,11 +213,13 @@ impl Instance {
             store.data.datas.len() - 1
         }));
 
-        let inst = Rc::new(inst);
+        let inst = Instance {
+            inner: Rc::new(inst),
+        };
 
         // Allocate functions into store
         for func in module.functions {
-            let ty = &inst.types[func.index as usize];
+            let ty = &inst.types()[func.index as usize];
             let code = std::mem::replace(
                 &mut module.codes[func.index as usize],
                 Code {
@@ -188,7 +230,7 @@ impl Instance {
             let func_inst = FuncInst::Module(ModuleFunc {
                 ty: ty.clone(),
                 code,
-                inst: Rc::clone(&inst),
+                inst: inst.clone(),
             });
             store.data.functions.push(func_inst);
             store.data.types.insert(
@@ -198,7 +240,7 @@ impl Instance {
         }
 
         // Initialize tables with element segments
-        for (elem_addr, elem) in inst.elem_addrs.iter().zip(&module.elements) {
+        for (elem_addr, elem) in inst.elem_addrs().iter().zip(&module.elements) {
             let elem_inst = &mut store.mut_.elems[*elem_addr];
             match elem.kind {
                 ElementKind::Passive => {}
@@ -208,9 +250,9 @@ impl Instance {
                         vm::eval_const_expr(&store.mut_.globals, &imported_globals, &offset)
                             .as_u32();
                     for (i, func_idx) in elem_inst.elems.iter().enumerate() {
-                        let funcaddr = inst.func_addrs[*func_idx];
-                        store.mut_.tables[inst.table_addrs[tbl_idx as usize]].elements
-                            [offset as usize + i] = Some(funcaddr);
+                        let func_addr = func_idx.map(|i| inst.func_addrs()[i]);
+                        store.mut_.tables[inst.table_addrs()[tbl_idx as usize]].elements
+                            [offset as usize + i] = func_addr;
                     }
                     elem_inst.elem_drop();
                 }
@@ -223,12 +265,43 @@ impl Instance {
             };
             let offset = vm::eval_const_expr(&store.mut_.globals, &imported_globals, offset_expr)
                 .as_u32() as usize;
-            let mem = &mut store.mut_.memories[inst.mem_addrs[0]];
+            let mem = &mut store.mut_.memories[inst.mem_addrs()[0]];
             mem.data[offset..offset + data.data.len()].copy_from_slice(data.data);
         }
 
-        // TODO: run start
+        if let Some(start) = module.start {
+            let func_addr = inst.func_addrs()[start as usize];
+            let mut vm = Vm::new(&store.data, &mut store.mut_, inst.clone());
+            vm.call(func_addr, &[]).map_err(Error::Trap)?;
+        }
 
         Ok(inst)
+    }
+
+    pub fn get_func<Params, Results>(
+        &self,
+        store: &mut Store,
+        name: &str,
+    ) -> Result<WasmFunc<Params, Results>>
+    where
+        Params: WasmParams,
+        Results: WasmResults,
+    {
+        let func = self
+            .exports()
+            .iter()
+            .find(|export| export.name == name)
+            .ok_or_else(|| Error::FunctionNotFound(name.to_owned()))?;
+        let ExternVal::Func(func_addr) = func.reference else {
+            return Err(Error::AttemptingToCallNonFunction(func.reference));
+        };
+        let f = &store.data.functions[func_addr];
+        if !Params::matches(f.ty().0.iter().copied()) {
+            panic!("typed func \"{name}\" params don't match, got {}", f.ty());
+        }
+        if !Results::matches(f.ty().0.iter().copied()) {
+            panic!("typed func \"{name}\" results don't match, got {}", f.ty());
+        }
+        Ok(WasmFunc::new(func_addr, self.clone()))
     }
 }

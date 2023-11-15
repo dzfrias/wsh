@@ -1,6 +1,4 @@
-#![allow(dead_code)]
-
-use std::{collections::HashMap, fmt, rc::Rc};
+use std::{collections::HashMap, fmt};
 
 use shwasi_parser::{Code, FuncType, GlobalType, Memory, RefType, TableType};
 
@@ -13,12 +11,12 @@ use crate::{
 /// A WebAssembly store, holding all global data of given module.
 #[derive(Debug, Default)]
 pub struct Store<'a> {
-    pub data: StoreData<'a>,
-    pub mut_: StoreMut,
+    pub(crate) data: StoreData<'a>,
+    pub(crate) mut_: StoreMut,
 }
 
 #[derive(Debug, Default)]
-pub struct StoreData<'a> {
+pub(crate) struct StoreData<'a> {
     pub functions: Vec<FuncInst>,
     pub datas: Vec<DataInst<'a>>,
 
@@ -26,7 +24,7 @@ pub struct StoreData<'a> {
 }
 
 #[derive(Debug, Default)]
-pub struct StoreMut {
+pub(crate) struct StoreMut {
     pub memories: Vec<MemInst>,
     pub globals: Vec<GlobalInst>,
     pub elems: Vec<ElemInst>,
@@ -38,11 +36,26 @@ impl Store<'_> {
     pub fn new() -> Self {
         Self::default()
     }
+
+    /// Drop all items in the store.
+    ///
+    /// This will clear all items in the store, but will not free the store allocations themselves.
+    /// The allocations can be used for future items.
+    pub fn clear(&mut self) {
+        self.data.functions.clear();
+        self.data.datas.clear();
+        self.data.types.clear();
+        self.mut_.memories.clear();
+        self.mut_.globals.clear();
+        self.mut_.elems.clear();
+        self.mut_.tables.clear();
+    }
 }
 
 /// An instance of a WebAssembly function.
 #[derive(Debug)]
 pub enum FuncInst {
+    #[allow(dead_code)]
     Host(HostFunc),
     Module(ModuleFunc),
 }
@@ -64,14 +77,14 @@ pub type HostFuncInner = Box<dyn Fn()>;
 pub struct ModuleFunc {
     pub ty: FuncType,
     pub code: Code,
-    pub inst: Rc<Instance>,
+    pub inst: Instance,
 }
 
 /// An instance of a WebAssembly table.
 #[derive(Debug)]
 pub struct TableInst {
     pub ty: TableType,
-    pub elements: Vec<Option<Ref>>,
+    pub elements: Vec<Ref>,
 }
 
 /// An instance of WebAssembly memory.
@@ -192,5 +205,14 @@ impl fmt::Debug for HostFunc {
             .field("ty", &self.ty)
             .field("code", &"fn(...)")
             .finish()
+    }
+}
+
+impl FuncInst {
+    pub fn ty(&self) -> &FuncType {
+        match self {
+            FuncInst::Host(h) => &h.ty,
+            FuncInst::Module(m) => &m.ty,
+        }
     }
 }

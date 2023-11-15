@@ -2,7 +2,7 @@
 
 mod ops;
 
-use std::{mem, rc::Rc};
+use std::mem;
 
 use shwasi_parser::{
     BlockType, FuncType, InitExpr, InstrBuffer, Instruction, MemArg, NumLocals, RefType,
@@ -11,9 +11,9 @@ use thiserror::Error;
 
 use self::ops::*;
 use crate::{
-    store::{Addr, GlobalInst},
+    store::{Addr, FuncInst, GlobalInst, StoreData, StoreMut},
     value::Value,
-    FuncInst, Instance, StoreData, StoreMut,
+    Instance,
 };
 
 #[derive(Debug)]
@@ -46,7 +46,7 @@ const STACK_BUDGET: usize = 300;
 #[derive(Debug)]
 struct StackFrame {
     /// The module this frame is for.
-    module: Rc<Instance>,
+    module: Instance,
     /// Used to get locals and arguments.
     bp: usize,
     /// Used as a counter to make sure we don't overflow the stack (our budget is STACK_BUDGET).
@@ -56,7 +56,7 @@ struct StackFrame {
 }
 
 impl StackFrame {
-    fn new(module: Rc<Instance>) -> Self {
+    fn new(module: Instance) -> Self {
         Self {
             module,
             bp: 0,
@@ -65,7 +65,7 @@ impl StackFrame {
     }
 
     // Because we don't actually have a real stack, this push operation is a bit different.
-    fn push(&self, module: Rc<Instance>, bp: usize) -> Option<Self> {
+    fn push(&self, module: Instance, bp: usize) -> Option<Self> {
         Some(Self {
             module,
             bp,
@@ -107,7 +107,7 @@ pub enum Trap {
 pub type Result<T> = std::result::Result<T, Trap>;
 
 impl<'s> Vm<'s> {
-    pub fn new(store: &'s StoreData, store_mut: &'s mut StoreMut, module: Rc<Instance>) -> Self {
+    pub fn new(store: &'s StoreData, store_mut: &'s mut StoreMut, module: Instance) -> Self {
         Self {
             stack: vec![],
             frame: StackFrame::new(module),
@@ -117,7 +117,20 @@ impl<'s> Vm<'s> {
         }
     }
 
-    pub fn call(&mut self, f: &FuncInst) -> Result<()> {
+    pub fn call(&mut self, f_addr: Addr, args: &[Value]) -> Result<Vec<Value>> {
+        let f = &self.store.functions[f_addr];
+        // Push arguments onto the stack
+        for arg in args.iter().rev() {
+            self.push(*arg);
+        }
+
+        self.call_inner(f)?;
+        // We can just take the stack because we know that call_inner will clear any values that
+        // are not results.
+        Ok(std::mem::take(&mut self.stack))
+    }
+
+    fn call_inner(&mut self, f: &FuncInst) -> Result<()> {
         match f {
             FuncInst::Module(f) => {
                 // Args should already be on the stack (due to validation), so push locals
@@ -139,7 +152,7 @@ impl<'s> Vm<'s> {
                 });
                 let new_frame = self
                     .frame
-                    .push(Rc::clone(&f.inst), bp)
+                    .push(f.inst.clone(), bp)
                     .ok_or(Trap::StackOverflow)?;
                 // Keep track of the old frame to replace later. This is what emulate a call stack
                 let old_frame = mem::replace(&mut self.frame, new_frame);
@@ -436,13 +449,13 @@ impl<'s> Vm<'s> {
                 I::F32ReinterpretI32 => unop!(reinterpret for f32),
                 I::F64ReinterpretI64 => unop!(reinterpret for f64),
                 I::MemorySize => {
-                    let addr = self.frame.module.mem_addrs[0];
+                    let addr = self.frame.module.mem_addrs()[0];
                     let mem = &self.store_mut.memories[addr];
                     self.push(mem.size() as u32);
                 }
                 I::MemoryGrow => {
                     let new_size = self.pop::<u32>();
-                    let addr = self.frame.module.mem_addrs[0];
+                    let addr = self.frame.module.mem_addrs()[0];
                     let mem = &mut self.store_mut.memories[addr];
                     let old_size = mem.size();
                     if mem.grow(new_size as usize).is_some() {
@@ -453,7 +466,7 @@ impl<'s> Vm<'s> {
                 }
                 I::MemoryCopy => {
                     let (dst, src, len) = self.pop3::<u32, u32, u32>();
-                    let mem = &mut self.store_mut.memories[self.frame.module.mem_addrs[0]];
+                    let mem = &mut self.store_mut.memories[self.frame.module.mem_addrs()[0]];
                     if src + len > mem.data.len() as u32 {
                         return Err(Trap::MemoryAccessOutOfBounds {
                             offset: src + len,
@@ -471,7 +484,7 @@ impl<'s> Vm<'s> {
                 }
                 I::MemoryFill => {
                     let (dst, val, len) = self.pop3::<u32, u8, u32>();
-                    let mem = &mut self.store_mut.memories[self.frame.module.mem_addrs[0]];
+                    let mem = &mut self.store_mut.memories[self.frame.module.mem_addrs()[0]];
                     if dst + len > mem.data.len() as u32 {
                         return Err(Trap::MemoryAccessOutOfBounds {
                             offset: dst + len,
@@ -537,9 +550,9 @@ impl<'s> Vm<'s> {
                 I::I64Store16(MemArg { offset, align: _ }) => store!(u16, offset),
                 I::I64Store32(MemArg { offset, align: _ }) => store!(u32, offset),
                 I::Call { func_idx } => {
-                    let f = &self.frame.module.func_addrs[*func_idx as usize];
+                    let f = &self.frame.module.func_addrs()[*func_idx as usize];
                     let f = &self.store.functions[*f];
-                    self.call(f)?;
+                    self.call_inner(f)?;
                 }
                 I::LocalGet { idx } => {
                     let val = self.stack[self.frame.bp + *idx as usize];
@@ -553,12 +566,12 @@ impl<'s> Vm<'s> {
                     self.stack[self.frame.bp + (*idx as usize)] = *self.stack.last().unwrap();
                 }
                 I::GlobalGet { idx } => {
-                    let addr = self.frame.module.global_addrs[*idx as usize];
+                    let addr = self.frame.module.global_addrs()[*idx as usize];
                     let val = self.store_mut.globals[addr].value;
                     self.push(val);
                 }
                 I::GlobalSet { idx } => {
-                    let addr = self.frame.module.global_addrs[*idx as usize];
+                    let addr = self.frame.module.global_addrs()[*idx as usize];
                     let val = self.pop();
                     self.store_mut.globals[addr].value = val;
                 }
@@ -566,12 +579,12 @@ impl<'s> Vm<'s> {
                 // data is never mutated, this is fine.
                 I::DataDrop { data_idx: _ } => {}
                 I::ElemDrop { elem_idx } => {
-                    let addr = self.frame.module.elem_addrs[*elem_idx as usize];
+                    let addr = self.frame.module.elem_addrs()[*elem_idx as usize];
                     self.store_mut.elems[addr].elem_drop();
                 }
                 I::MemoryInit { data_idx } => {
-                    let data_addr = self.frame.module.data_addrs[*data_idx as usize];
-                    let mem_addr = self.frame.module.mem_addrs[0];
+                    let data_addr = self.frame.module.data_addrs()[*data_idx as usize];
+                    let mem_addr = self.frame.module.mem_addrs()[0];
                     let (dst, src, n) = self.pop3::<u32, u32, u32>();
 
                     if n + src > self.store.datas[data_addr].0.len() as u32
@@ -584,12 +597,12 @@ impl<'s> Vm<'s> {
                     mem.data.copy_from_slice(data);
                 }
                 I::RefFunc { func_idx } => {
-                    let f = &self.frame.module.func_addrs[*func_idx as usize];
-                    self.push(Value::Ref(*f));
+                    let f = &self.frame.module.func_addrs()[*func_idx as usize];
+                    self.push(Value::Ref(Some(*f)));
                 }
                 I::TableGet { table } => {
                     let idx = self.pop::<u32>();
-                    let addr = self.frame.module.table_addrs[*table as usize];
+                    let addr = self.frame.module.table_addrs()[*table as usize];
                     let table = &self.store_mut.tables[addr];
                     let ref_ =
                         table
@@ -599,10 +612,9 @@ impl<'s> Vm<'s> {
                                 table_size: table.size() as u32,
                                 index: idx,
                             })?;
-                    let val = match (*ref_, table.ty.elem_type) {
-                        (Some(ref_), RefType::Func) => Value::Ref(ref_),
-                        (Some(ref_), RefType::Extern) => Value::ExternRef(ref_),
-                        (None, ty) => Value::NullRef(ty),
+                    let val = match table.ty.elem_type {
+                        RefType::Func => Value::Ref(*ref_),
+                        RefType::Extern => Value::ExternRef(*ref_),
                     };
                     self.push(val);
                 }
@@ -610,7 +622,7 @@ impl<'s> Vm<'s> {
                     let val = self.pop();
                     let idx = self.pop::<u32>();
 
-                    let addr = self.frame.module.table_addrs[*table as usize];
+                    let addr = self.frame.module.table_addrs()[*table as usize];
                     let table = &mut self.store_mut.tables[addr];
                     let size = table.size();
                     *table
@@ -620,8 +632,7 @@ impl<'s> Vm<'s> {
                             table_size: size as u32,
                             index: idx,
                         })? = match val {
-                        Value::NullRef(_) => None,
-                        Value::ExternRef(r) | Value::Ref(r) => Some(r),
+                        Value::ExternRef(r) | Value::Ref(r) => r,
                         _ => unreachable!(
                             "BUG: due to validation, value should never be a number type"
                         ),
@@ -629,22 +640,22 @@ impl<'s> Vm<'s> {
                 }
                 I::TableGrow { .. } => todo!(),
                 I::TableSize { table } => {
-                    let addr = self.frame.module.table_addrs[*table as usize];
+                    let addr = self.frame.module.table_addrs()[*table as usize];
                     let table = &self.store_mut.tables[addr];
                     self.push(table.elements.len() as u32);
                 }
                 I::TableFill { .. } => todo!(),
                 I::RefNull { ty } => {
-                    self.push(Value::NullRef(*ty));
+                    self.push(Value::type_default((*ty).into()));
                 }
                 I::CallIndirect {
                     table_idx,
                     type_idx,
                 } => {
                     let tbl_idx = self.pop::<u32>();
-                    let table_addr = self.frame.module.table_addrs[*table_idx as usize];
+                    let table_addr = self.frame.module.table_addrs()[*table_idx as usize];
                     let table = &self.store_mut.tables[table_addr];
-                    let expect_ty = &self.frame.module.types[*type_idx as usize];
+                    let expect_ty = &self.frame.module.types()[*type_idx as usize];
 
                     let f_addr = table
                         .elements
@@ -655,10 +666,7 @@ impl<'s> Vm<'s> {
                         })?
                         .ok_or(Trap::CallNullRef)?;
                     let f = &self.store.functions[f_addr];
-                    let actual_ty = match f {
-                        FuncInst::Host(host) => &host.ty,
-                        FuncInst::Module(module) => &module.ty,
-                    };
+                    let actual_ty = f.ty();
 
                     if expect_ty != actual_ty {
                         return Err(Trap::CallIndirectTypeMismatch {
@@ -667,14 +675,14 @@ impl<'s> Vm<'s> {
                         });
                     }
 
-                    self.call(f)?;
+                    self.call_inner(f)?;
                 }
                 I::TableCopy {
                     src_table,
                     dst_table,
                 } => {
-                    let src_addr = self.frame.module.table_addrs[*src_table as usize];
-                    let dst_addr = self.frame.module.table_addrs[*dst_table as usize];
+                    let src_addr = self.frame.module.table_addrs()[*src_table as usize];
+                    let dst_addr = self.frame.module.table_addrs()[*dst_table as usize];
                     let (dst_start, src_start, n) = self.pop3::<u32, u32, u32>();
                     let src_table = &self.store_mut.tables[src_addr];
                     let dst_table = &self.store_mut.tables[dst_addr];
@@ -696,8 +704,8 @@ impl<'s> Vm<'s> {
                     table_idx,
                     elem_idx,
                 } => {
-                    let table_addr = self.frame.module.table_addrs[*table_idx as usize];
-                    let elem_addr = self.frame.module.elem_addrs[*elem_idx as usize];
+                    let table_addr = self.frame.module.table_addrs()[*table_idx as usize];
+                    let elem_addr = self.frame.module.elem_addrs()[*elem_idx as usize];
                     let (dst_start, src_start, n) = self.pop3::<u32, u32, u32>();
                     let elem = &self.store_mut.elems[elem_addr];
                     let table = &self.store_mut.tables[table_addr];
@@ -709,7 +717,7 @@ impl<'s> Vm<'s> {
                     }
 
                     // TODO: no clone here?
-                    let elems = elem.elems.iter().map(|e| Some(*e)).collect::<Vec<_>>();
+                    let elems = elem.elems.clone();
                     self.store_mut.tables[table_addr].elements
                         [src_start as usize..(dst_start + n) as usize]
                         .copy_from_slice(&elems);
@@ -767,20 +775,20 @@ impl<'s> Vm<'s> {
         match blockty {
             BlockType::Empty => 0,
             BlockType::Type(_) => 1,
-            BlockType::FuncType(idx) => self.frame.module.types[idx as usize].1.len(),
+            BlockType::FuncType(idx) => self.frame.module.types()[idx as usize].1.len(),
         }
     }
 
     fn param_arity(&self, blockty: BlockType) -> usize {
         match blockty {
             BlockType::Empty | BlockType::Type(_) => 0,
-            BlockType::FuncType(idx) => self.frame.module.types[idx as usize].0.len(),
+            BlockType::FuncType(idx) => self.frame.module.types()[idx as usize].0.len(),
         }
     }
 
     /// Get the `N` bytes of data at the given offset in the current memory.
     fn load<const N: usize>(&self, offset: u32) -> Result<[u8; N]> {
-        let mem = &self.store_mut.memories[self.frame.module.mem_addrs[0]];
+        let mem = &self.store_mut.memories[self.frame.module.mem_addrs()[0]];
         if offset + N as u32 > mem.data.len() as u32 {
             return Err(Trap::MemoryAccessOutOfBounds {
                 mem_size: mem.data.len() as u32,
@@ -795,7 +803,7 @@ impl<'s> Vm<'s> {
 
     /// Store the `N` bytes of data at the given offset in the current memory.
     fn store<const N: usize>(&mut self, offset: u32, val: [u8; N]) -> Result<()> {
-        let mem = &mut self.store_mut.memories[self.frame.module.mem_addrs[0]];
+        let mem = &mut self.store_mut.memories[self.frame.module.mem_addrs()[0]];
         if offset as usize + N > mem.data.len() {
             return Err(Trap::MemoryAccessOutOfBounds {
                 mem_size: mem.data.len() as u32,
@@ -814,8 +822,11 @@ pub fn eval_const_expr(globals: &[GlobalInst], module_globals: &[Addr], expr: &I
         InitExpr::F32Const(f32) => Value::F32(f32::from_bits(f32.raw())),
         InitExpr::F64Const(f64) => Value::F64(f64::from_bits(f64.raw())),
         InitExpr::ConstGlobalGet(idx) => globals[module_globals[*idx as usize]].value,
-        InitExpr::RefNull(t) => Value::NullRef(*t),
-        InitExpr::RefFunc(idx) => Value::Ref(*idx as usize),
+        InitExpr::RefNull(t) => match t {
+            RefType::Func => Value::Ref(None),
+            RefType::Extern => Value::ExternRef(None),
+        },
+        InitExpr::RefFunc(idx) => Value::Ref(Some(*idx as usize)),
     }
 }
 
@@ -855,11 +866,11 @@ mod tests {
                 }],
                 ..Default::default()
             };
-            let inst = Instance::instantiate(module, &mut store, &[]).unwrap();
-            let mut vm = Vm::new(&store.data, &mut store.mut_, Rc::clone(&inst));
-            vm.call(&store.data.functions[0]).unwrap();
+            let inst = Instance::instantiate(&mut store, module, &[]).unwrap();
+            let mut vm = Vm::new(&store.data, &mut store.mut_, inst.clone());
+            let res = vm.call(0, &[]).unwrap();
             let expect: Vec<Value> = vec![$($val),*];
-            assert_eq!(expect, vm.stack);
+            assert_eq!(expect, res);
         };
     }
 
