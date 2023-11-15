@@ -24,7 +24,6 @@ members = [
     "crates/shwasi-engine",
     "crates/dumbwasm",
     "crates/wasm-leb128",
-    "xtask",
 ]
 
 [profile.release]
