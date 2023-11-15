@@ -1119,6 +1119,7 @@ dependencies = [
  "shwasi-engine",
  "shwasi-parser",
  "test-log",
+ "tracing",
  "tracing-subscriber",
  "wast",
 ]

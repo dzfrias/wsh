@@ -9,11 +9,11 @@ path = "tests/tests.rs"
 
 [dependencies]
 anyhow.workspace = true
+tracing-subscriber.workspace = true
 clap = { version = "4.4.6", features = ["derive"] }
 dhat = { version = "0.3.2", optional = true }
 shwasi-parser = { path = "crates/shwasi-parser" }
 shwasi-engine = { path = "crates/shwasi-engine" }
-tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 
 [features]
 dhat-heap = ["dhat"]
@@ -31,12 +31,15 @@ debug = 1
 
 [dev-dependencies]
 test-log.workspace = true
+tracing.workspace = true
 wast = "67.0.1"
 
 [workspace.dependencies]
 anyhow = "1.0.75"
 thiserror = "1.0.50"
 test-log = { version = "0.2.13", default-features = false, features = ["trace"] }
+tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+tracing = "0.1.37"
 
 [workspace.lints.clippy]
 all = "warn"

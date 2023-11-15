@@ -3,6 +3,7 @@ use std::{fs, path::Path};
 use anyhow::{ensure, Context, Result};
 use shwasi_engine::{Instance, Store, Value};
 use shwasi_parser::{validate, Parser};
+use tracing::info;
 use wast::{
     core::{HeapType, NanPattern, WastArgCore, WastRetCore},
     token::{Index, Span},
@@ -51,9 +52,9 @@ impl ExecutionContext<'_> {
         let args = convert_args(&invoke.args);
         let results = func.call(&mut self.store, &args).with_context(|| {
             format!(
-                "invoke call failed for {} over {}",
+                "invoke call failed for {} at {span}",
                 invoke.name,
-                self.line(invoke.span)
+                span = self.line(invoke.span)
             )
         })?;
 
@@ -80,13 +81,13 @@ fn execute_directives(directives: Vec<WastDirective>, mut ctx: ExecutionContext)
                 message,
             } => {
                 let Ok(wasm) = module.encode() else {
-                    eprintln!("ignored bad module");
+                    info!("ignored bad module at {span}", span = ctx.line(span));
                     continue;
                 };
                 let parser = Parser::new(&wasm);
                 ensure!(
                     parser.read_module().is_err(),
-                    "module should be malformed: {message} over {span}",
+                    "module should be malformed: {message} at {span}",
                     span = ctx.line(span)
                 );
             }
@@ -100,7 +101,7 @@ fn execute_directives(directives: Vec<WastDirective>, mut ctx: ExecutionContext)
                 let m = parser.read_module().expect("module should parse correctly");
                 ensure!(
                     validate(&m).is_err(),
-                    "module should not be valid: {message} over {span}",
+                    "module should not be valid: {message} at {span}",
                     span = ctx.line(span)
                 );
             }
@@ -116,10 +117,10 @@ fn execute_directives(directives: Vec<WastDirective>, mut ctx: ExecutionContext)
                     let res = ctx.invoke(&invoke);
                     ensure!(
                         res.is_err(),
-                        "expected {message} but got no error over {span}",
+                        "expected {message} but got no error at {span}",
                         span = ctx.line(span)
                     );
-                    eprintln!("assert trap passed for {}", invoke.name);
+                    info!("assert trap passed for {}", invoke.name);
                 }
                 WastExecute::Get { .. } | WastExecute::Wat(..) => unimplemented!(),
             },
@@ -133,11 +134,11 @@ fn execute_directives(directives: Vec<WastDirective>, mut ctx: ExecutionContext)
                     let expect = convert_results(&expect);
                     ensure!(
                         matches(&results, &expect),
-                        "expected {expect:?} but got {results:?} over {span} when running {name}",
+                        "expected {expect:?} but got {results:?} at {span} when running {name}",
                         span = ctx.line(span),
                         name = invoke.name,
                     );
-                    eprintln!("assert return passed for {}", invoke.name);
+                    info!("assert return passed for {}", invoke.name);
                 }
                 // TODO
                 WastExecute::Get { .. } => continue,
