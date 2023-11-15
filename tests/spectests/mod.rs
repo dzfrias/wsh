@@ -13,7 +13,8 @@ pub fn run_spectest(name: &str) -> Result<()> {
     let file = Path::new("tests/spectests/testsuite")
         .join(name)
         .with_extension("wast");
-    let contents = fs::read_to_string(file).context("failed to read file")?;
+    let contents = fs::read_to_string(&file)
+        .with_context(|| format!("failed to read file, {}", file.display()))?;
     let tokens = wast::parser::ParseBuffer::new(&contents).context("failed to lex wast file")?;
     let wast = wast::parser::parse::<wast::Wast>(&tokens).context("failed to parse wast file")?;
 
