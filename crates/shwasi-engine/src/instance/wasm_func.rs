@@ -10,6 +10,50 @@ use crate::{
     Instance, Store,
 };
 
+/// An untyped WebAssembly function.
+///
+/// Using [`Self::call`], you can call the function with arguments whose types are not known at
+/// compile time. For a well-typed version of this function, see [`WasmFunc`].
+#[derive(Debug)]
+pub struct WasmFuncUntyped {
+    func_addr: Addr,
+    inst: Instance,
+}
+
+impl WasmFuncUntyped {
+    pub(crate) fn new(func_addr: Addr, inst: Instance) -> Self {
+        Self { func_addr, inst }
+    }
+
+    /// Call the function with the given arguments, returning the results.
+    ///
+    /// Note that this function will perform type validation, and will return
+    /// [`Error::FunctionArgsMismatch`] given a mismatch.
+    pub fn call(&self, store: &mut Store, args: &[Value]) -> Result<Vec<Value>> {
+        let f = self.inst.func_addrs()[self.func_addr];
+        let func = &store.data.functions[f];
+        if func.ty().0.len() != args.len()
+            || !func
+                .ty()
+                .0
+                .iter()
+                .zip(args.iter().map(|v| v.ty()))
+                .all(|(a, b)| a == &b)
+        {
+            return Err(Error::FunctionArgsMismatch {
+                want: func.ty().0.clone(),
+                got: args.iter().map(|v| v.ty()).collect(),
+            });
+        }
+        let mut vm = Vm::new(&store.data, &mut store.mut_, self.inst.clone());
+        let res = vm.call(self.func_addr, args).map_err(Error::Trap)?;
+        Ok(res)
+    }
+}
+
+/// A typed WebAssembly function.
+///
+/// For the untyped counterpart of this type, see [`WasmFuncUntyped`].
 #[derive(Debug)]
 pub struct WasmFunc<Params, Results> {
     func_addr: Addr,
@@ -30,6 +74,7 @@ where
         }
     }
 
+    /// Call the function with the given arguments, returning the results.
     pub fn call(&self, store: &mut Store, args: Params) -> Result<Results> {
         let mut vm = Vm::new(&store.data, &mut store.mut_, self.inst.clone());
         let res = vm

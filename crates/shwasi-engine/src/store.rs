@@ -138,7 +138,7 @@ pub struct ElemInst {
     pub elems: Vec<Ref>,
 }
 
-/// An instance of field exported from a WebAssembly module.
+/// An instance of a field exported from a WebAssembly module.
 #[derive(Debug)]
 pub struct ExportInst {
     pub name: String,

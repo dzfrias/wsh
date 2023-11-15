@@ -278,6 +278,15 @@ impl Instance {
         Ok(inst)
     }
 
+    /// Get a function by name and type.
+    ///
+    /// # Panics
+    /// Panics if the function's type doesn't match the given type params and results. Note that
+    /// this behavior is different from [`Self::get_func_untyped`], which returns an error at call
+    /// time instead.
+    ///
+    /// This discrepancy exists because this function is intended to be used with functions who's
+    /// types are known at compile time.
     pub fn get_func<Params, Results>(
         &self,
         store: &mut Store,
@@ -303,5 +312,21 @@ impl Instance {
             panic!("typed func \"{name}\" results don't match, got {}", f.ty());
         }
         Ok(WasmFunc::new(func_addr, self.clone()))
+    }
+
+    /// Get a function by name. Types are not validated until the function is called.
+    ///
+    /// For the the version of this function that provides a type-safe API for calling WebAssembly
+    /// functions, see [`Self::get_func`].
+    pub fn get_func_untyped(&self, _store: &mut Store, name: &str) -> Result<WasmFuncUntyped> {
+        let func = self
+            .exports()
+            .iter()
+            .find(|export| export.name == name)
+            .ok_or_else(|| Error::FunctionNotFound(name.to_owned()))?;
+        let ExternVal::Func(func_addr) = func.reference else {
+            return Err(Error::AttemptingToCallNonFunction(func.reference));
+        };
+        Ok(WasmFuncUntyped::new(func_addr, self.clone()))
     }
 }

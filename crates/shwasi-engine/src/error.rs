@@ -1,3 +1,4 @@
+use shwasi_parser::ValType;
 use thiserror::Error;
 
 use crate::{
@@ -17,12 +18,19 @@ pub enum Error {
     BadExternType { want: Extern, got: Extern },
     #[error("validation error: {0}")]
     Validation(anyhow::Error),
+
+    // Runtime errors
     #[error("trap: {0}")]
     Trap(Trap),
     #[error("function not found {0}")]
     FunctionNotFound(String),
     #[error("attempting to call non-function ({0:?})")]
     AttemptingToCallNonFunction(ExternVal),
+    #[error("attempting to call function with wrong args: want {want:?}, got {got:?}")]
+    FunctionArgsMismatch {
+        want: Vec<ValType>,
+        got: Vec<ValType>,
+    },
 }
 
 /// A convenience type alias for `Result<T, Error>`.
