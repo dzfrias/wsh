@@ -505,3 +505,34 @@ impl ValType {
         matches!(self, Self::I32 | Self::I64 | Self::F32 | Self::F64)
     }
 }
+
+impl Limit {
+    pub fn matches(&self, other: &Limit) -> bool {
+        self.initial >= other.initial
+            && (other.max.is_none() || self.max.is_some_and(|max| max < other.max.unwrap()))
+    }
+}
+
+impl TableType {
+    pub fn matches(&self, other: &TableType) -> bool {
+        self.elem_type == other.elem_type && self.limit.matches(&other.limit)
+    }
+}
+
+impl GlobalType {
+    pub fn matches(&self, other: &GlobalType) -> bool {
+        self == other
+    }
+}
+
+impl FuncType {
+    pub fn matches(&self, other: &FuncType) -> bool {
+        self == other
+    }
+}
+
+impl Memory {
+    pub fn matches(&self, other: &Memory) -> bool {
+        self.limit.matches(&other.limit)
+    }
+}

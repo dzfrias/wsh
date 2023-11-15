@@ -1,3 +1,4 @@
+mod host_func;
 mod wasm_func;
 
 use std::rc::Rc;
@@ -6,6 +7,7 @@ use shwasi_parser::{
     validate, Code, ElementKind, ExternalKind, FuncType, ImportKind, InstrBuffer, Module,
 };
 
+pub use self::host_func::IntoHostFunc;
 pub use self::wasm_func::*;
 use crate::{
     error::{Error, Result},
@@ -14,6 +16,7 @@ use crate::{
         ModuleFunc, Store, TableInst,
     },
     vm::{self, Vm},
+    Trap, Value,
 };
 
 /// Memory page size in WebAssembly.
@@ -41,40 +44,7 @@ struct InstanceInner {
     data_addrs: Vec<Addr>,
 }
 
-impl Instance {
-    pub fn types(&self) -> &[FuncType] {
-        &self.inner.types
-    }
-
-    pub fn exports(&self) -> &[ExportInst] {
-        &self.inner.exports
-    }
-
-    pub fn func_addrs(&self) -> &[Addr] {
-        &self.inner.func_addrs
-    }
-
-    pub fn table_addrs(&self) -> &[Addr] {
-        &self.inner.table_addrs
-    }
-
-    pub fn mem_addrs(&self) -> &[Addr] {
-        &self.inner.mem_addrs
-    }
-
-    pub fn global_addrs(&self) -> &[Addr] {
-        &self.inner.global_addrs
-    }
-
-    pub fn elem_addrs(&self) -> &[Addr] {
-        &self.inner.elem_addrs
-    }
-
-    pub fn data_addrs(&self) -> &[Addr] {
-        &self.inner.data_addrs
-    }
-}
-
+// Public impl
 impl Instance {
     /// Instantiate a module with the given [`ExternVal`]s and [`Store`].
     ///
@@ -99,7 +69,7 @@ impl Instance {
                 ImportKind::Memory(mem) => Extern::Mem(mem.clone()),
                 ImportKind::Global(global) => Extern::Global(global.clone()),
             };
-            if ty != &import_ty {
+            if !ty.matches(&import_ty) {
                 return Err(Error::BadExternType {
                     want: import_ty,
                     got: ty.clone(),
@@ -240,10 +210,20 @@ impl Instance {
                     let offset =
                         vm::eval_const_expr(&store.mut_.globals, &imported_globals, &offset)
                             .as_u32();
+                    let len = store.mut_.tables[inst.table_addrs()[tbl_idx as usize]]
+                        .elements
+                        .len();
+                    if offset + elem_inst.elems.len() as u32 > len as u32 {
+                        return Err(Error::Trap(Trap::TableGetOutOfBounds {
+                            index: offset + elem_inst.elems.len() as u32,
+                            table_size: len as u32,
+                        }));
+                    }
                     for (i, func_idx) in elem_inst.elems.iter().enumerate() {
                         let func_addr = func_idx.map(|i| inst.func_addrs()[i]);
-                        store.mut_.tables[inst.table_addrs()[tbl_idx as usize]].elements
-                            [offset as usize + i] = func_addr;
+                        let tbl =
+                            &mut store.mut_.tables[inst.table_addrs()[tbl_idx as usize]].elements;
+                        tbl[offset as usize + i] = func_addr;
                     }
                     elem_inst.elem_drop();
                 }
@@ -257,6 +237,12 @@ impl Instance {
             let offset = vm::eval_const_expr(&store.mut_.globals, &imported_globals, offset_expr)
                 .as_u32() as usize;
             let mem = &mut store.mut_.memories[inst.mem_addrs()[0]];
+            if offset + data.data.len() > mem.data.len() {
+                return Err(Error::Trap(Trap::MemoryAccessOutOfBounds {
+                    offset: (offset + data.data.len()) as u32,
+                    mem_size: mem.data.len() as u32,
+                }));
+            }
             mem.data[offset..offset + data.data.len()].copy_from_slice(data.data);
         }
 
@@ -284,7 +270,7 @@ impl Instance {
     /// types are known at compile time.
     pub fn get_func<Params, Results>(
         &self,
-        store: &mut Store,
+        store: &Store,
         name: &str,
     ) -> Result<WasmFunc<Params, Results>>
     where
@@ -303,7 +289,7 @@ impl Instance {
         if !Params::matches(f.ty().0.iter().copied()) {
             panic!("typed func \"{name}\" params don't match, got {}", f.ty());
         }
-        if !Results::matches(f.ty().0.iter().copied()) {
+        if !Results::matches(f.ty().1.iter().copied()) {
             panic!("typed func \"{name}\" results don't match, got {}", f.ty());
         }
         Ok(WasmFunc::new(func_addr, self.clone()))
@@ -313,15 +299,62 @@ impl Instance {
     ///
     /// For the the version of this function that provides a type-safe API for calling WebAssembly
     /// functions, see [`Self::get_func`].
-    pub fn get_func_untyped(&self, _store: &mut Store, name: &str) -> Result<WasmFuncUntyped> {
+    pub fn get_func_untyped(&self, _store: &Store, name: &str) -> Result<WasmFuncUntyped> {
         let func = self
-            .exports()
-            .iter()
-            .find(|export| export.name == name)
+            .find_export(name)
             .ok_or_else(|| Error::FunctionNotFound(name.to_owned()))?;
         let ExternVal::Func(func_addr) = func.reference else {
             return Err(Error::AttemptingToCallNonFunction(func.reference));
         };
         Ok(WasmFuncUntyped::new(func_addr, self.clone()))
+    }
+
+    /// Get an exported global by name.
+    pub fn get_global(&self, store: &Store, name: &str) -> Option<Value> {
+        let global = self.find_export(name)?;
+        let ExternVal::Global(addr) = global.reference else {
+            return None;
+        };
+        let global = &store.mut_.globals[addr];
+        Some(global.value)
+    }
+}
+
+// Private impl
+impl Instance {
+    pub(crate) fn types(&self) -> &[FuncType] {
+        &self.inner.types
+    }
+
+    pub(crate) fn exports(&self) -> &[ExportInst] {
+        &self.inner.exports
+    }
+
+    pub(crate) fn func_addrs(&self) -> &[Addr] {
+        &self.inner.func_addrs
+    }
+
+    pub(crate) fn table_addrs(&self) -> &[Addr] {
+        &self.inner.table_addrs
+    }
+
+    pub(crate) fn mem_addrs(&self) -> &[Addr] {
+        &self.inner.mem_addrs
+    }
+
+    pub(crate) fn global_addrs(&self) -> &[Addr] {
+        &self.inner.global_addrs
+    }
+
+    pub(crate) fn elem_addrs(&self) -> &[Addr] {
+        &self.inner.elem_addrs
+    }
+
+    pub(crate) fn data_addrs(&self) -> &[Addr] {
+        &self.inner.data_addrs
+    }
+
+    pub(crate) fn find_export(&self, name: &str) -> Option<&ExportInst> {
+        self.exports().iter().find(|export| export.name == name)
     }
 }

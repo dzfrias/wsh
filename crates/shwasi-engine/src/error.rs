@@ -1,10 +1,8 @@
 use shwasi_parser::ValType;
 use thiserror::Error;
 
-use crate::{
-    store::{Extern, ExternVal},
-    vm::Trap,
-};
+use crate::store::{Extern, ExternVal};
+pub use crate::vm::Trap;
 
 /// A error that can occur during instantiation or at runtime.
 #[derive(Debug, Error)]

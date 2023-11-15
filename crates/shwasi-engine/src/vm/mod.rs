@@ -19,7 +19,7 @@ use crate::{
 #[derive(Debug)]
 pub struct Vm<'s> {
     /// The stack of values. This is used to store locals, arguments, and intermediate values.
-    stack: Vec<Value>,
+    pub(crate) stack: Vec<Value>,
     /// A "stack" of frames.
     ///
     /// Note that this is note actually a stack, as it has no reason to be.
@@ -104,9 +104,10 @@ pub enum Trap {
     MemoryAccessOutOfBounds { offset: u32, mem_size: u32 },
 }
 
-pub type Result<T> = std::result::Result<T, Trap>;
+pub(crate) type Result<T> = std::result::Result<T, Trap>;
 
 impl<'s> Vm<'s> {
+    #[allow(private_interfaces)]
     pub fn new(store: &'s StoreData, store_mut: &'s mut StoreMut, module: Instance) -> Self {
         Self {
             stack: vec![],
@@ -163,7 +164,11 @@ impl<'s> Vm<'s> {
                 // cleared (due to the mandatory `End` instruction at the end of functions).
                 self.clear_block(bp, f.ty.1.len());
             }
-            FuncInst::Host(_) => todo!("host functions"),
+            FuncInst::Host(host_func) => {
+                let res = (host_func.code)(self);
+                self.clear_block(0, host_func.ty.1.len());
+                self.stack.extend(res);
+            }
         }
 
         Ok(())

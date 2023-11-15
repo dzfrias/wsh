@@ -1,13 +1,13 @@
-use std::{fs, path::Path};
+use std::{collections::HashMap, fs, path::Path};
 
-use anyhow::{ensure, Context, Result};
+use anyhow::{bail, ensure, Context, Result};
 use shwasi_engine::{Instance, Store, Value};
 use shwasi_parser::{validate, Parser};
 use tracing::info;
 use wast::{
-    core::{HeapType, NanPattern, WastArgCore, WastRetCore},
-    token::{Index, Span},
-    WastArg, WastDirective, WastExecute, WastInvoke, WastRet,
+    core::{HeapType, Module, NanPattern, WastArgCore, WastRetCore},
+    token::{Id, Index, Span},
+    QuoteWat, WastArg, WastDirective, WastExecute, WastInvoke, WastRet, Wat,
 };
 
 pub fn run_spectest(name: &str) -> Result<()> {
@@ -19,21 +19,29 @@ pub fn run_spectest(name: &str) -> Result<()> {
     let tokens = wast::parser::ParseBuffer::new(&contents).context("failed to lex wast file")?;
     let wast = wast::parser::parse::<wast::Wast>(&tokens).context("failed to parse wast file")?;
 
+    let mut store = Store::default();
+    store.define("spectest", "print", || {
+        println!("print");
+    });
+    store.define("spectest", "print_i32", |i: i32| {
+        println!("print_i32: {i}");
+    });
     let ctx = ExecutionContext {
         contents: &contents,
-        instance: None,
-        store: Store::default(),
+        store,
+        ..Default::default()
     };
     execute_directives(wast.directives, ctx)?;
 
     Ok(())
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct ExecutionContext<'a> {
     contents: &'a str,
 
-    instance: Option<Instance>,
+    instances: HashMap<String, Instance>,
+    last_instance: Option<Instance>,
     store: Store,
 }
 
@@ -44,10 +52,8 @@ impl ExecutionContext<'_> {
 
     fn invoke(&mut self, invoke: &WastInvoke) -> Result<Vec<Value>> {
         let func = self
-            .instance
-            .as_ref()
-            .expect("should have an instance")
-            .get_func_untyped(&mut self.store, invoke.name)
+            .get_inst(invoke.module)
+            .get_func_untyped(&self.store, invoke.name)
             .unwrap_or_else(|err| panic!("{} should be defined, but got {err}", invoke.name));
         let args = convert_args(&invoke.args);
         let results = func.call(&mut self.store, &args).with_context(|| {
@@ -60,20 +66,44 @@ impl ExecutionContext<'_> {
 
         Ok(results)
     }
+
+    fn get_inst(&mut self, id: Option<Id>) -> Instance {
+        id.map(|id| {
+            self.instances
+                .get(id.name())
+                .unwrap_or_else(|| panic!("should have an instance named \"{}\"", id.name()))
+        })
+        .unwrap_or_else(|| {
+            self.last_instance
+                .as_ref()
+                .expect("should have an instance")
+        })
+        .clone()
+    }
 }
 
 fn execute_directives(directives: Vec<WastDirective>, mut ctx: ExecutionContext) -> Result<()> {
     for directive in directives.into_iter() {
         match directive {
             WastDirective::Wat(mut module) => {
+                if matches!(
+                    module,
+                    QuoteWat::QuoteComponent(..) | QuoteWat::Wat(Wat::Component(..))
+                ) {
+                    unimplemented!("wat component encountered!");
+                }
+
                 let wasm = module.encode().expect("module should have a valid form");
                 let parser = Parser::new(&wasm);
-                let module = parser
+                let parse_module = parser
                     .read_module()
                     .expect("module should have a valid form");
-                let instance =
-                    Instance::instantiate(&mut ctx.store, module).expect("module should be valid");
-                ctx.instance = Some(instance);
+                let instance = Instance::instantiate(&mut ctx.store, parse_module)
+                    .expect("module should be valid");
+                if let QuoteWat::Wat(Wat::Module(Module { id: Some(id), .. })) = module {
+                    ctx.instances.insert(id.name().to_owned(), instance.clone());
+                }
+                ctx.last_instance = Some(instance);
             }
             WastDirective::AssertMalformed {
                 span,
@@ -120,9 +150,26 @@ fn execute_directives(directives: Vec<WastDirective>, mut ctx: ExecutionContext)
                         "expected {message} but got no error at {span}",
                         span = ctx.line(span)
                     );
-                    info!("assert trap passed for {}", invoke.name);
+                    info!(
+                        "assert trap passed for {} at {span}",
+                        invoke.name,
+                        span = ctx.line(span)
+                    );
                 }
-                WastExecute::Get { .. } | WastExecute::Wat(..) => unimplemented!(),
+                WastExecute::Wat(Wat::Module(mut m)) => {
+                    let wasm = m.encode().expect("module should have a valid form");
+                    let parser = Parser::new(&wasm);
+                    let parse_module = parser
+                        .read_module()
+                        .expect("module should have a valid form");
+                    let res = Instance::instantiate(&mut ctx.store, parse_module);
+                    ensure!(
+                        res.is_err(),
+                        "expected {message} but got no error at {span}",
+                        span = ctx.line(span)
+                    );
+                }
+                _ => unimplemented!(),
             },
             WastDirective::AssertReturn {
                 span,
@@ -140,10 +187,43 @@ fn execute_directives(directives: Vec<WastDirective>, mut ctx: ExecutionContext)
                     );
                     info!("assert return passed for {}", invoke.name);
                 }
-                // TODO
-                WastExecute::Get { .. } => continue,
+                WastExecute::Get { module, global } => {
+                    let val = ctx.get_inst(module).get_global(&ctx.store, global);
+                    let Some(val) = val else {
+                        bail!("global {global:?} not found from {module:?}");
+                    };
+                    let expect = convert_results(&expect);
+                    ensure!(
+                        matches(&[val], &expect),
+                        "expected {expect:?} but got {val:?} at {span} when running {name}",
+                        span = ctx.line(span),
+                        name = global,
+                    );
+                }
                 WastExecute::Wat(..) => unimplemented!(),
             },
+            WastDirective::Register {
+                span: _,
+                name,
+                module,
+            } => {
+                let inst = ctx.get_inst(module);
+                inst.export_as(&mut ctx.store, name);
+            }
+            WastDirective::AssertUnlinkable {
+                span,
+                mut module,
+                message,
+            } => {
+                let wasm = module.encode().expect("module should have a valid form");
+                let parser = Parser::new(&wasm);
+                let m = parser.read_module().expect("module should parse correctly");
+                ensure!(
+                    Instance::instantiate(&mut ctx.store, m).is_err(),
+                    "module should not be linkable: {message} at {span}",
+                    span = ctx.line(span)
+                );
+            }
 
             _ => panic!("unsupported directive: {directive:?}"),
         }

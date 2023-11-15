@@ -13,3 +13,5 @@ macro_rules! spectest {
 }
 
 spectest!(address);
+spectest!(exports);
+spectest!(linking);

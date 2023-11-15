@@ -5,7 +5,8 @@ use shwasi_parser::{Code, FuncType, GlobalType, Memory, RefType, TableType};
 use crate::{
     instance::Instance,
     value::{Ref, Value},
-    PAGE_SIZE,
+    vm::Vm,
+    IntoHostFunc, PAGE_SIZE,
 };
 
 /// A WebAssembly store, holding all global data of given module.
@@ -53,12 +54,18 @@ impl Store {
         self.mut_.tables.clear();
     }
 
-    pub fn define(&mut self, module: &str, field: &str, func: HostFunc) {
+    pub fn define<Params, Results>(
+        &mut self,
+        module: &str,
+        field: &str,
+        func: impl IntoHostFunc<Params, Results>,
+    ) {
+        let host = func.into_host_func();
         self.data.types.insert(
             ExternVal::Func(self.data.functions.len()),
-            Extern::Func(func.ty.clone()),
+            Extern::Func(host.ty.clone()),
         );
-        self.data.functions.push(FuncInst::Host(func));
+        self.data.functions.push(FuncInst::Host(host));
         self.data.hosts.insert(
             (module.to_owned(), field.to_owned()),
             self.data.functions.len() - 1,
@@ -109,8 +116,7 @@ pub struct HostFunc {
 /// The inner function type of a host function.
 ///
 /// See [`HostFunc`] for more information.
-// TODO: fill this in
-pub type HostFuncInner = Box<dyn Fn()>;
+pub type HostFuncInner = Box<dyn Fn(&mut Vm) -> Vec<Value>>;
 
 /// A function defined inside of the WebAssembly module.
 #[derive(Debug)]
@@ -253,6 +259,18 @@ impl FuncInst {
         match self {
             FuncInst::Host(h) => &h.ty,
             FuncInst::Module(m) => &m.ty,
+        }
+    }
+}
+
+impl Extern {
+    pub fn matches(&self, other: &Extern) -> bool {
+        match (self, other) {
+            (Extern::Func(a), Extern::Func(b)) => a.matches(b),
+            (Extern::Table(a), Extern::Table(b)) => a.matches(b),
+            (Extern::Mem(a), Extern::Mem(b)) => a.matches(b),
+            (Extern::Global(a), Extern::Global(b)) => a.matches(b),
+            _ => false,
         }
     }
 }

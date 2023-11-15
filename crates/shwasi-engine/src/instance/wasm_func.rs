@@ -90,6 +90,23 @@ pub trait WasmType {
     fn ty() -> ValType;
 }
 
+pub trait WasmParams {
+    fn as_values(&self) -> Vec<Value>;
+    fn matches<I>(values: I) -> bool
+    where
+        I: ExactSizeIterator<Item = ValType>;
+    fn valtypes() -> Vec<ValType>;
+}
+
+pub trait WasmResults {
+    fn from_values(values: &[Value]) -> Self;
+    fn matches<I>(values: I) -> bool
+    where
+        I: ExactSizeIterator<Item = ValType>;
+    fn into_values(self) -> Vec<Value>;
+    fn valtypes() -> Vec<ValType>;
+}
+
 impl WasmType for i32 {
     fn as_value(&self) -> Value {
         Value::I32(*self as u32)
@@ -174,20 +191,6 @@ impl WasmType for u64 {
     }
 }
 
-pub trait WasmParams {
-    fn as_values(&self) -> Vec<Value>;
-    fn matches<I>(values: I) -> bool
-    where
-        I: ExactSizeIterator<Item = ValType>;
-}
-
-pub trait WasmResults {
-    fn from_values(values: &[Value]) -> Self;
-    fn matches<I>(values: I) -> bool
-    where
-        I: ExactSizeIterator<Item = ValType>;
-}
-
 impl WasmResults for () {
     fn from_values(_values: &[Value]) -> Self {}
 
@@ -196,6 +199,14 @@ impl WasmResults for () {
         I: ExactSizeIterator<Item = ValType>,
     {
         values.len() == 0
+    }
+
+    fn into_values(self) -> Vec<Value> {
+        vec![]
+    }
+
+    fn valtypes() -> Vec<ValType> {
+        vec![]
     }
 }
 
@@ -210,6 +221,14 @@ impl<T: WasmType> WasmResults for T {
     {
         values.len() == 1 && values.next().unwrap() == T::ty()
     }
+
+    fn into_values(self) -> Vec<Value> {
+        vec![self.as_value()]
+    }
+
+    fn valtypes() -> Vec<ValType> {
+        vec![T::ty()]
+    }
 }
 
 impl WasmParams for () {
@@ -223,6 +242,10 @@ impl WasmParams for () {
     {
         values.len() == 0
     }
+
+    fn valtypes() -> Vec<ValType> {
+        vec![]
+    }
 }
 
 impl<T: WasmType> WasmParams for T {
@@ -235,6 +258,10 @@ impl<T: WasmType> WasmParams for T {
         I: ExactSizeIterator<Item = ValType>,
     {
         values.len() == 1 && values.next().unwrap() == T::ty()
+    }
+
+    fn valtypes() -> Vec<ValType> {
+        vec![T::ty()]
     }
 }
 
@@ -275,11 +302,15 @@ macro_rules! impl_wasm_params {
                     values.into_iter().zip([$([<T $T>]::ty()),*].iter()).all(|(a, b)| a == *b)
                 }
             }
+
+            fn valtypes() -> Vec<ValType> {
+                vec![$([<T $T>]::ty()),*]
+            }
         }
     }}
 }
 
-macro_rules! impl_wasm_types {
+macro_rules! impl_wasm_results {
     ($n:tt $($T:tt)*) => {paste::paste! {
         impl<$([<T $T>]: WasmType),*> WasmResults for ($([<T $T>],)*) {
             fn from_values(values: &[Value]) -> Self {
@@ -294,9 +325,17 @@ macro_rules! impl_wasm_types {
                     values.into_iter().zip([$([<T $T>]::ty()),*].iter()).all(|(a, b)| a == *b)
                 }
             }
+
+            fn into_values(self) -> Vec<Value> {
+                vec![$(self.$T.as_value()),*]
+            }
+
+            fn valtypes() -> Vec<ValType> {
+                vec![$([<T $T>]::ty()),*]
+            }
         }
     }}
 }
 
 for_each_tuple!(impl_wasm_params);
-for_each_tuple!(impl_wasm_types);
+for_each_tuple!(impl_wasm_results);
