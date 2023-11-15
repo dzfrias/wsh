@@ -33,7 +33,7 @@ pub struct Vm<'s> {
     /// the block. For other blocks, the return address is the end of the block. The return address
     /// should be jumped to by the VM when a block is finished or a branch to that block is taken.
     labels: Vec<Label>,
-    store: &'s StoreData<'s>,
+    store: &'s StoreData,
     store_mut: &'s mut StoreMut,
 }
 
@@ -591,7 +591,7 @@ impl<'s> Vm<'s> {
                     {
                         todo!("err")
                     }
-                    let data = self.store.datas[data_addr].0;
+                    let data = &self.store.datas[data_addr].0;
                     let mem = &mut self.store_mut.memories[mem_addr];
                     mem.data.copy_from_slice(data);
                 }

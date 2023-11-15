@@ -80,7 +80,7 @@ impl Instance {
     ///
     /// This will allocate the module's imports into the store, and allocate the module's different
     /// sections, and run the module's start function, if present.
-    pub fn instantiate<'a>(store: &mut Store<'a>, mut module: Module<'a>) -> Result<Self> {
+    pub fn instantiate(store: &mut Store, mut module: Module) -> Result<Self> {
         validate(&module).map_err(Error::Validation)?;
 
         let mut inst = InstanceInner::default();
@@ -199,7 +199,7 @@ impl Instance {
             store.mut_.elems.len() - 1
         }));
         inst.data_addrs.extend(module.datas.iter().map(|data| {
-            let inst = DataInst(data.data);
+            let inst = DataInst(data.data.to_owned());
             store.data.datas.push(inst);
             store.data.datas.len() - 1
         }));

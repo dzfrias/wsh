@@ -1120,6 +1120,7 @@ dependencies = [
  "shwasi-parser",
  "test-log",
  "tracing-subscriber",
+ "wast 67.0.1",
 ]
 
 [[package]]
@@ -1471,6 +1472,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "wasm-encoder"
+version = "0.36.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "822b645bf4f2446b949776ffca47e2af60b167209ffb70814ef8779d299cd421"
+dependencies = [
+ "leb128",
+]
+
+[[package]]
 name = "wasm-leb128"
 version = "0.1.0"
 dependencies = [
@@ -1487,7 +1497,19 @@ dependencies = [
  "leb128",
  "memchr",
  "unicode-width",
- "wasm-encoder",
+ "wasm-encoder 0.35.0",
+]
+
+[[package]]
+name = "wast"
+version = "67.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a974d82fac092b5227c1663e16514e7a85f32014e22e6fdcb08b71aec9d3fb1e"
+dependencies = [
+ "leb128",
+ "memchr",
+ "unicode-width",
+ "wasm-encoder 0.36.2",
 ]
 
 [[package]]
@@ -1496,7 +1518,7 @@ version = "1.0.77"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e367582095d2903caeeea9acbb140e1db9c7677001efa4347c3687fd34fe7072"
 dependencies = [
- "wast",
+ "wast 66.0.2",
 ]
 
 [[package]]
@@ -1687,7 +1709,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
- "wast",
+ "wast 66.0.2",
  "wat",
 ]
 

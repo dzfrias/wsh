@@ -32,6 +32,7 @@ debug = 1
 
 [dev-dependencies]
 test-log.workspace = true
+wast = "67.0.1"
 
 [workspace.dependencies]
 anyhow = "1.0.75"

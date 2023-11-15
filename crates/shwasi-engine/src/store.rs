@@ -10,15 +10,15 @@ use crate::{
 
 /// A WebAssembly store, holding all global data of given module.
 #[derive(Debug, Default)]
-pub struct Store<'a> {
-    pub(crate) data: StoreData<'a>,
+pub struct Store {
+    pub(crate) data: StoreData,
     pub(crate) mut_: StoreMut,
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct StoreData<'a> {
+pub(crate) struct StoreData {
     pub functions: Vec<FuncInst>,
-    pub datas: Vec<DataInst<'a>>,
+    pub datas: Vec<DataInst>,
     pub instances: HashMap<String, Instance>,
     pub hosts: HashMap<(String, String), Addr>,
 
@@ -33,7 +33,7 @@ pub(crate) struct StoreMut {
     pub tables: Vec<TableInst>,
 }
 
-impl Store<'_> {
+impl Store {
     /// Create a new, empty [`Store`].
     pub fn new() -> Self {
         Self::default()
@@ -187,7 +187,7 @@ pub struct ExportInst {
 
 /// An instance of a WebAssembly data segment.
 #[derive(Debug)]
-pub struct DataInst<'a>(pub &'a [u8]);
+pub struct DataInst(pub Vec<u8>);
 
 /// An address into a [`Store`].
 pub type Addr = usize;
