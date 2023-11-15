@@ -80,28 +80,19 @@ impl Instance {
     ///
     /// This will allocate the module's imports into the store, and allocate the module's different
     /// sections, and run the module's start function, if present.
-    pub fn instantiate<'a>(
-        store: &mut Store<'a>,
-        mut module: Module<'a>,
-        externs: &[ExternVal],
-    ) -> Result<Self> {
+    pub fn instantiate<'a>(store: &mut Store<'a>, mut module: Module<'a>) -> Result<Self> {
         validate(&module).map_err(Error::Validation)?;
-
-        if module.imports.len() != externs.len() {
-            return Err(Error::InvalidExternLength {
-                want: module.imports.len(),
-                got: externs.len(),
-            });
-        }
 
         let mut inst = InstanceInner::default();
 
-        for (extern_val, import) in externs.iter().zip(module.imports.iter()) {
-            let ty = store
-                .data
-                .types
-                .get(extern_val)
-                .ok_or(Error::ExternNotFound(*extern_val))?;
+        for import in module.imports.iter() {
+            let extern_val = store.resolve(import.module, import.field).ok_or_else(|| {
+                Error::ExternNotFound {
+                    module: import.module.to_owned(),
+                    field: import.field.to_owned(),
+                }
+            })?;
+            let ty = store.data.types.get(&extern_val).unwrap();
             let import_ty = match &import.kind {
                 ImportKind::Function(idx) => Extern::Func(module.types[*idx as usize].clone()),
                 ImportKind::Table(table) => Extern::Table(table.clone()),
@@ -116,10 +107,10 @@ impl Instance {
             }
 
             match extern_val {
-                ExternVal::Func(addr) => inst.func_addrs.push(*addr),
-                ExternVal::Table(addr) => inst.table_addrs.push(*addr),
-                ExternVal::Mem(addr) => inst.mem_addrs.push(*addr),
-                ExternVal::Global(addr) => inst.global_addrs.push(*addr),
+                ExternVal::Func(addr) => inst.func_addrs.push(addr),
+                ExternVal::Table(addr) => inst.table_addrs.push(addr),
+                ExternVal::Mem(addr) => inst.mem_addrs.push(addr),
+                ExternVal::Global(addr) => inst.global_addrs.push(addr),
             }
         }
         let imported_globals = inst.global_addrs.clone();
@@ -276,6 +267,10 @@ impl Instance {
         }
 
         Ok(inst)
+    }
+
+    pub fn export_as(&self, store: &mut Store, name: &str) {
+        store.data.instances.insert(name.to_owned(), self.clone());
     }
 
     /// Get a function by name and type.

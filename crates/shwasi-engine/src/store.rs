@@ -19,8 +19,10 @@ pub struct Store<'a> {
 pub(crate) struct StoreData<'a> {
     pub functions: Vec<FuncInst>,
     pub datas: Vec<DataInst<'a>>,
+    pub instances: HashMap<String, Instance>,
+    pub hosts: HashMap<(String, String), Addr>,
 
-    pub(crate) types: HashMap<ExternVal, Extern>,
+    pub types: HashMap<ExternVal, Extern>,
 }
 
 #[derive(Debug, Default)]
@@ -49,6 +51,44 @@ impl Store<'_> {
         self.mut_.globals.clear();
         self.mut_.elems.clear();
         self.mut_.tables.clear();
+    }
+
+    pub fn define(&mut self, module: &str, field: &str, func: HostFunc) {
+        self.data.types.insert(
+            ExternVal::Func(self.data.functions.len()),
+            Extern::Func(func.ty.clone()),
+        );
+        self.data.functions.push(FuncInst::Host(func));
+        self.data.hosts.insert(
+            (module.to_owned(), field.to_owned()),
+            self.data.functions.len() - 1,
+        );
+    }
+
+    pub(crate) fn resolve(&self, module: &str, field: &str) -> Option<ExternVal> {
+        self.resolve_host(module, field)
+            .or_else(|| self.resolve_module(module, field))
+    }
+
+    fn resolve_host(&self, module: &str, field: &str) -> Option<ExternVal> {
+        self.data
+            .hosts
+            .get(&(module.to_owned(), field.to_owned()))
+            .map(|&addr| ExternVal::Func(addr))
+    }
+
+    fn resolve_module(&self, module: &str, field: &str) -> Option<ExternVal> {
+        let instance = self.data.instances.get(module)?;
+        instance
+            .exports()
+            .iter()
+            .find_map(|ExportInst { name, reference }| {
+                if name == field {
+                    Some(*reference)
+                } else {
+                    None
+                }
+            })
     }
 }
 

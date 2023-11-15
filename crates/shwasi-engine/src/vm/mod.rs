@@ -274,11 +274,10 @@ impl<'s> Vm<'s> {
                             ip = *else_;
                         } else {
                             // If there is no else block, we need to jump to the normal end
-                            // continuation.
+                            // continuation. We also let it fall through to the ip increment.
                             let label = self.labels.pop().unwrap();
                             ip = label.ra;
                             self.clear_block(label.stack_height, label.arity);
-                            continue;
                         }
                     }
                 }
@@ -866,7 +865,7 @@ mod tests {
                 }],
                 ..Default::default()
             };
-            let inst = Instance::instantiate(&mut store, module, &[]).unwrap();
+            let inst = Instance::instantiate(&mut store, module).unwrap();
             let mut vm = Vm::new(&store.data, &mut store.mut_, inst.clone());
             let res = vm.call(0, &[]).unwrap();
             let expect: Vec<Value> = vec![$($val),*];
