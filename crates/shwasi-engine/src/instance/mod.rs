@@ -209,10 +209,10 @@ impl Instance {
         };
 
         // Allocate functions into store
-        for func in module.functions {
+        for (i, func) in module.functions.into_iter().enumerate() {
             let ty = &inst.types()[func.index as usize];
             let code = std::mem::replace(
-                &mut module.codes[func.index as usize],
+                &mut module.codes[i],
                 Code {
                     locals: vec![],
                     body: InstrBuffer::new(),

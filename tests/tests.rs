@@ -1,6 +1,7 @@
 mod spectests;
 
 use self::spectests::run_spectest;
+use test_log::test;
 
 macro_rules! spectest {
     ($name:ident) => {

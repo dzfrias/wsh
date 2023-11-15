@@ -1,4 +1,4 @@
-#![allow(dead_code, clippy::match_same_arms)]
+#![allow(clippy::match_same_arms)]
 
 mod ops;
 
@@ -193,7 +193,7 @@ impl<'s> Vm<'s> {
         }
         macro_rules! load {
             ($ty:ty, $encode:ty, $offset:expr) => {{
-                let offset = self.pop::<u32>() + $offset;
+                let offset = self.pop::<u32>().saturating_add($offset);
                 let bytes = self.load(offset)?;
                 self.push(<$ty>::from_le_bytes(bytes) as $encode);
             }};
@@ -509,28 +509,28 @@ impl<'s> Vm<'s> {
                 I::I64Extend8S => todo!(),
                 I::I64Extend16S => todo!(),
                 I::I64Extend32S => todo!(),
-                I::I32Load(MemArg { offset, align: _ }) => load!(u32, u32, offset),
-                I::I64Load(MemArg { offset, align: _ }) => load!(u64, u64, offset),
+                I::I32Load(MemArg { offset, align: _ }) => load!(u32, u32, *offset),
+                I::I64Load(MemArg { offset, align: _ }) => load!(u64, u64, *offset),
                 I::F32Load(MemArg { offset, align: _ }) => {
-                    let offset = self.pop::<u32>() + offset;
+                    let offset = self.pop::<u32>().saturating_add(*offset);
                     let bytes = self.load(offset)?;
                     self.push(f32::from_bits(u32::from_le_bytes(bytes)));
                 }
                 I::F64Load(MemArg { offset, align: _ }) => {
-                    let offset = self.pop::<u32>() + offset;
+                    let offset = self.pop::<u32>().saturating_add(*offset);
                     let bytes = self.load(offset)?;
                     self.push(f64::from_bits(u64::from_le_bytes(bytes)));
                 }
-                I::I32Load8S(MemArg { offset, align: _ }) => load!(i8, u32, offset),
-                I::I32Load8U(MemArg { offset, align: _ }) => load!(u8, u32, offset),
-                I::I32Load16S(MemArg { offset, align: _ }) => load!(i16, u32, offset),
-                I::I32Load16U(MemArg { offset, align: _ }) => load!(u16, u32, offset),
-                I::I64Load8S(MemArg { offset, align: _ }) => load!(i8, u64, offset),
-                I::I64Load8U(MemArg { offset, align: _ }) => load!(u8, u64, offset),
-                I::I64Load16S(MemArg { offset, align: _ }) => load!(i16, u64, offset),
-                I::I64Load16U(MemArg { offset, align: _ }) => load!(u16, u64, offset),
-                I::I64Load32S(MemArg { offset, align: _ }) => load!(i32, u64, offset),
-                I::I64Load32U(MemArg { offset, align: _ }) => load!(u32, u64, offset),
+                I::I32Load8S(MemArg { offset, align: _ }) => load!(i8, u32, *offset),
+                I::I32Load8U(MemArg { offset, align: _ }) => load!(u8, u32, *offset),
+                I::I32Load16S(MemArg { offset, align: _ }) => load!(i16, u32, *offset),
+                I::I32Load16U(MemArg { offset, align: _ }) => load!(u16, u32, *offset),
+                I::I64Load8S(MemArg { offset, align: _ }) => load!(i8, u64, *offset),
+                I::I64Load8U(MemArg { offset, align: _ }) => load!(u8, u64, *offset),
+                I::I64Load16S(MemArg { offset, align: _ }) => load!(i16, u64, *offset),
+                I::I64Load16U(MemArg { offset, align: _ }) => load!(u16, u64, *offset),
+                I::I64Load32S(MemArg { offset, align: _ }) => load!(i32, u64, *offset),
+                I::I64Load32U(MemArg { offset, align: _ }) => load!(u32, u64, *offset),
                 I::I32Store(MemArg { offset, align: _ }) => store!(u32, offset),
                 I::I64Store(MemArg { offset, align: _ }) => store!(u64, offset),
                 I::F32Store(MemArg { offset, align: _ }) => {
@@ -788,7 +788,7 @@ impl<'s> Vm<'s> {
     /// Get the `N` bytes of data at the given offset in the current memory.
     fn load<const N: usize>(&self, offset: u32) -> Result<[u8; N]> {
         let mem = &self.store_mut.memories[self.frame.module.mem_addrs()[0]];
-        if offset + N as u32 > mem.data.len() as u32 {
+        if offset.saturating_add(N as u32) > mem.data.len() as u32 {
             return Err(Trap::MemoryAccessOutOfBounds {
                 mem_size: mem.data.len() as u32,
                 offset,

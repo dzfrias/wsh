@@ -30,8 +30,7 @@ impl WasmFuncUntyped {
     /// Note that this function will perform type validation, and will return
     /// [`Error::FunctionArgsMismatch`] given a mismatch.
     pub fn call(&self, store: &mut Store, args: &[Value]) -> Result<Vec<Value>> {
-        let f = self.inst.func_addrs()[self.func_addr];
-        let func = &store.data.functions[f];
+        let func = &store.data.functions[self.func_addr];
         if func.ty().0.len() != args.len()
             || !func
                 .ty()

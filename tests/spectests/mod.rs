@@ -131,7 +131,7 @@ fn execute_directives(directives: Vec<WastDirective>, mut ctx: ExecutionContext)
                     let results = ctx.invoke(&invoke)?;
                     let expect = convert_results(&expect);
                     ensure!(
-                        results == expect,
+                        matches(&results, &expect),
                         "expected {expect:?} but got {results:?} over {span} when running {name}",
                         span = ctx.line(span),
                         name = invoke.name,
@@ -207,4 +207,16 @@ fn convert_args(args: &[WastArg]) -> Vec<Value> {
             }
         })
         .collect()
+}
+
+fn matches(v1: &[Value], v2: &[Value]) -> bool {
+    v1.iter().zip(v2).all(|(v1, v2)| match (v1, v2) {
+        (Value::I32(i1), Value::I32(i2)) => i1 == i2,
+        (Value::I64(i1), Value::I64(i2)) => i1 == i2,
+        (Value::F32(f1), Value::F32(f2)) => f1 == f2 || f1.is_nan() && f2.is_nan(),
+        (Value::F64(f1), Value::F64(f2)) => f1 == f2 || f1.is_nan() && f2.is_nan(),
+        (Value::Ref(r1), Value::Ref(r2)) => r1 == r2,
+        (Value::ExternRef(r1), Value::ExternRef(r2)) => r1 == r2,
+        _ => false,
+    })
 }
