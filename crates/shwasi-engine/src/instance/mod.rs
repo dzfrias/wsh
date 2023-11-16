@@ -116,7 +116,7 @@ impl Instance {
                     vm::eval_const_expr(&store.mut_.globals, &imported_globals, &global.init);
                 store.mut_.globals.push(GlobalInst {
                     ty: global.kind.clone(),
-                    value,
+                    value: value.into_typed(global.kind.content_type),
                 });
                 let addr = store.mut_.globals.len() - 1;
                 store
@@ -220,10 +220,10 @@ impl Instance {
                         }));
                     }
                     for (i, func_idx) in elem_inst.elems.iter().enumerate() {
-                        let func_addr = func_idx.map(|i| inst.func_addrs()[i]);
+                        let func_addr = func_idx.map(|i| inst.func_addrs()[i as usize]);
                         let tbl =
                             &mut store.mut_.tables[inst.table_addrs()[tbl_idx as usize]].elements;
-                        tbl[offset as usize + i] = func_addr;
+                        tbl[offset as usize + i] = func_addr.map(|m| m as u32);
                     }
                     elem_inst.elem_drop();
                 }
@@ -249,7 +249,7 @@ impl Instance {
         if let Some(start) = module.start {
             let func_addr = inst.func_addrs()[start as usize];
             let mut vm = Vm::new(&store.data, &mut store.mut_, inst.clone());
-            vm.call(func_addr, &[]).map_err(Error::Trap)?;
+            vm.call(func_addr, []).map_err(Error::Trap)?;
         }
 
         Ok(inst)

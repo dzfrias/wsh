@@ -4,7 +4,7 @@ use shwasi_parser::{Code, FuncType, GlobalType, Memory, RefType, TableType};
 
 use crate::{
     instance::Instance,
-    value::{Ref, Value},
+    value::{Ref, Value, ValueUntyped},
     vm::Vm,
     IntoHostFunc, PAGE_SIZE,
 };
@@ -116,7 +116,7 @@ pub struct HostFunc {
 /// The inner function type of a host function.
 ///
 /// See [`HostFunc`] for more information.
-pub type HostFuncInner = Box<dyn Fn(&mut Vm) -> Vec<Value>>;
+pub type HostFuncInner = Box<dyn Fn(&mut Vm) -> Vec<ValueUntyped>>;
 
 /// A function defined inside of the WebAssembly module.
 #[derive(Debug)]

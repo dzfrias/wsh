@@ -2,10 +2,7 @@ use std::mem;
 
 use shwasi_parser::ValType;
 
-/// A reference.
-pub type Ref = Option<usize>;
-
-/// A WebAssembly value.
+/// A typed WebAssembly value.
 #[derive(Debug, Clone, PartialEq, Copy)]
 pub enum Value {
     I32(u32),
@@ -19,86 +16,7 @@ pub enum Value {
 }
 
 impl Value {
-    #[inline]
-    pub fn as_u32(self) -> u32 {
-        match self {
-            Self::I32(i32) => i32,
-            // Because of validation, it is okay to interpret an u64 as an u32. We will never have
-            // the wrong type.
-            Self::I64(i64) => i64 as u32,
-            _ => panic!("Expected i32, found {:?}", self),
-        }
-    }
-
-    #[inline]
-    pub fn as_i32(self) -> i32 {
-        match self {
-            Self::I32(i32) => i32 as i32,
-            Self::I64(i64) => i64 as i32,
-            _ => panic!("Expected i32, found {:?}", self),
-        }
-    }
-
-    #[inline]
-    pub fn as_u64(self) -> u64 {
-        match self {
-            Self::I64(i64) => i64,
-            _ => panic!("Expected i64, found {:?}", self),
-        }
-    }
-
-    #[inline]
-    pub fn as_f32(self) -> f32 {
-        match self {
-            Self::F32(f32) => f32,
-            _ => panic!("Expected f32, found {:?}", self),
-        }
-    }
-
-    #[inline]
-    pub fn as_f64(self) -> f64 {
-        match self {
-            Self::F64(f64) => f64,
-            _ => panic!("Expected f64, found {:?}", self),
-        }
-    }
-
-    #[inline]
-    pub fn as_i64(self) -> i64 {
-        match self {
-            Self::I64(i64) => i64 as i64,
-            _ => panic!("Expected i64, found {:?}", self),
-        }
-    }
-
-    #[inline]
-    pub fn as_ref(self) -> Ref {
-        match self {
-            Self::Ref(ref_) | Self::ExternRef(ref_) => ref_,
-            _ => panic!("Expected Ref, found {:?}", self),
-        }
-    }
-
-    #[inline]
-    pub fn is_true(&self) -> bool {
-        match self {
-            Self::I32(i32) => *i32 != 0,
-            Self::I64(i64) => *i64 != 0,
-            _ => panic!("Expected i32, found {:?}", self),
-        }
-    }
-
-    #[inline]
-    pub fn is_false(&self) -> bool {
-        !self.is_true()
-    }
-
-    pub fn is_null(&self) -> bool {
-        matches!(self, Self::Ref(None) | Self::ExternRef(None))
-    }
-
-    #[inline]
-    pub fn type_default(ty: ValType) -> Self {
+    pub const fn type_default(ty: ValType) -> Self {
         match ty {
             ValType::I32 => Self::I32(0),
             ValType::I64 => Self::I64(0),
@@ -109,7 +27,7 @@ impl Value {
         }
     }
 
-    pub fn ty(&self) -> ValType {
+    pub const fn ty(&self) -> ValType {
         match self {
             Self::I32(_) => ValType::I32,
             Self::I64(_) => ValType::I64,
@@ -121,114 +39,208 @@ impl Value {
     }
 }
 
-impl From<bool> for Value {
-    #[inline]
-    fn from(b: bool) -> Self {
-        Self::I32(if b { 1 } else { 0 })
+/// A reference.
+pub type Ref = Option<u32>;
+
+/// An untyped WebAssembly value.
+///
+/// Note that because of [validation](https://webassembly.github.io/spec/core/valid/index.html), it
+/// is always correct to cast a `ValueUntyped` into a real type, so long as the caller casts to the
+/// same type as the validation requires.
+#[derive(Debug, Clone, PartialEq, Copy)]
+pub struct ValueUntyped(u64);
+
+impl ValueUntyped {
+    pub fn as_u32(self) -> u32 {
+        self.0 as u32
+    }
+
+    pub fn as_i32(self) -> i32 {
+        self.0 as i32
+    }
+
+    pub fn as_u64(self) -> u64 {
+        self.0
+    }
+
+    pub fn as_f32(self) -> f32 {
+        f32::from_bits(self.0 as u32)
+    }
+
+    pub fn as_f64(self) -> f64 {
+        f64::from_bits(self.0)
+    }
+
+    pub fn as_i64(self) -> i64 {
+        self.0 as i64
+    }
+
+    pub fn as_ref(self) -> Ref {
+        unsafe { mem::transmute(self.0) }
+    }
+
+    pub fn is_true(self) -> bool {
+        self.0 != 0
+    }
+
+    pub fn is_false(self) -> bool {
+        !self.is_true()
+    }
+
+    pub fn is_null(self) -> bool {
+        self.0 == 0
+    }
+
+    pub fn type_default(_ty: ValType) -> Self {
+        ValueUntyped(0)
+    }
+
+    pub fn into_typed(self, ty: ValType) -> Value {
+        match ty {
+            ValType::I32 => Value::I32(self.0 as u32),
+            ValType::I64 => Value::I64(self.0),
+            ValType::F32 => Value::F32(f32::from_bits(self.0 as u32)),
+            ValType::F64 => Value::F64(f64::from_bits(self.0)),
+            ValType::Func => Value::Ref(self.as_ref()),
+            ValType::Extern => Value::ExternRef(self.as_ref()),
+        }
     }
 }
 
-impl From<i32> for Value {
-    #[inline]
-    fn from(i32: i32) -> Self {
-        Self::I32(unsafe { mem::transmute(i32) })
+impl From<Value> for ValueUntyped {
+    fn from(value: Value) -> Self {
+        match value {
+            Value::I32(n) => Self(n as u64),
+            Value::I64(n) => Self(n),
+            Value::F32(f) => Self(f.to_bits() as u64),
+            Value::F64(f) => Self(f.to_bits()),
+            Value::Ref(r) | Value::ExternRef(r) => Self(unsafe { mem::transmute(r) }),
+        }
     }
 }
 
-impl From<i64> for Value {
-    #[inline]
-    fn from(i64: i64) -> Self {
-        Self::I64(unsafe { mem::transmute(i64) })
-    }
-}
-
-impl From<u64> for Value {
-    #[inline]
-    fn from(u64: u64) -> Self {
-        Self::I64(u64)
-    }
-}
-
-impl From<u32> for Value {
+impl From<u32> for ValueUntyped {
     #[inline]
     fn from(u32: u32) -> Self {
-        Self::I32(u32)
+        Self(u32 as u64)
     }
 }
 
-impl From<f32> for Value {
+impl From<i32> for ValueUntyped {
+    #[inline]
+    fn from(i32: i32) -> Self {
+        Self(i32 as u64)
+    }
+}
+
+impl From<u64> for ValueUntyped {
+    #[inline]
+    fn from(u64: u64) -> Self {
+        Self(u64)
+    }
+}
+
+impl From<i64> for ValueUntyped {
+    #[inline]
+    fn from(i64: i64) -> Self {
+        Self(i64 as u64)
+    }
+}
+
+impl From<f32> for ValueUntyped {
     #[inline]
     fn from(f32: f32) -> Self {
-        Self::F32(f32)
+        Self(f32.to_bits() as u64)
     }
 }
 
-impl From<f64> for Value {
+impl From<f64> for ValueUntyped {
     #[inline]
     fn from(f64: f64) -> Self {
-        Self::F64(f64)
+        Self(f64.to_bits())
     }
 }
 
-impl From<Value> for u32 {
+impl From<bool> for ValueUntyped {
     #[inline]
-    fn from(value: Value) -> Self {
+    fn from(b: bool) -> Self {
+        Self(if b { 1 } else { 0 })
+    }
+}
+
+impl From<Ref> for ValueUntyped {
+    #[inline]
+    fn from(ref_: Ref) -> Self {
+        Self(unsafe { mem::transmute(ref_) })
+    }
+}
+
+impl From<ValueUntyped> for u32 {
+    #[inline]
+    fn from(value: ValueUntyped) -> Self {
         value.as_u32()
     }
 }
 
-impl From<Value> for i32 {
+impl From<ValueUntyped> for i32 {
     #[inline]
-    fn from(value: Value) -> Self {
+    fn from(value: ValueUntyped) -> Self {
         value.as_i32()
     }
 }
 
-impl From<Value> for u64 {
+impl From<ValueUntyped> for u64 {
     #[inline]
-    fn from(value: Value) -> Self {
+    fn from(value: ValueUntyped) -> Self {
         value.as_u64()
     }
 }
 
-impl From<Value> for i64 {
+impl From<ValueUntyped> for i64 {
     #[inline]
-    fn from(value: Value) -> Self {
+    fn from(value: ValueUntyped) -> Self {
         value.as_i64()
     }
 }
 
-impl From<Value> for f32 {
+impl From<ValueUntyped> for f32 {
     #[inline]
-    fn from(value: Value) -> Self {
-        value.as_f32()
+    fn from(value: ValueUntyped) -> Self {
+        Self::from_bits(value.as_u32())
     }
 }
 
-impl From<Value> for f64 {
+impl From<ValueUntyped> for f64 {
     #[inline]
-    fn from(value: Value) -> Self {
-        value.as_f64()
+    fn from(value: ValueUntyped) -> Self {
+        Self::from_bits(value.as_u64())
     }
 }
 
-impl From<Value> for bool {
+impl From<ValueUntyped> for bool {
     #[inline]
-    fn from(value: Value) -> Self {
+    fn from(value: ValueUntyped) -> Self {
         value.is_true()
     }
 }
 
-impl From<Value> for u8 {
+impl From<ValueUntyped> for Ref {
     #[inline]
-    fn from(value: Value) -> Self {
+    fn from(value: ValueUntyped) -> Self {
+        value.as_ref()
+    }
+}
+
+impl From<ValueUntyped> for u8 {
+    #[inline]
+    fn from(value: ValueUntyped) -> Self {
         value.as_u32() as u8
     }
 }
 
-impl From<Value> for u16 {
+impl From<ValueUntyped> for u16 {
     #[inline]
-    fn from(value: Value) -> Self {
+    fn from(value: ValueUntyped) -> Self {
         value.as_u32() as u16
     }
 }

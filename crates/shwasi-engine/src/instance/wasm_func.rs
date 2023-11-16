@@ -5,7 +5,7 @@ use shwasi_parser::ValType;
 use crate::{
     error::{Error, Result},
     store::Addr,
-    value::Value,
+    value::{Value, ValueUntyped},
     vm::Vm,
     Instance, Store,
 };
@@ -45,7 +45,9 @@ impl WasmFuncUntyped {
             });
         }
         let mut vm = Vm::new(&store.data, &mut store.mut_, self.inst.clone());
-        let res = vm.call(self.func_addr, args).map_err(Error::Trap)?;
+        let res = vm
+            .call(self.func_addr, args.iter().map(|v| (*v).into()))
+            .map_err(Error::Trap)?;
         Ok(res)
     }
 }
@@ -77,42 +79,57 @@ where
     pub fn call(&self, store: &mut Store, args: Params) -> Result<Results> {
         let mut vm = Vm::new(&store.data, &mut store.mut_, self.inst.clone());
         let res = vm
-            .call(self.func_addr, &args.as_values())
+            .call(self.func_addr, args.as_values())
             .map_err(Error::Trap)?;
-        let values = Results::from_values(&res);
+        let values = Results::from_values(res.into_iter().map(Into::into));
         Ok(values)
     }
 }
 
+/// An opaque trait that represents values that can be passed to a WebAssembly function.
 pub trait WasmType {
-    fn as_value(&self) -> Value;
-    fn from_value(value: Value) -> Self;
+    #[doc(hidden)]
+    fn as_value(&self) -> ValueUntyped;
+    #[doc(hidden)]
+    fn from_value(value: ValueUntyped) -> Self;
+    #[doc(hidden)]
     fn ty() -> ValType;
 }
 
+/// An opaque trait that represents values that can be passed into a WebAssembly function.
 pub trait WasmParams {
-    fn as_values(&self) -> Vec<Value>;
+    #[doc(hidden)]
+    fn as_values(&self) -> impl DoubleEndedIterator<Item = ValueUntyped>;
+    #[doc(hidden)]
     fn matches<I>(values: I) -> bool
     where
-        I: ExactSizeIterator<Item = ValType>;
-    fn valtypes() -> Vec<ValType>;
+        I: IntoIterator<Item = ValType>;
+    #[doc(hidden)]
+    fn valtypes() -> impl Iterator<Item = ValType>;
 }
 
+/// An opaque trait that represents values that can be returned from a WebAssembly function.
 pub trait WasmResults {
-    fn from_values(values: &[Value]) -> Self;
+    #[doc(hidden)]
+    fn from_values<I>(values: I) -> Self
+    where
+        I: IntoIterator<Item = ValueUntyped>;
+    #[doc(hidden)]
     fn matches<I>(values: I) -> bool
     where
-        I: ExactSizeIterator<Item = ValType>;
-    fn into_values(self) -> Vec<Value>;
-    fn valtypes() -> Vec<ValType>;
+        I: IntoIterator<Item = ValType>;
+    #[doc(hidden)]
+    fn into_values(self) -> Vec<ValueUntyped>;
+    #[doc(hidden)]
+    fn valtypes() -> impl Iterator<Item = ValType>;
 }
 
 impl WasmType for i32 {
-    fn as_value(&self) -> Value {
-        Value::I32(*self as u32)
+    fn as_value(&self) -> ValueUntyped {
+        (*self).into()
     }
 
-    fn from_value(value: Value) -> Self {
+    fn from_value(value: ValueUntyped) -> Self {
         value.as_u32() as Self
     }
 
@@ -122,11 +139,11 @@ impl WasmType for i32 {
 }
 
 impl WasmType for i64 {
-    fn as_value(&self) -> Value {
-        Value::I64(*self as u64)
+    fn as_value(&self) -> ValueUntyped {
+        (*self).into()
     }
 
-    fn from_value(value: Value) -> Self {
+    fn from_value(value: ValueUntyped) -> Self {
         value.as_u64() as Self
     }
 
@@ -136,11 +153,11 @@ impl WasmType for i64 {
 }
 
 impl WasmType for f32 {
-    fn as_value(&self) -> Value {
-        Value::F32(*self)
+    fn as_value(&self) -> ValueUntyped {
+        (*self).into()
     }
 
-    fn from_value(value: Value) -> Self {
+    fn from_value(value: ValueUntyped) -> Self {
         value.as_f32() as Self
     }
 
@@ -150,11 +167,11 @@ impl WasmType for f32 {
 }
 
 impl WasmType for f64 {
-    fn as_value(&self) -> Value {
-        Value::F64(*self)
+    fn as_value(&self) -> ValueUntyped {
+        (*self).into()
     }
 
-    fn from_value(value: Value) -> Self {
+    fn from_value(value: ValueUntyped) -> Self {
         value.as_f64() as Self
     }
 
@@ -164,11 +181,11 @@ impl WasmType for f64 {
 }
 
 impl WasmType for u32 {
-    fn as_value(&self) -> Value {
-        Value::I32(*self)
+    fn as_value(&self) -> ValueUntyped {
+        (*self).into()
     }
 
-    fn from_value(value: Value) -> Self {
+    fn from_value(value: ValueUntyped) -> Self {
         value.as_u32() as Self
     }
 
@@ -178,11 +195,11 @@ impl WasmType for u32 {
 }
 
 impl WasmType for u64 {
-    fn as_value(&self) -> Value {
-        Value::I64(*self)
+    fn as_value(&self) -> ValueUntyped {
+        (*self).into()
     }
 
-    fn from_value(value: Value) -> Self {
+    fn from_value(value: ValueUntyped) -> Self {
         value.as_u64() as Self
     }
 
@@ -192,76 +209,85 @@ impl WasmType for u64 {
 }
 
 impl WasmResults for () {
-    fn from_values(_values: &[Value]) -> Self {}
+    fn from_values<I>(_values: I) -> Self
+    where
+        I: IntoIterator<Item = ValueUntyped>,
+    {
+    }
 
     fn matches<I>(values: I) -> bool
     where
-        I: ExactSizeIterator<Item = ValType>,
+        I: IntoIterator<Item = ValType>,
     {
-        values.len() == 0
+        values.into_iter().next().is_none()
     }
 
-    fn into_values(self) -> Vec<Value> {
+    fn into_values(self) -> Vec<ValueUntyped> {
         vec![]
     }
 
-    fn valtypes() -> Vec<ValType> {
-        vec![]
+    fn valtypes() -> impl Iterator<Item = ValType> {
+        None.into_iter()
     }
 }
 
 impl<T: WasmType> WasmResults for T {
-    fn from_values(values: &[Value]) -> Self {
-        T::from_value(values[0])
-    }
-
-    fn matches<I>(mut values: I) -> bool
+    fn from_values<I>(values: I) -> Self
     where
-        I: ExactSizeIterator<Item = ValType>,
+        I: IntoIterator<Item = ValueUntyped>,
     {
-        values.len() == 1 && values.next().unwrap() == T::ty()
-    }
-
-    fn into_values(self) -> Vec<Value> {
-        vec![self.as_value()]
-    }
-
-    fn valtypes() -> Vec<ValType> {
-        vec![T::ty()]
-    }
-}
-
-impl WasmParams for () {
-    fn as_values(&self) -> Vec<Value> {
-        vec![]
+        T::from_value(values.into_iter().next().unwrap())
     }
 
     fn matches<I>(values: I) -> bool
     where
-        I: ExactSizeIterator<Item = ValType>,
+        I: IntoIterator<Item = ValType>,
     {
-        values.len() == 0
+        let mut iter = values.into_iter();
+        iter.next().is_some_and(|v| v == T::ty()) && iter.next().is_none()
     }
 
-    fn valtypes() -> Vec<ValType> {
-        vec![]
+    fn into_values(self) -> Vec<ValueUntyped> {
+        vec![self.as_value()]
+    }
+
+    fn valtypes() -> impl Iterator<Item = ValType> {
+        std::iter::once(T::ty())
+    }
+}
+
+impl WasmParams for () {
+    fn as_values(&self) -> impl DoubleEndedIterator<Item = ValueUntyped> {
+        None.into_iter()
+    }
+
+    fn matches<I>(values: I) -> bool
+    where
+        I: IntoIterator<Item = ValType>,
+    {
+        values.into_iter().next().is_none()
+    }
+
+    fn valtypes() -> impl Iterator<Item = ValType> {
+        None.into_iter()
     }
 }
 
 impl<T: WasmType> WasmParams for T {
-    fn as_values(&self) -> Vec<Value> {
-        vec![self.as_value()]
+    fn as_values(&self) -> impl DoubleEndedIterator<Item = ValueUntyped> {
+        std::iter::once(self.as_value())
     }
 
-    fn matches<I>(mut values: I) -> bool
+    fn matches<I>(values: I) -> bool
     where
-        I: ExactSizeIterator<Item = ValType>,
+        I: IntoIterator<Item = ValType>,
     {
-        values.len() == 1 && values.next().unwrap() == T::ty()
+        let mut iter = values.into_iter();
+        iter.next().is_some_and(|v| v == T::ty()) && iter.next().is_none()
     }
 
-    fn valtypes() -> Vec<ValType> {
-        vec![T::ty()]
+    fn valtypes() -> impl Iterator<Item = ValType> {
+        std::iter::once(T::ty())
     }
 }
 
@@ -290,21 +316,25 @@ macro_rules! for_each_tuple {
 macro_rules! impl_wasm_params {
     ($n:tt $($T:tt)*) => {paste::paste! {
         impl<$([<T $T>]: WasmType),*> WasmParams for ($([<T $T>],)*) {
-            fn as_values(&self) -> Vec<Value> {
-                vec![$(self.$T.as_value()),*]
+            fn as_values(&self) -> impl DoubleEndedIterator<Item = ValueUntyped> {
+                [$(self.$T.as_value()),*].into_iter()
             }
 
             fn matches<I>(values: I) -> bool
             where
-                I: ExactSizeIterator<Item = ValType>,
+                I: IntoIterator<Item = ValType>,
             {
-                values.len() == $n && {
-                    values.into_iter().zip([$([<T $T>]::ty()),*].iter()).all(|(a, b)| a == *b)
-                }
+                let mut iter = values.into_iter();
+                $(
+                    if !iter.next().is_some_and(|v| v == [<T $T>]::ty()) {
+                        return false;
+                    }
+                 )*
+                iter.next().is_none()
             }
 
-            fn valtypes() -> Vec<ValType> {
-                vec![$([<T $T>]::ty()),*]
+            fn valtypes() -> impl Iterator<Item = ValType> {
+                [$([<T $T>]::ty()),*].into_iter()
             }
         }
     }}
@@ -313,25 +343,33 @@ macro_rules! impl_wasm_params {
 macro_rules! impl_wasm_results {
     ($n:tt $($T:tt)*) => {paste::paste! {
         impl<$([<T $T>]: WasmType),*> WasmResults for ($([<T $T>],)*) {
-            fn from_values(values: &[Value]) -> Self {
-                ($(<[<T $T>]>::from_value(values[$T])),*,)
+            fn from_values<I>(values: I) -> Self
+            where
+                I: IntoIterator<Item = ValueUntyped>,
+            {
+                let mut iter = values.into_iter();
+                ($(<[<T $T>]>::from_value(iter.next().unwrap())),*,)
             }
 
             fn matches<I>(values: I) -> bool
             where
-                I: ExactSizeIterator<Item = ValType>,
+                I: IntoIterator<Item = ValType>,
             {
-                values.len() == $n && {
-                    values.into_iter().zip([$([<T $T>]::ty()),*].iter()).all(|(a, b)| a == *b)
-                }
+                let mut iter = values.into_iter();
+                $(
+                    if !iter.next().is_some_and(|v| v == [<T $T>]::ty()) {
+                        return false;
+                    }
+                 )*
+                iter.next().is_none()
             }
 
-            fn into_values(self) -> Vec<Value> {
+            fn into_values(self) -> Vec<ValueUntyped> {
                 vec![$(self.$T.as_value()),*]
             }
 
-            fn valtypes() -> Vec<ValType> {
-                vec![$([<T $T>]::ty()),*]
+            fn valtypes() -> impl Iterator<Item = ValType> {
+                [$([<T $T>]::ty()),*].into_iter()
             }
         }
     }}

@@ -12,14 +12,14 @@ use thiserror::Error;
 use self::ops::*;
 use crate::{
     store::{Addr, FuncInst, GlobalInst, StoreData, StoreMut},
-    value::Value,
+    value::{Value, ValueUntyped},
     Instance,
 };
 
 #[derive(Debug)]
 pub struct Vm<'s> {
     /// The stack of values. This is used to store locals, arguments, and intermediate values.
-    pub(crate) stack: Vec<Value>,
+    pub(crate) stack: Vec<ValueUntyped>,
     /// A "stack" of frames.
     ///
     /// Note that this is note actually a stack, as it has no reason to be.
@@ -118,17 +118,26 @@ impl<'s> Vm<'s> {
         }
     }
 
-    pub fn call(&mut self, f_addr: Addr, args: &[Value]) -> Result<Vec<Value>> {
+    pub fn call<I>(&mut self, f_addr: Addr, args: I) -> Result<Vec<Value>>
+    where
+        I: IntoIterator<Item = ValueUntyped>,
+        I::IntoIter: DoubleEndedIterator,
+    {
         let f = &self.store.functions[f_addr];
         // Push arguments onto the stack
-        for arg in args.iter().rev() {
-            self.push(*arg);
+        for arg in args.into_iter().rev() {
+            self.push(arg);
         }
 
         self.call_inner(f)?;
         // We can just take the stack because we know that call_inner will clear any values that
         // are not results.
-        Ok(std::mem::take(&mut self.stack))
+        let res = std::mem::take(&mut self.stack);
+        Ok(res
+            .into_iter()
+            .enumerate()
+            .map(|(i, v)| v.into_typed(f.ty().1[i]))
+            .collect())
     }
 
     fn call_inner(&mut self, f: &FuncInst) -> Result<()> {
@@ -221,7 +230,7 @@ impl<'s> Vm<'s> {
             match instr {
                 I::Nop => {}
                 I::Unreachable => return Err(Trap::Unreachable),
-                I::I32Const(i32) => self.push(Value::I32(*i32)),
+                I::I32Const(i32) => self.push(*i32),
                 I::I32Add => binop!(add for u32),
                 I::I32Sub => binop!(sub for u32),
                 I::I32Mul => binop!(mul for u32),
@@ -246,7 +255,7 @@ impl<'s> Vm<'s> {
                 I::Return => return Ok(()),
                 I::Drop => drop(self.stack.pop()),
                 I::Select | I::SelectT(_) => {
-                    let (a, b, cond) = self.pop3::<Value, Value, bool>();
+                    let (a, b, cond) = self.pop3::<ValueUntyped, ValueUntyped, bool>();
                     self.push(if cond { a } else { b });
                 }
 
@@ -425,7 +434,7 @@ impl<'s> Vm<'s> {
 
                 I::F32Const(f32) => self.push(f32::from_bits(f32.raw())),
                 I::F64Const(f64) => self.push(f64::from_bits(f64.raw())),
-                I::I64Const(i64) => self.push(Value::I64(*i64)),
+                I::I64Const(i64) => self.push(*i64),
 
                 I::I32WrapI64 => unop!(wrap for u64),
                 I::I32TruncF32S => unop!(trunc_i32 for f32, Trap::BadTruncate),
@@ -498,7 +507,7 @@ impl<'s> Vm<'s> {
                     mem.data[dst as usize..(dst + len) as usize].fill(val);
                 }
                 I::RefIsNull => {
-                    let val = self.pop::<Value>();
+                    let val = self.pop::<ValueUntyped>();
                     self.push(val.is_null());
                 }
                 I::I32TruncSatF32S => unop!(trunc_i32_sat for f32),
@@ -576,8 +585,9 @@ impl<'s> Vm<'s> {
                 }
                 I::GlobalSet { idx } => {
                     let addr = self.frame.module.global_addrs()[*idx as usize];
-                    let val = self.pop();
-                    self.store_mut.globals[addr].value = val;
+                    let val = self.pop::<ValueUntyped>();
+                    let typed = val.into_typed(self.store_mut.globals[addr].ty.content_type);
+                    self.store_mut.globals[addr].value = typed;
                 }
                 // We can't actually drop data because it's behind an immutable reference. Since
                 // data is never mutated, this is fine.
@@ -602,7 +612,7 @@ impl<'s> Vm<'s> {
                 }
                 I::RefFunc { func_idx } => {
                     let f = &self.frame.module.func_addrs()[*func_idx as usize];
-                    self.push(Value::Ref(Some(*f)));
+                    self.push(Some(*f as u32));
                 }
                 I::TableGet { table } => {
                     let idx = self.pop::<u32>();
@@ -616,14 +626,10 @@ impl<'s> Vm<'s> {
                                 table_size: table.size() as u32,
                                 index: idx,
                             })?;
-                    let val = match table.ty.elem_type {
-                        RefType::Func => Value::Ref(*ref_),
-                        RefType::Extern => Value::ExternRef(*ref_),
-                    };
-                    self.push(val);
+                    self.push(*ref_);
                 }
                 I::TableSet { table } => {
-                    let val = self.pop();
+                    let val = self.pop::<Option<u32>>();
                     let idx = self.pop::<u32>();
 
                     let addr = self.frame.module.table_addrs()[*table as usize];
@@ -635,12 +641,7 @@ impl<'s> Vm<'s> {
                         .ok_or(Trap::TableGetOutOfBounds {
                             table_size: size as u32,
                             index: idx,
-                        })? = match val {
-                        Value::ExternRef(r) | Value::Ref(r) => r,
-                        _ => unreachable!(
-                            "BUG: due to validation, value should never be a number type"
-                        ),
-                    };
+                        })? = val;
                 }
                 I::TableGrow { .. } => todo!(),
                 I::TableSize { table } => {
@@ -650,7 +651,7 @@ impl<'s> Vm<'s> {
                 }
                 I::TableFill { .. } => todo!(),
                 I::RefNull { ty } => {
-                    self.push(Value::type_default((*ty).into()));
+                    self.push(ValueUntyped::type_default((*ty).into()));
                 }
                 I::CallIndirect {
                     table_idx,
@@ -669,7 +670,7 @@ impl<'s> Vm<'s> {
                             index: tbl_idx,
                         })?
                         .ok_or(Trap::CallNullRef)?;
-                    let f = &self.store.functions[f_addr];
+                    let f = &self.store.functions[f_addr as usize];
                     let actual_ty = f.ty();
 
                     if expect_ty != actual_ty {
@@ -741,12 +742,12 @@ impl<'s> Vm<'s> {
         self.stack.drain(begin..self.stack.len() - arity);
     }
 
-    fn push(&mut self, val: impl Into<Value>) {
+    fn push(&mut self, val: impl Into<ValueUntyped>) {
         self.stack.push(val.into());
     }
 
     // TODO: inline?
-    fn pop<T: From<Value>>(&mut self) -> T {
+    fn pop<T: From<ValueUntyped>>(&mut self) -> T {
         self.stack
             .pop()
             .expect("due to validation, stack cannot be empty")
@@ -755,8 +756,8 @@ impl<'s> Vm<'s> {
 
     fn pop2<T, U>(&mut self) -> (T, U)
     where
-        T: From<Value>,
-        U: From<Value>,
+        T: From<ValueUntyped>,
+        U: From<ValueUntyped>,
     {
         let b = self.pop::<U>();
         let a = self.pop::<T>();
@@ -765,9 +766,9 @@ impl<'s> Vm<'s> {
 
     fn pop3<T, U, S>(&mut self) -> (T, U, S)
     where
-        T: From<Value>,
-        U: From<Value>,
-        S: From<Value>,
+        T: From<ValueUntyped>,
+        U: From<ValueUntyped>,
+        S: From<ValueUntyped>,
     {
         let c = self.pop::<S>();
         let b = self.pop::<U>();
@@ -819,18 +820,22 @@ impl<'s> Vm<'s> {
     }
 }
 
-pub fn eval_const_expr(globals: &[GlobalInst], module_globals: &[Addr], expr: &InitExpr) -> Value {
+pub fn eval_const_expr(
+    globals: &[GlobalInst],
+    module_globals: &[Addr],
+    expr: &InitExpr,
+) -> ValueUntyped {
     match expr {
-        InitExpr::I32Const(i32) => Value::I32(*i32),
-        InitExpr::I64Const(i64) => Value::I64(*i64),
-        InitExpr::F32Const(f32) => Value::F32(f32::from_bits(f32.raw())),
-        InitExpr::F64Const(f64) => Value::F64(f64::from_bits(f64.raw())),
-        InitExpr::ConstGlobalGet(idx) => globals[module_globals[*idx as usize]].value,
+        InitExpr::I32Const(i32) => (*i32).into(),
+        InitExpr::I64Const(i64) => (*i64).into(),
+        InitExpr::F32Const(f32) => f32::from_bits(f32.raw()).into(),
+        InitExpr::F64Const(f64) => f64::from_bits(f64.raw()).into(),
+        InitExpr::ConstGlobalGet(idx) => globals[module_globals[*idx as usize]].value.into(),
         InitExpr::RefNull(t) => match t {
-            RefType::Func => Value::Ref(None),
-            RefType::Extern => Value::ExternRef(None),
+            RefType::Func => 0.into(),
+            RefType::Extern => 0.into(),
         },
-        InitExpr::RefFunc(idx) => Value::Ref(Some(*idx as usize)),
+        InitExpr::RefFunc(idx) => Some(*idx).into(),
     }
 }
 
@@ -872,7 +877,7 @@ mod tests {
             };
             let inst = Instance::instantiate(&mut store, module).unwrap();
             let mut vm = Vm::new(&store.data, &mut store.mut_, inst.clone());
-            let res = vm.call(0, &[]).unwrap();
+            let res = vm.call(0, []).unwrap();
             let expect: Vec<Value> = vec![$($val),*];
             assert_eq!(expect, res);
         };

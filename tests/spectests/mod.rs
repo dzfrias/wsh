@@ -255,9 +255,9 @@ fn convert_results(results: &[WastRet]) -> Vec<Value> {
                     HeapType::Extern => Value::ExternRef(None),
                     ty => unimplemented!("heap type of {ty:?} encountered!"),
                 },
-                WastRetCore::RefExtern(ext) => Value::ExternRef(ext.map(|ext| ext as usize)),
+                WastRetCore::RefExtern(ext) => Value::ExternRef(*ext),
                 WastRetCore::RefFunc(ref_) => Value::Ref(ref_.map(|ref_| match ref_ {
-                    Index::Num(n, _) => n as usize,
+                    Index::Num(n, _) => n,
                     Index::Id(_) => unreachable!("id should not be present in an encoded module"),
                 })),
                 _ => unimplemented!("unsupported return val encountered!"),
@@ -282,7 +282,7 @@ fn convert_args(args: &[WastArg]) -> Vec<Value> {
                     HeapType::Extern => Value::ExternRef(None),
                     ty => unimplemented!("heap type of {ty:?} encountered!"),
                 },
-                WastArgCore::RefExtern(ext) => Value::ExternRef(Some(*ext as usize)),
+                WastArgCore::RefExtern(ext) => Value::ExternRef(Some(*ext)),
                 WastArgCore::RefHost(_) | WastArgCore::V128(_) => {
                     unimplemented!("unsupported arg encountered!")
                 }

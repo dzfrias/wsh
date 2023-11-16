@@ -74,7 +74,7 @@ macro_rules! impl_host_func {
 
                 fn into_host_func(self) -> HostFunc {
                     HostFunc {
-                        ty: FuncType(<Self::Params as WasmParams>::valtypes(), R::valtypes()),
+                        ty: FuncType(<Self::Params as WasmParams>::valtypes().collect(), R::valtypes().collect()),
                         code: Box::new(move |vm| {
                             $(
                                 let [<t $T>] = [<T $T>]::from_value(vm.stack.pop().unwrap());
