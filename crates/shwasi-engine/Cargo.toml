@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 anyhow.workspace = true
 thiserror.workspace = true
+tracing.workspace = true
 shwasi-parser = { path = "../shwasi-parser" }
 paste = "1.0.14"
 

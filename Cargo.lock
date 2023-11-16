@@ -1133,6 +1133,7 @@ dependencies = [
  "paste",
  "shwasi-parser",
  "thiserror",
+ "tracing",
 ]
 
 [[package]]

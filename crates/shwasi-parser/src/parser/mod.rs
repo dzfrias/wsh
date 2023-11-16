@@ -56,6 +56,7 @@ impl<'a> Parser<'a> {
             self.module.functions.len() == self.module.codes.len(),
             "function signatures do not match up with code section"
         );
+        info!("finished reading module");
 
         Ok(self.module)
     }

@@ -185,7 +185,11 @@ fn execute_directives(directives: Vec<WastDirective>, mut ctx: ExecutionContext)
                         span = ctx.line(span),
                         name = invoke.name,
                     );
-                    info!("assert return passed for {}", invoke.name);
+                    info!(
+                        "assert return passed for {} at {span}",
+                        invoke.name,
+                        span = ctx.line(span)
+                    );
                 }
                 WastExecute::Get { module, global } => {
                     let val = ctx.get_inst(module).get_global(&ctx.store, global);

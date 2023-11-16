@@ -77,8 +77,19 @@ impl StackFrame {
 
 #[derive(Debug)]
 struct Label {
+    /// The arity of the label. This is the "result" of the label. There should be `stack_height +
+    /// arity` values on the stack when the label is popped.
+    ///
+    /// For all blocks, this the arity of the end types (results) of the blocks.
     arity: usize,
-    /// Return address of the block.
+    /// The continuation arity of the label. This is the number of values that should be on the
+    /// stack when the label's continuation is jumped to (the return address). This happens when a
+    /// branch is taken.
+    ///
+    /// For `if`, `block` and function labels, this is the same as the arity. For `loop` labels,
+    /// this is the params of the block.
+    cont_arity: usize,
+    /// Return address of the block. In the spec, this is called the continuation.
     ra: usize,
     /// The stack height when the label was pushed
     stack_height: usize,
@@ -156,6 +167,7 @@ impl<'s> Vm<'s> {
                 let bp = self.stack.len() - f.ty.0.len() - pushed_locals;
                 self.labels.push(Label {
                     arity: f.ty.1.len(),
+                    cont_arity: f.ty.1.len(),
                     ra: f.code.body.len(),
                     stack_height: bp,
                 });
@@ -237,9 +249,6 @@ impl<'s> Vm<'s> {
                 I::I32DivU => binop!(divu for u32, Trap::DivideByZero),
                 I::End => {
                     let label = self.labels.pop().unwrap();
-                    // Jump to continuation, which is the return address of the block that is found
-                    // at compile time.
-                    ip = label.ra;
                     self.clear_block(label.stack_height, label.arity);
                 }
                 I::Else => {
@@ -250,7 +259,7 @@ impl<'s> Vm<'s> {
                     ip = label.ra;
                 }
                 I::Return => {
-                    self.labels.pop();
+                    self.labels.drain(1..);
                     return Ok(());
                 }
                 I::Drop => drop(self.stack.pop()),
@@ -262,15 +271,17 @@ impl<'s> Vm<'s> {
                 // Control instructions
                 I::Loop(block) => {
                     self.labels.push(Label {
-                        arity: self.param_arity(block.ty),
+                        arity: self.return_arity(block.ty),
+                        cont_arity: self.param_arity(block.ty),
                         // Return to the beginning of the block
-                        ra: ip,
+                        ra: ip + 1,
                         stack_height: self.stack.len() - self.param_arity(block.ty),
                     });
                 }
                 I::Block(block) => {
                     self.labels.push(Label {
                         arity: self.return_arity(block.ty),
+                        cont_arity: self.return_arity(block.ty),
                         ra: block.end,
                         stack_height: self.stack.len() - self.param_arity(block.ty),
                     });
@@ -279,6 +290,7 @@ impl<'s> Vm<'s> {
                     let cond = self.pop::<bool>();
                     self.labels.push(Label {
                         arity: self.return_arity(block.ty),
+                        cont_arity: self.return_arity(block.ty),
                         ra: block.end,
                         stack_height: self.stack.len() - self.param_arity(block.ty),
                     });
@@ -303,7 +315,9 @@ impl<'s> Vm<'s> {
                     // is safe here.
                     let label = self.labels.last().unwrap();
                     ip = label.ra;
-                    self.clear_block(label.stack_height, label.arity);
+                    // NOTE: we use cont_arity here. See the comment on the Label struct for more
+                    // details on why.
+                    self.clear_block(label.stack_height, label.cont_arity);
                     continue;
                 }
                 I::BrTable(br_table) => {
@@ -317,7 +331,7 @@ impl<'s> Vm<'s> {
                     }
                     let label = self.labels.last().unwrap();
                     ip = label.ra;
-                    self.clear_block(label.stack_height, label.arity);
+                    self.clear_block(label.stack_height, label.cont_arity);
                     continue;
                 }
                 I::BrIf { depth } => {
@@ -328,7 +342,7 @@ impl<'s> Vm<'s> {
                         }
                         let label = self.labels.last().unwrap();
                         ip = label.ra;
-                        self.clear_block(label.stack_height, label.arity);
+                        self.clear_block(label.stack_height, label.cont_arity);
                         continue;
                     }
                 }
@@ -965,39 +979,6 @@ mod tests {
             ],
             [
                 I32(1),
-            ]
-        );
-    }
-
-    #[test]
-    fn locals() {
-        test_function!(
-            [I32] => [
-                Loop(shwasi_parser::Block {
-                    ty: BlockType::Empty,
-                    end: 0,
-                }),
-                    LocalGet { idx: 0 },
-                    I32Const(1),
-                    I32Add,
-                    LocalSet { idx: 0 },
-                    LocalGet { idx: 0 },
-                    I32Const(10),
-                    I32Eq,
-                    If {
-                        block: shwasi_parser::Block {
-                            ty: BlockType::Empty,
-                            end: 11,
-                        },
-                        else_: None,
-                    },
-                        LocalGet { idx: 0 },
-                        Return,
-                    End,
-                End,
-            ] with locals [I32 * 1],
-            [
-                I32(10),
             ]
         );
     }

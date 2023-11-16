@@ -621,8 +621,6 @@ impl<'a> InstrReader<'a> {
             buffer.push(instr);
         }
 
-        buffer.shrink();
-        debug!("got {} instructions", buffer.len());
-        Ok(buffer)
+        Err(anyhow::anyhow!("no end instruction found"))
     }
 }

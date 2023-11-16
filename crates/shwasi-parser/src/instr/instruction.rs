@@ -533,7 +533,7 @@ impl fmt::Display for Instruction {
                 for depth in br_table.depths.iter() {
                     write!(f, " {depth}")?;
                 }
-                write!(f, "{} (default)", br_table.default_depth)
+                write!(f, " {} (default)", br_table.default_depth)
             }
             Instruction::SelectT(ty) => {
                 write!(f, " {ty}")
