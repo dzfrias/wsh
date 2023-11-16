@@ -30,6 +30,7 @@ members = [
 debug = 1
 
 [dev-dependencies]
+paste = "1.0.14"
 test-log.workspace = true
 tracing.workspace = true
 wast = "67.0.1"

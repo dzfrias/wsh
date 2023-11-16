@@ -121,11 +121,10 @@ impl<'s> Vm<'s> {
     pub fn call<I>(&mut self, f_addr: Addr, args: I) -> Result<Vec<Value>>
     where
         I: IntoIterator<Item = ValueUntyped>,
-        I::IntoIter: DoubleEndedIterator,
     {
         let f = &self.store.functions[f_addr];
         // Push arguments onto the stack
-        for arg in args.into_iter().rev() {
+        for arg in args {
             self.push(arg);
         }
 
@@ -158,7 +157,7 @@ impl<'s> Vm<'s> {
                 self.labels.push(Label {
                     arity: f.ty.1.len(),
                     ra: f.code.body.len(),
-                    stack_height: self.stack.len(),
+                    stack_height: bp,
                 });
                 let new_frame = self
                     .frame
@@ -242,7 +241,6 @@ impl<'s> Vm<'s> {
                     // at compile time.
                     ip = label.ra;
                     self.clear_block(label.stack_height, label.arity);
-                    continue;
                 }
                 I::Else => {
                     let label = self.labels.pop().unwrap();
@@ -250,9 +248,11 @@ impl<'s> Vm<'s> {
                     // instruction, it means that the `If` block main body was executed, so treat
                     // this as an `End` instruction.
                     ip = label.ra;
-                    continue;
                 }
-                I::Return => return Ok(()),
+                I::Return => {
+                    self.labels.pop();
+                    return Ok(());
+                }
                 I::Drop => drop(self.stack.pop()),
                 I::Select | I::SelectT(_) => {
                     let (a, b, cond) = self.pop3::<ValueUntyped, ValueUntyped, bool>();
@@ -265,14 +265,14 @@ impl<'s> Vm<'s> {
                         arity: self.param_arity(block.ty),
                         // Return to the beginning of the block
                         ra: ip,
-                        stack_height: self.stack.len(),
+                        stack_height: self.stack.len() - self.param_arity(block.ty),
                     });
                 }
                 I::Block(block) => {
                     self.labels.push(Label {
                         arity: self.return_arity(block.ty),
                         ra: block.end,
-                        stack_height: self.stack.len(),
+                        stack_height: self.stack.len() - self.param_arity(block.ty),
                     });
                 }
                 I::If { block, else_ } => {
@@ -280,7 +280,7 @@ impl<'s> Vm<'s> {
                     self.labels.push(Label {
                         arity: self.return_arity(block.ty),
                         ra: block.end,
-                        stack_height: self.stack.len(),
+                        stack_height: self.stack.len() - self.param_arity(block.ty),
                     });
                     if !cond {
                         if let Some(else_) = else_ {

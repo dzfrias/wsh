@@ -1116,6 +1116,7 @@ dependencies = [
  "anyhow",
  "clap",
  "dhat",
+ "paste",
  "shwasi-engine",
  "shwasi-parser",
  "test-log",
