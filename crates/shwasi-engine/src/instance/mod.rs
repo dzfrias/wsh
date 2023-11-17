@@ -46,7 +46,7 @@ struct InstanceInner {
 
 // Public impl
 impl Instance {
-    /// Instantiate a module with the given [`ExternVal`]s and [`Store`].
+    /// Instantiate a module with the given [`Store`].
     ///
     /// This will allocate the module's imports into the store, and allocate the module's different
     /// sections, and run the module's start function, if present.
@@ -70,7 +70,7 @@ impl Instance {
                 ImportKind::Global(global) => Extern::Global(global.clone()),
             };
             if !ty.matches(&import_ty) {
-                return Err(Error::BadExternType {
+                return Err(Error::BadExtern {
                     want: import_ty,
                     got: ty.clone(),
                 });
@@ -283,7 +283,7 @@ impl Instance {
             .find(|export| export.name == name)
             .ok_or_else(|| Error::FunctionNotFound(name.to_owned()))?;
         let ExternVal::Func(func_addr) = func.reference else {
-            return Err(Error::AttemptingToCallNonFunction(func.reference));
+            return Err(Error::AttemptingToCallNonFunction(func.reference.ty()));
         };
         let f = &store.data.functions[func_addr];
         if !Params::matches(f.ty().0.iter().copied()) {
@@ -304,7 +304,7 @@ impl Instance {
             .find_export(name)
             .ok_or_else(|| Error::FunctionNotFound(name.to_owned()))?;
         let ExternVal::Func(func_addr) = func.reference else {
-            return Err(Error::AttemptingToCallNonFunction(func.reference));
+            return Err(Error::AttemptingToCallNonFunction(func.reference.ty()));
         };
         Ok(WasmFuncUntyped::new(func_addr, self.clone()))
     }

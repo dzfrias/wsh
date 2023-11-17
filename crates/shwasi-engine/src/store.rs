@@ -207,6 +207,14 @@ pub enum ExternVal {
     Global(Addr),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExternType {
+    Func,
+    Table,
+    Memory,
+    Global,
+}
+
 /// A value that can be imported or exported.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Extern {
@@ -230,6 +238,17 @@ impl fmt::Display for ExternVal {
             ExternVal::Table(addr) => write!(f, "table at {addr}"),
             ExternVal::Mem(addr) => write!(f, "mem at {addr}"),
             ExternVal::Global(addr) => write!(f, "global at {addr}"),
+        }
+    }
+}
+
+impl fmt::Display for ExternType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ExternType::Func => write!(f, "func"),
+            ExternType::Table => write!(f, "table"),
+            ExternType::Memory => write!(f, "memory"),
+            ExternType::Global => write!(f, "global"),
         }
     }
 }
@@ -271,6 +290,26 @@ impl Extern {
             (Extern::Mem(a), Extern::Mem(b)) => a.matches(b),
             (Extern::Global(a), Extern::Global(b)) => a.matches(b),
             _ => false,
+        }
+    }
+
+    pub fn ty(&self) -> ExternType {
+        match self {
+            Extern::Func(_) => ExternType::Func,
+            Extern::Table(_) => ExternType::Table,
+            Extern::Mem(_) => ExternType::Memory,
+            Extern::Global(_) => ExternType::Global,
+        }
+    }
+}
+
+impl ExternVal {
+    pub fn ty(&self) -> ExternType {
+        match self {
+            ExternVal::Func(_) => ExternType::Func,
+            ExternVal::Table(_) => ExternType::Table,
+            ExternVal::Mem(_) => ExternType::Memory,
+            ExternVal::Global(_) => ExternType::Global,
         }
     }
 }
