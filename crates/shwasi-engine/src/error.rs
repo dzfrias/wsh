@@ -8,14 +8,12 @@ pub use crate::vm::Trap;
 #[derive(Debug, Error)]
 pub enum Error {
     // Instantiation errors
-    #[error("invalid number of externs: want {want}, got {got}")]
-    InvalidExternLength { want: usize, got: usize },
     #[error("extern not found: \"{module}\" \"{field}\"")]
     ExternNotFound { module: String, field: String },
     #[error("bad extern type: want {want}, got {got}")]
     BadExtern { want: Extern, got: Extern },
     #[error("validation error: {0}")]
-    Validation(anyhow::Error),
+    ValidationError(anyhow::Error),
 
     // Runtime errors
     #[error("trap: {0}")]

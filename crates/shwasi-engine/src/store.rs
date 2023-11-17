@@ -215,7 +215,7 @@ pub(crate) type Addr = usize;
 
 /// A reference to a value in the store, but not in the module.
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash, Copy)]
-pub enum ExternVal {
+pub(crate) enum ExternVal {
     Func(Addr),
     Table(Addr),
     Mem(Addr),
@@ -239,22 +239,14 @@ pub enum Extern {
     Global(GlobalType),
 }
 
-mod private {
-    use super::*;
-
-    pub trait Sealed {}
-    impl Sealed for HostFunc {}
-    impl Sealed for Global {}
-    impl Sealed for Memory {}
-    impl Sealed for Table {}
-}
-
-pub trait HostValue: private::Sealed {
+pub trait HostValue {
     #[doc(hidden)]
+    #[allow(private_interfaces)]
     fn store(self, store: &mut Store) -> ExternVal;
 }
 
 impl HostValue for HostFunc {
+    #[allow(private_interfaces)]
     fn store(self, store: &mut Store) -> ExternVal {
         store.data.functions.push(Func::Host(self));
         ExternVal::Func(store.data.functions.len() - 1)
@@ -262,6 +254,7 @@ impl HostValue for HostFunc {
 }
 
 impl HostValue for Global {
+    #[allow(private_interfaces)]
     fn store(self, store: &mut Store) -> ExternVal {
         store.mut_.globals.push(Global {
             mutable: self.mutable,
@@ -273,6 +266,7 @@ impl HostValue for Global {
 }
 
 impl HostValue for Memory {
+    #[allow(private_interfaces)]
     fn store(self, store: &mut Store) -> ExternVal {
         let addr = store.mut_.memories.len();
         store.mut_.memories.push(self);
@@ -281,6 +275,7 @@ impl HostValue for Memory {
 }
 
 impl HostValue for Table {
+    #[allow(private_interfaces)]
     fn store(self, store: &mut Store) -> ExternVal {
         let addr = store.mut_.tables.len();
         store.mut_.tables.push(self);

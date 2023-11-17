@@ -1,4 +1,4 @@
-mod host_func;
+mod into_host_func;
 mod wasm_func;
 
 use std::rc::Rc;
@@ -8,7 +8,7 @@ use shwasi_parser::{
     Module,
 };
 
-pub use self::host_func::IntoHostFunc;
+pub use self::into_host_func::IntoHostFunc;
 pub use self::wasm_func::*;
 use crate::{
     error::{Error, Result},
@@ -52,17 +52,20 @@ impl Instance {
     /// This will allocate the module's imports into the store, and allocate the module's different
     /// sections, and run the module's start function, if present.
     pub fn instantiate(store: &mut Store, mut module: Module) -> Result<Self> {
-        validate(&module).map_err(Error::Validation)?;
+        validate(&module).map_err(Error::ValidationError)?;
 
         let mut inst = InstanceInner::default();
 
         for import in module.imports.iter() {
+            // This will give us an an `ExternVal`, which holds data about the address of the
+            // extern we're workign with.
             let extern_val = store.resolve(import.module, import.field).ok_or_else(|| {
                 Error::ExternNotFound {
                     module: import.module.to_owned(),
                     field: import.field.to_owned(),
                 }
             })?;
+            // `ty` is the type of the extern **from the store**, using the address we just got.
             let ty = match extern_val {
                 ExternVal::Mem(addr) => Extern::Mem(store.mut_.memories[addr].ty.clone()),
                 ExternVal::Func(addr) => Extern::Func(store.data.functions[addr].ty().clone()),
@@ -75,6 +78,7 @@ impl Instance {
                     })
                 }
             };
+            // This is the type of the extern from the module imports.
             let import_ty = match &import.kind {
                 ImportKind::Function(idx) => Extern::Func(module.types[*idx as usize].clone()),
                 ImportKind::Table(table) => Extern::Table(table.clone()),
@@ -289,9 +293,7 @@ impl Instance {
         Results: WasmResults,
     {
         let func = self
-            .exports()
-            .iter()
-            .find(|export| export.name == name)
+            .find_export(name)
             .ok_or_else(|| Error::FunctionNotFound(name.to_owned()))?;
         let ExternVal::Func(func_addr) = func.reference else {
             return Err(Error::AttemptingToCallNonFunction(func.reference.ty()));
