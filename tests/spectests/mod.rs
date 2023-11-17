@@ -177,6 +177,11 @@ fn execute_directives(directives: Vec<WastDirective>, mut ctx: ExecutionContext)
                 results: expect,
             } => match exec {
                 WastExecute::Invoke(invoke) => {
+                    info!(
+                        "got assert return for {} at {span}",
+                        invoke.name,
+                        span = ctx.line(span)
+                    );
                     let results = ctx.invoke(&invoke)?;
                     let expect = convert_results(&expect);
                     ensure!(
@@ -225,6 +230,23 @@ fn execute_directives(directives: Vec<WastDirective>, mut ctx: ExecutionContext)
                 ensure!(
                     Instance::instantiate(&mut ctx.store, m).is_err(),
                     "module should not be linkable: {message} at {span}",
+                    span = ctx.line(span)
+                );
+            }
+            WastDirective::AssertExhaustion {
+                span,
+                call,
+                message,
+            } => {
+                let res = ctx.invoke(&call);
+                ensure!(
+                    res.is_err(),
+                    "expected {message} but got no error at {span}",
+                    span = ctx.line(span)
+                );
+                info!(
+                    "assert exhaustion passed for {} at {span}",
+                    call.name,
                     span = ctx.line(span)
                 );
             }

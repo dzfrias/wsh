@@ -8,6 +8,7 @@ use shwasi_parser::{
     BlockType, FuncType, InitExpr, InstrBuffer, Instruction, MemArg, NumLocals, RefType,
 };
 use thiserror::Error;
+use tracing::trace;
 
 use self::ops::*;
 use crate::{
@@ -16,6 +17,9 @@ use crate::{
     Instance,
 };
 
+/// The WebAssembly virtual machine that this crate uses internally.
+///
+/// Note that this is a very internal struct, and has a very low-level interface.
 #[derive(Debug)]
 pub struct Vm<'s> {
     /// The stack of values. This is used to store locals, arguments, and intermediate values.
@@ -27,11 +31,6 @@ pub struct Vm<'s> {
     /// and replace it with the old frame when the function call ends.
     frame: StackFrame,
     /// Stack of labels.
-    ///
-    /// This is used to keep track of the arity of blocks, and their return
-    /// address when they're finished. For a `loop` block, the return address is the beginning of
-    /// the block. For other blocks, the return address is the end of the block. The return address
-    /// should be jumped to by the VM when a block is finished or a branch to that block is taken.
     labels: Vec<Label>,
     store: &'s StoreData,
     store_mut: &'s mut StoreMut,
@@ -177,7 +176,25 @@ impl<'s> Vm<'s> {
                     .ok_or(Trap::StackOverflow)?;
                 // Keep track of the old frame to replace later. This is what emulate a call stack
                 let old_frame = mem::replace(&mut self.frame, new_frame);
-                self.execute(&f.code.body)?;
+                if cfg!(debug_assertions) {
+                    // See https://github.com/rust-lang/rust/issues/34283.
+                    // This is a workaround for some annyoing rustc behavior. In debug mode, match
+                    // arms will tend to allocate stack space proportional to the number of arms,
+                    // instead of the maximum one. This is only a real problem because we have a
+                    // ton of arms in the `execute` method, each matching an instruction.
+                    //
+                    // The solution for this is to use the `stacker` crate, which will allocate
+                    // more stack space when we're in a certain "red zone" (here is 32kb). If we
+                    // reach this, we allocate more stack space (1mb in this case).
+                    //
+                    // This behavior is **not** present in release mode.
+                    stacker::maybe_grow(32 * 1024, 1024 * 1024, || -> Result<()> {
+                        self.execute(&f.code.body)
+                    })?;
+                } else {
+                    self.execute(&f.code.body)?;
+                }
+
                 self.frame = old_frame;
 
                 // Clear locals and arguments. Other stuff from the block should have already been
@@ -237,6 +254,7 @@ impl<'s> Vm<'s> {
         while ip < body.len() {
             // TODO: unchecked here?
             let instr = &body.get(ip).unwrap();
+            trace!("executing instruction: {instr}");
 
             match instr {
                 I::Nop => {}
@@ -743,6 +761,7 @@ impl<'s> Vm<'s> {
                 }
             }
 
+            trace!("executed instruction with stack: {:?}", self.stack);
             ip += 1;
         }
 

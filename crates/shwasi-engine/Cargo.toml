@@ -9,6 +9,7 @@ thiserror.workspace = true
 tracing.workspace = true
 shwasi-parser = { path = "../shwasi-parser" }
 paste = "1.0.14"
+stacker = "0.1.15"
 
 [lints]
 workspace = true

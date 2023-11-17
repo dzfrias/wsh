@@ -30,4 +30,5 @@ spectests!(
     if,
     start,
     loop,
+    call,
 );
