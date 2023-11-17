@@ -77,7 +77,7 @@ spectests!(
     // names,
     nop,
     ref_func,
-    // ref_is_null,
+    ref_is_null,
     ref_null,
     return,
     select,

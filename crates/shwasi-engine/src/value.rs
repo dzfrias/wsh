@@ -88,7 +88,7 @@ impl ValueUntyped {
     }
 
     pub fn is_null(self) -> bool {
-        self.0 == 0
+        self.as_ref().is_none()
     }
 
     pub fn type_default(_ty: ValType) -> Self {
