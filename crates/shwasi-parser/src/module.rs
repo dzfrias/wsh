@@ -29,7 +29,7 @@ pub enum ImportKind {
     /// Table import.
     Table(TableType),
     /// Memory import.
-    Memory(Memory),
+    Memory(MemoryType),
     /// Global import.
     Global(GlobalType),
 }
@@ -63,7 +63,7 @@ pub enum NumType {
 /// A global type.
 ///
 /// Declared in the `globals` section of the [`Module`].
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub struct GlobalType {
     /// The type of the global.
     pub content_type: ValType,
@@ -137,7 +137,7 @@ pub struct Limit {
 
 /// The type of a memory block.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Memory {
+pub struct MemoryType {
     /// The size of the memory block.
     pub limit: Limit,
 }
@@ -296,7 +296,7 @@ pub struct Module<'a> {
     pub imports: Vec<Import<'a>>,
     pub functions: Vec<Function>,
     pub tables: Vec<TableType>,
-    pub memories: Vec<Memory>,
+    pub memories: Vec<MemoryType>,
     pub globals: Vec<Global>,
     pub exports: Vec<Export<'a>>,
     pub start: Option<FuncIdx>,
@@ -366,7 +366,7 @@ impl fmt::Display for GlobalType {
     }
 }
 
-impl fmt::Display for Memory {
+impl fmt::Display for MemoryType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "memory {}", self.limit)
     }
@@ -507,9 +507,13 @@ impl ValType {
 }
 
 impl Limit {
+    pub fn new(initial: u32, max: Option<u32>) -> Self {
+        Self { initial, max }
+    }
+
     pub fn matches(&self, other: &Limit) -> bool {
         self.initial >= other.initial
-            && (other.max.is_none() || self.max.is_some_and(|max| max < other.max.unwrap()))
+            && (other.max.is_none() || self.max.is_some_and(|max| max <= other.max.unwrap()))
     }
 }
 
@@ -531,8 +535,8 @@ impl FuncType {
     }
 }
 
-impl Memory {
-    pub fn matches(&self, other: &Memory) -> bool {
+impl MemoryType {
+    pub fn matches(&self, other: &MemoryType) -> bool {
         self.limit.matches(&other.limit)
     }
 }

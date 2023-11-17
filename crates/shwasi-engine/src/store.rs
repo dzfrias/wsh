@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt};
 
-use shwasi_parser::{Code, FuncType, GlobalType, Memory, RefType, TableType};
+use shwasi_parser::{Code, FuncType, GlobalType, Limit, MemoryType, RefType, TableType};
 
 use crate::{
     instance::Instance,
@@ -18,20 +18,18 @@ pub struct Store {
 
 #[derive(Debug, Default)]
 pub(crate) struct StoreData {
-    pub functions: Vec<FuncInst>,
-    pub datas: Vec<DataInst>,
+    pub functions: Vec<Func>,
+    pub datas: Vec<Data>,
     pub instances: HashMap<String, Instance>,
-    pub hosts: HashMap<(String, String), Addr>,
-
-    pub types: HashMap<ExternVal, Extern>,
+    pub hosts: HashMap<(String, String), ExternVal>,
 }
 
 #[derive(Debug, Default)]
 pub(crate) struct StoreMut {
-    pub memories: Vec<MemInst>,
-    pub globals: Vec<GlobalInst>,
-    pub elems: Vec<ElemInst>,
-    pub tables: Vec<TableInst>,
+    pub memories: Vec<Memory>,
+    pub globals: Vec<Global>,
+    pub elems: Vec<Element>,
+    pub tables: Vec<Table>,
 }
 
 impl Store {
@@ -47,29 +45,17 @@ impl Store {
     pub fn clear(&mut self) {
         self.data.functions.clear();
         self.data.datas.clear();
-        self.data.types.clear();
         self.mut_.memories.clear();
         self.mut_.globals.clear();
         self.mut_.elems.clear();
         self.mut_.tables.clear();
     }
 
-    pub fn define<Params, Results>(
-        &mut self,
-        module: &str,
-        field: &str,
-        func: impl IntoHostFunc<Params, Results>,
-    ) {
-        let host = func.into_host_func();
-        self.data.types.insert(
-            ExternVal::Func(self.data.functions.len()),
-            Extern::Func(host.ty.clone()),
-        );
-        self.data.functions.push(FuncInst::Host(host));
-        self.data.hosts.insert(
-            (module.to_owned(), field.to_owned()),
-            self.data.functions.len() - 1,
-        );
+    pub fn define(&mut self, module: &str, field: &str, val: impl HostValue) {
+        let extern_val = val.store(self);
+        self.data
+            .hosts
+            .insert((module.to_owned(), field.to_owned()), extern_val);
     }
 
     pub(crate) fn resolve(&self, module: &str, field: &str) -> Option<ExternVal> {
@@ -81,7 +67,7 @@ impl Store {
         self.data
             .hosts
             .get(&(module.to_owned(), field.to_owned()))
-            .map(|&addr| ExternVal::Func(addr))
+            .copied()
     }
 
     fn resolve_module(&self, module: &str, field: &str) -> Option<ExternVal> {
@@ -89,7 +75,7 @@ impl Store {
         instance
             .exports()
             .iter()
-            .find_map(|ExportInst { name, reference }| {
+            .find_map(|Export { name, reference }| {
                 if name == field {
                     Some(*reference)
                 } else {
@@ -99,28 +85,33 @@ impl Store {
     }
 }
 
+/// A function defined outside of the WebAssembly module, imported into the store.
+pub struct HostFunc {
+    pub(crate) ty: FuncType,
+    #[allow(clippy::type_complexity)]
+    pub(crate) code: Box<dyn Fn(&mut Vm) -> Vec<ValueUntyped>>,
+}
+
+impl HostFunc {
+    pub fn wrap<Params, Results>(f: impl IntoHostFunc<Params, Results>) -> Self {
+        let host = f.into_host_func();
+        Self {
+            ty: host.ty,
+            code: host.code,
+        }
+    }
+}
+
 /// An instance of a WebAssembly function.
 #[derive(Debug)]
-pub enum FuncInst {
-    #[allow(dead_code)]
+pub(crate) enum Func {
     Host(HostFunc),
     Module(ModuleFunc),
 }
 
-/// A function defined outside of the WebAssembly module, imported into the store.
-pub struct HostFunc {
-    pub ty: FuncType,
-    pub code: HostFuncInner,
-}
-
-/// The inner function type of a host function.
-///
-/// See [`HostFunc`] for more information.
-pub type HostFuncInner = Box<dyn Fn(&mut Vm) -> Vec<ValueUntyped>>;
-
 /// A function defined inside of the WebAssembly module.
 #[derive(Debug)]
-pub struct ModuleFunc {
+pub(crate) struct ModuleFunc {
     pub ty: FuncType,
     pub code: Code,
     pub inst: Instance,
@@ -128,21 +119,46 @@ pub struct ModuleFunc {
 
 /// An instance of a WebAssembly table.
 #[derive(Debug)]
-pub struct TableInst {
+pub struct Table {
     pub ty: TableType,
     pub elements: Vec<Ref>,
 }
 
+impl Table {
+    pub fn new(limit: Limit, ty: RefType) -> Self {
+        Self {
+            ty: TableType {
+                limit: limit.clone(),
+                elem_type: ty,
+            },
+            elements: vec![None; limit.initial as usize],
+        }
+    }
+
+    #[inline]
+    pub fn size(&self) -> usize {
+        self.elements.len()
+    }
+}
+
 /// An instance of WebAssembly memory.
 #[derive(Debug)]
-pub struct MemInst {
-    pub ty: Memory,
+pub struct Memory {
+    pub ty: MemoryType,
     pub data: Vec<u8>,
 }
 
-impl MemInst {
+impl Memory {
+    pub fn new(limit: Limit) -> Self {
+        Self {
+            ty: MemoryType {
+                limit: limit.clone(),
+            },
+            data: vec![0; limit.initial as usize * PAGE_SIZE],
+        }
+    }
+
     /// Get the size of the memory in pages.
-    #[inline]
     pub fn size(&self) -> usize {
         self.data.len() / PAGE_SIZE
     }
@@ -159,44 +175,43 @@ impl MemInst {
             return None;
         }
         self.data.resize((sz + new) * PAGE_SIZE, 0);
+        self.ty.limit.initial = (sz + new) as u32;
         Some(sz)
-    }
-}
-
-impl TableInst {
-    #[inline]
-    pub fn size(&self) -> usize {
-        self.elements.len()
     }
 }
 
 /// An instance of a WebAssembly global.
 #[derive(Debug)]
-pub struct GlobalInst {
-    pub ty: GlobalType,
+pub struct Global {
     pub value: Value,
+    pub mutable: bool,
+}
+
+impl Global {
+    pub fn new(value: Value, mutable: bool) -> Self {
+        Self { value, mutable }
+    }
 }
 
 /// An instance of a WebAssembly element.
 #[derive(Debug)]
-pub struct ElemInst {
-    pub ty: RefType,
+pub(crate) struct Element {
     pub elems: Vec<Ref>,
 }
 
 /// An instance of a field exported from a WebAssembly module.
 #[derive(Debug)]
-pub struct ExportInst {
+pub(crate) struct Export {
     pub name: String,
     pub reference: ExternVal,
 }
 
 /// An instance of a WebAssembly data segment.
 #[derive(Debug)]
-pub struct DataInst(pub Vec<u8>);
+pub(crate) struct Data(pub Vec<u8>);
 
 /// An address into a [`Store`].
-pub type Addr = usize;
+pub(crate) type Addr = usize;
 
 /// A reference to a value in the store, but not in the module.
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash, Copy)]
@@ -220,11 +235,60 @@ pub enum ExternType {
 pub enum Extern {
     Func(FuncType),
     Table(TableType),
-    Mem(Memory),
+    Mem(MemoryType),
     Global(GlobalType),
 }
 
-impl ElemInst {
+mod private {
+    use super::*;
+
+    pub trait Sealed {}
+    impl Sealed for HostFunc {}
+    impl Sealed for Global {}
+    impl Sealed for Memory {}
+    impl Sealed for Table {}
+}
+
+pub trait HostValue: private::Sealed {
+    #[doc(hidden)]
+    fn store(self, store: &mut Store) -> ExternVal;
+}
+
+impl HostValue for HostFunc {
+    fn store(self, store: &mut Store) -> ExternVal {
+        store.data.functions.push(Func::Host(self));
+        ExternVal::Func(store.data.functions.len() - 1)
+    }
+}
+
+impl HostValue for Global {
+    fn store(self, store: &mut Store) -> ExternVal {
+        store.mut_.globals.push(Global {
+            mutable: self.mutable,
+            value: self.value,
+        });
+        let addr = store.mut_.globals.len() - 1;
+        ExternVal::Global(addr)
+    }
+}
+
+impl HostValue for Memory {
+    fn store(self, store: &mut Store) -> ExternVal {
+        let addr = store.mut_.memories.len();
+        store.mut_.memories.push(self);
+        ExternVal::Mem(addr)
+    }
+}
+
+impl HostValue for Table {
+    fn store(self, store: &mut Store) -> ExternVal {
+        let addr = store.mut_.tables.len();
+        store.mut_.tables.push(self);
+        ExternVal::Table(addr)
+    }
+}
+
+impl Element {
     #[inline]
     pub fn elem_drop(&mut self) {
         self.elems.clear();
@@ -273,11 +337,11 @@ impl fmt::Debug for HostFunc {
     }
 }
 
-impl FuncInst {
+impl Func {
     pub fn ty(&self) -> &FuncType {
         match self {
-            FuncInst::Host(h) => &h.ty,
-            FuncInst::Module(m) => &m.ty,
+            Func::Host(h) => &h.ty,
+            Func::Module(m) => &m.ty,
         }
     }
 }

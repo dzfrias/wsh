@@ -6,5 +6,5 @@ mod vm;
 
 pub use error::*;
 pub use instance::*;
-pub use store::{Extern, ExternType, Store};
+pub use store::*;
 pub use value::{Ref, Value};

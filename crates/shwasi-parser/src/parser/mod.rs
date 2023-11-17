@@ -14,7 +14,7 @@ use tracing::{debug, info, instrument, trace};
 use crate::{
     parser::instr_reader::InstrReader, Code, Data, Element, ElementKind, Export, ExternalKind,
     FuncType, Function, Global, GlobalType, Import, ImportKind, InitExpr, Instruction, Limit,
-    Memory, Module, NumLocals, Opcode, RefType, TableType, ValType,
+    MemoryType, Module, NumLocals, Opcode, RefType, TableType, ValType,
 };
 
 const MAGIC_VALUE: u32 = 0x6d73_6100;
@@ -630,7 +630,7 @@ impl<'a> Parser<'a> {
         Ok(table)
     }
 
-    fn read_memory_type(&mut self) -> Result<Memory> {
+    fn read_memory_type(&mut self) -> Result<MemoryType> {
         let flags = self.read_u8()?;
         let has_max = (flags & 0x01) == 0x01;
         if flags > 1 {
@@ -646,7 +646,7 @@ impl<'a> Parser<'a> {
         let limit = Limit { initial, max };
 
         debug!("read memory type with limit: {limit:?}");
-        Ok(Memory { limit })
+        Ok(MemoryType { limit })
     }
 
     fn read_global_type(&mut self) -> Result<GlobalType> {

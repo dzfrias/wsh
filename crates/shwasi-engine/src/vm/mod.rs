@@ -12,7 +12,7 @@ use tracing::trace;
 
 use self::ops::*;
 use crate::{
-    store::{Addr, FuncInst, GlobalInst, StoreData, StoreMut},
+    store::{Addr, Func, Global, StoreData, StoreMut},
     value::{Value, ValueUntyped},
     Instance,
 };
@@ -149,9 +149,9 @@ impl<'s> Vm<'s> {
             .collect())
     }
 
-    fn call_inner(&mut self, f: &FuncInst) -> Result<()> {
+    fn call_inner(&mut self, f: &Func) -> Result<()> {
         match f {
-            FuncInst::Module(f) => {
+            Func::Module(f) => {
                 // Args should already be on the stack (due to validation), so push locals
                 let mut pushed_locals = 0;
                 for NumLocals { num, locals_type } in &f.code.locals {
@@ -201,9 +201,9 @@ impl<'s> Vm<'s> {
                 // cleared (due to the mandatory `End` instruction at the end of functions).
                 self.clear_block(bp, f.ty.1.len());
             }
-            FuncInst::Host(host_func) => {
+            Func::Host(host_func) => {
                 let res = (host_func.code)(self);
-                self.clear_block(0, host_func.ty.1.len());
+                self.clear_block(self.stack.len(), host_func.ty.1.len());
                 self.stack.extend(res);
             }
         }
@@ -618,7 +618,7 @@ impl<'s> Vm<'s> {
                 I::GlobalSet { idx } => {
                     let addr = self.frame.module.global_addrs()[*idx as usize];
                     let val = self.pop::<ValueUntyped>();
-                    let typed = val.into_typed(self.store_mut.globals[addr].ty.content_type);
+                    let typed = val.into_typed(self.store_mut.globals[addr].value.ty());
                     self.store_mut.globals[addr].value = typed;
                 }
                 // We can't actually drop data because it's behind an immutable reference. Since
@@ -747,10 +747,17 @@ impl<'s> Vm<'s> {
                     let elem = &self.store_mut.elems[elem_addr];
                     let table = &self.store_mut.tables[table_addr];
 
-                    if src_start + n > elem.elems.len() as u32
-                        || dst_start + n > table.size() as u32
-                    {
-                        todo!("err")
+                    if src_start + n > elem.elems.len() as u32 {
+                        return Err(Trap::TableGetOutOfBounds {
+                            index: src_start + n,
+                            table_size: elem.elems.len() as u32,
+                        });
+                    }
+                    if dst_start + n > table.size() as u32 {
+                        return Err(Trap::TableGetOutOfBounds {
+                            index: dst_start + n,
+                            table_size: table.size() as u32,
+                        });
                     }
 
                     // TODO: no clone here?
@@ -854,8 +861,9 @@ impl<'s> Vm<'s> {
 }
 
 pub fn eval_const_expr(
-    globals: &[GlobalInst],
+    globals: &[Global],
     module_globals: &[Addr],
+    module_funcs: &[Addr],
     expr: &InitExpr,
 ) -> ValueUntyped {
     match expr {
@@ -868,7 +876,7 @@ pub fn eval_const_expr(
             RefType::Func => 0.into(),
             RefType::Extern => 0.into(),
         },
-        InitExpr::RefFunc(idx) => Some(*idx).into(),
+        InitExpr::RefFunc(idx) => Some(module_funcs[*idx as usize] as u32).into(),
     }
 }
 

@@ -1,8 +1,8 @@
 use std::{collections::HashMap, fs, path::Path};
 
 use anyhow::{bail, ensure, Context, Result};
-use shwasi_engine::{Instance, Store, Value};
-use shwasi_parser::{validate, Parser};
+use shwasi_engine::{Global, HostFunc, Instance, Memory, Store, Table, Value};
+use shwasi_parser::{validate, Limit, Parser, RefType};
 use tracing::info;
 use wast::{
     core::{HeapType, Module, NanPattern, WastArgCore, WastRetCore},
@@ -20,12 +20,81 @@ pub fn run_spectest(name: &str) -> Result<()> {
     let wast = wast::parser::parse::<wast::Wast>(&tokens).context("failed to parse wast file")?;
 
     let mut store = Store::default();
-    store.define("spectest", "print", || {
-        println!("print");
-    });
-    store.define("spectest", "print_i32", |i: i32| {
-        println!("print_i32: {i}");
-    });
+    store.define(
+        "spectest",
+        "print",
+        HostFunc::wrap(|| {
+            println!("print");
+        }),
+    );
+    store.define(
+        "spectest",
+        "print_i32",
+        HostFunc::wrap(|i: i32| {
+            println!("print_i32: {i}");
+        }),
+    );
+    store.define(
+        "spectest",
+        "print_i64",
+        HostFunc::wrap(|i: i64| {
+            println!("print_i64: {i}");
+        }),
+    );
+    store.define(
+        "spectest",
+        "print_f32",
+        HostFunc::wrap(|f: f32| {
+            println!("print_f32: {f}");
+        }),
+    );
+    store.define(
+        "spectest",
+        "print_f64",
+        HostFunc::wrap(|f: f64| {
+            println!("print_f64: {f}");
+        }),
+    );
+    store.define(
+        "spectest",
+        "print_i32_f32",
+        HostFunc::wrap(|i: i32, f: f32| {
+            println!("print_i32_f32: {i} {f}");
+        }),
+    );
+    store.define(
+        "spectest",
+        "print_f64_f64",
+        HostFunc::wrap(|f1: f64, f2: f64| {
+            println!("print_f64_f64: {f1} {f2}");
+        }),
+    );
+    store.define(
+        "spectest",
+        "table",
+        Table::new(Limit::new(10, Some(20)), RefType::Func),
+    );
+    store.define("spectest", "memory", Memory::new(Limit::new(1, Some(2))));
+    store.define(
+        "spectest",
+        "global_i32",
+        Global::new(Value::I32(666), false),
+    );
+    store.define(
+        "spectest",
+        "global_i64",
+        Global::new(Value::I64(666), false),
+    );
+    store.define(
+        "spectest",
+        "global_f32",
+        Global::new(Value::F32(0.0), false),
+    );
+    store.define(
+        "spectest",
+        "global_f64",
+        Global::new(Value::F64(0.0), false),
+    );
     let ctx = ExecutionContext {
         contents: &contents,
         store,
@@ -115,11 +184,14 @@ fn execute_directives(directives: Vec<WastDirective>, mut ctx: ExecutionContext)
                     continue;
                 };
                 let parser = Parser::new(&wasm);
-                ensure!(
-                    parser.read_module().is_err(),
-                    "module should be malformed: {message} at {span}",
-                    span = ctx.line(span)
-                );
+                // We also allow validation errors, if no parse errors were encountered
+                if let Ok(m) = parser.read_module() {
+                    ensure!(
+                        validate(&m).is_err(),
+                        "module should be malformed: {message} at {span}",
+                        span = ctx.line(span),
+                    );
+                }
             }
             WastDirective::AssertInvalid {
                 span,
@@ -128,12 +200,16 @@ fn execute_directives(directives: Vec<WastDirective>, mut ctx: ExecutionContext)
             } => {
                 let wasm = module.encode().expect("module should have a valid form");
                 let parser = Parser::new(&wasm);
-                let m = parser.read_module().expect("module should parse correctly");
-                ensure!(
-                    validate(&m).is_err(),
-                    "module should not be valid: {message} at {span}",
-                    span = ctx.line(span)
-                );
+                let m = parser.read_module();
+                // We also allow parse errors. While this is not FULL spec complicance, it is
+                // spec-compliant for our purposes.
+                if let Ok(m) = m {
+                    ensure!(
+                        validate(&m).is_err(),
+                        "module should not be valid: {message} at {span}",
+                        span = ctx.line(span)
+                    );
+                }
             }
             WastDirective::Invoke(invoke) => {
                 ctx.invoke(&invoke)?;

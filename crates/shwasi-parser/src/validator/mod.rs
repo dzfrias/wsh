@@ -9,7 +9,7 @@ use tracing::{debug, info, instrument, trace};
 use crate::{
     validator::func_validator::FuncValidator, Code, Data, Element, ElementKind, Export,
     ExternalKind, FuncType, Function, Global, GlobalType, Import, ImportKind, InitExpr, Limit,
-    Memory, Module, RefType, TableType, ValType,
+    MemoryType, Module, RefType, TableType, ValType,
 };
 
 /// Validate a WebAssembly module.
@@ -37,7 +37,7 @@ struct Validator<'a> {
     /// Functions, either imported or declared in the module.
     funcs: Vec<&'a FuncType>,
     tables: Vec<&'a TableType>,
-    mems: Vec<&'a Memory>,
+    mems: Vec<&'a MemoryType>,
     globals: Vec<ValidatorGlobal<'a>>,
     // Used to determine if a `RefFunc` instruction is valid. For now, a function is "declared" if
     // it is exported or if it is present in an InitExpr.
@@ -193,7 +193,7 @@ impl<'a> Validator<'a> {
     }
 
     #[instrument(level = "debug", skip(self))]
-    fn validate_memories(&self, mems: &[Memory]) -> Result<()> {
+    fn validate_memories(&self, mems: &[MemoryType]) -> Result<()> {
         for mem in mems {
             self.validate_mem(mem)?;
         }
@@ -202,7 +202,7 @@ impl<'a> Validator<'a> {
     }
 
     #[instrument(level = "debug", skip(self))]
-    fn validate_mem(&self, mem: &Memory) -> Result<()> {
+    fn validate_mem(&self, mem: &MemoryType) -> Result<()> {
         // Memory limit must be less than 4GB
         const MAX: u64 = (1u64 << 32) / 65536;
 
