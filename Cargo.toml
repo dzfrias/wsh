@@ -30,7 +30,7 @@ members = [
 debug = 1
 
 [dev-dependencies]
-paste = "1.0.14"
+paste.workspace = true
 test-log.workspace = true
 tracing.workspace = true
 wast = "67.0.1"
@@ -41,6 +41,7 @@ thiserror = "1.0.50"
 test-log = { version = "0.2.13", default-features = false, features = ["trace"] }
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 tracing = "0.1.37"
+paste = "1.0.14"
 
 [workspace.lints.clippy]
 all = "warn"

@@ -7,8 +7,8 @@ edition = "2021"
 anyhow.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+paste.workspace = true
 shwasi-parser = { path = "../shwasi-parser" }
-paste = "1.0.14"
 stacker = "0.1.15"
 
 [lints]
