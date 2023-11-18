@@ -180,8 +180,8 @@ impl Instance {
         }));
         inst.data_addrs.extend(module.datas.iter().map(|data| {
             let inst = Data(data.data.to_owned());
-            store.data.datas.push(inst);
-            store.data.datas.len() - 1
+            store.mut_.datas.push(inst);
+            store.mut_.datas.len() - 1
         }));
 
         let inst = Instance {

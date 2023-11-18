@@ -27,7 +27,7 @@ spectests!(
     fn br("br");
     fn br_if("br_if");
     fn br_table("br_table");
-    // fn bulk("bulk");
+    fn bulk("bulk");
     fn call("call");
     fn call_indirect("call_indirect");
     fn comments("comments");
@@ -69,10 +69,10 @@ spectests!(
     fn local_tee("local_tee");
     fn loop_("loop");
     fn memory("memory");
-    // fn memory_copy("memory_copy");
-    // fn memory_fill("memory_fill");
+    fn memory_copy("memory_copy");
+    fn memory_fill("memory_fill");
     fn memory_grow("memory_grow");
-    // fn memory_init("memory_init");
+    fn memory_init("memory_init");
     fn memory_redundancy("memory_redundancy");
     fn memory_size("memory_size");
     fn memory_trap("memory_trap");

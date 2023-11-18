@@ -511,16 +511,16 @@ impl<'s> Vm<'s> {
                 I::MemoryCopy => {
                     let (dst, src, len) = self.pop3::<u32, u32, u32>();
                     let mem = &mut self.store_mut.memories[self.frame.module.mem_addrs()[0]];
-                    if src + len > mem.data.len() as u32 {
+                    if src.saturating_add(len) > mem.len() as u32 {
                         return Err(Trap::MemoryAccessOutOfBounds {
-                            offset: src + len,
-                            mem_size: mem.size() as u32,
+                            offset: src.saturating_add(len),
+                            mem_size: mem.len() as u32,
                         });
                     }
-                    if dst + len > mem.data.len() as u32 {
+                    if dst.saturating_add(len) > mem.len() as u32 {
                         return Err(Trap::MemoryAccessOutOfBounds {
-                            offset: dst + len,
-                            mem_size: mem.size() as u32,
+                            offset: dst.saturating_add(len),
+                            mem_size: mem.len() as u32,
                         });
                     }
                     mem.data
@@ -529,10 +529,10 @@ impl<'s> Vm<'s> {
                 I::MemoryFill => {
                     let (dst, val, len) = self.pop3::<u32, u8, u32>();
                     let mem = &mut self.store_mut.memories[self.frame.module.mem_addrs()[0]];
-                    if dst + len > mem.data.len() as u32 {
+                    if dst.saturating_add(len) > mem.len() as u32 {
                         return Err(Trap::MemoryAccessOutOfBounds {
-                            offset: dst + len,
-                            mem_size: mem.size() as u32,
+                            offset: dst.saturating_add(len),
+                            mem_size: mem.len() as u32,
                         });
                     }
                     mem.data[dst as usize..(dst + len) as usize].fill(val);
@@ -635,9 +635,10 @@ impl<'s> Vm<'s> {
                     let typed = val.into_typed(self.store_mut.globals[addr].value.ty());
                     self.store_mut.globals[addr].value = typed;
                 }
-                // We can't actually drop data because it's behind an immutable reference. Since
-                // data is never mutated, this is fine.
-                I::DataDrop { data_idx: _ } => {}
+                I::DataDrop { data_idx } => {
+                    let addr = self.frame.module.data_addrs()[*data_idx as usize];
+                    self.store_mut.datas[addr].data_drop();
+                }
                 I::ElemDrop { elem_idx } => {
                     let addr = self.frame.module.elem_addrs()[*elem_idx as usize];
                     self.store_mut.elems[addr].elem_drop();
@@ -647,14 +648,22 @@ impl<'s> Vm<'s> {
                     let mem_addr = self.frame.module.mem_addrs()[0];
                     let (dst, src, n) = self.pop3::<u32, u32, u32>();
 
-                    if n + src > self.store.datas[data_addr].0.len() as u32
-                        || dst + n > self.store_mut.memories[mem_addr].data.len() as u32
-                    {
-                        todo!("err")
+                    if src.saturating_add(n) > self.store_mut.datas[data_addr].0.len() as u32 {
+                        return Err(Trap::MemoryAccessOutOfBounds {
+                            offset: src.saturating_add(n),
+                            mem_size: self.store_mut.datas[data_addr].0.len() as u32,
+                        });
                     }
-                    let data = &self.store.datas[data_addr].0;
+                    if dst.saturating_add(n) > self.store_mut.memories[mem_addr].len() as u32 {
+                        return Err(Trap::MemoryAccessOutOfBounds {
+                            offset: dst.saturating_add(n),
+                            mem_size: self.store_mut.memories[mem_addr].len() as u32,
+                        });
+                    }
+
+                    let data = &self.store_mut.datas[data_addr].0[src as usize..(src + n) as usize];
                     let mem = &mut self.store_mut.memories[mem_addr];
-                    mem.data.copy_from_slice(data);
+                    mem.data[dst as usize..(dst + n) as usize].copy_from_slice(data);
                 }
                 I::RefFunc { func_idx } => {
                     let f = &self.frame.module.func_addrs()[*func_idx as usize];
@@ -874,10 +883,10 @@ impl<'s> Vm<'s> {
     /// Get the `N` bytes of data at the given offset in the current memory.
     fn load<const N: usize>(&self, offset: u32) -> Result<[u8; N]> {
         let mem = &self.store_mut.memories[self.frame.module.mem_addrs()[0]];
-        if offset.saturating_add(N as u32) > mem.data.len() as u32 {
+        if offset.saturating_add(N as u32) > mem.len() as u32 {
             return Err(Trap::MemoryAccessOutOfBounds {
-                mem_size: mem.data.len() as u32,
-                offset,
+                mem_size: mem.len() as u32,
+                offset: offset.saturating_add(N as u32),
             });
         }
         let val: [u8; N] = mem.data[offset as usize..offset as usize + N]
@@ -889,9 +898,9 @@ impl<'s> Vm<'s> {
     /// Store the `N` bytes of data at the given offset in the current memory.
     fn store<const N: usize>(&mut self, offset: u32, val: [u8; N]) -> Result<()> {
         let mem = &mut self.store_mut.memories[self.frame.module.mem_addrs()[0]];
-        if offset as usize + N > mem.data.len() {
+        if offset as usize + N > mem.len() {
             return Err(Trap::MemoryAccessOutOfBounds {
-                mem_size: mem.data.len() as u32,
+                mem_size: mem.len() as u32,
                 offset,
             });
         }

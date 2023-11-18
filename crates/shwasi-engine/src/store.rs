@@ -19,13 +19,13 @@ pub struct Store {
 #[derive(Debug, Default)]
 pub(crate) struct StoreData {
     pub functions: Vec<Func>,
-    pub datas: Vec<Data>,
     pub instances: HashMap<String, Instance>,
     pub hosts: HashMap<(String, String), ExternVal>,
 }
 
 #[derive(Debug, Default)]
 pub(crate) struct StoreMut {
+    pub datas: Vec<Data>,
     pub memories: Vec<Memory>,
     pub globals: Vec<Global>,
     pub elems: Vec<Element>,
@@ -44,7 +44,7 @@ impl Store {
     /// The allocations can be used for future items.
     pub fn clear(&mut self) {
         self.data.functions.clear();
-        self.data.datas.clear();
+        self.mut_.datas.clear();
         self.mut_.memories.clear();
         self.mut_.globals.clear();
         self.mut_.elems.clear();
@@ -179,6 +179,14 @@ impl Memory {
         self.data.len() / PAGE_SIZE
     }
 
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn grow(&mut self, new: usize) -> Option<usize> {
         let sz = self.data.len() / PAGE_SIZE;
         if let Some(max) = self.ty.limit.max {
@@ -225,6 +233,12 @@ pub(crate) struct Export {
 /// An instance of a WebAssembly data segment.
 #[derive(Debug)]
 pub(crate) struct Data(pub Vec<u8>);
+
+impl Data {
+    pub fn data_drop(&mut self) {
+        self.0.clear();
+    }
+}
 
 /// An address into a [`Store`].
 pub(crate) type Addr = usize;
