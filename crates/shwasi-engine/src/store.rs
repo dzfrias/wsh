@@ -135,6 +135,22 @@ impl Table {
         }
     }
 
+    pub fn grow(&mut self, grow_by: usize, init: Ref) -> Option<usize> {
+        let old_size = self.size();
+        let new_size = self.size() + grow_by;
+        if let Some(max) = self.ty.limit.max {
+            if (max as usize) < new_size {
+                return None;
+            }
+        }
+        if new_size as u64 >= 2u64.pow(32) {
+            return None;
+        }
+        self.elements.resize(new_size, init);
+        self.ty.limit.initial = new_size as u32;
+        Some(old_size)
+    }
+
     #[inline]
     pub fn size(&self) -> usize {
         self.elements.len()

@@ -11,7 +11,7 @@ macro_rules! spectests {
                 fn $name() {
                     // Validate that the test file exists at compile time
                     include_bytes!(concat!("spectests/testsuite/", $test, ".wast"));
-                    run_spectest($test).expect("should have no errors running spectest");
+                    run_spectest($test).expect("error running spectest");
                 }
              )*
         }
@@ -89,13 +89,13 @@ spectests!(
     fn switch("switch");
     fn table_sub("table-sub");
     fn table("table");
-    // fn table_copy("table_copy");
-    // fn table_fill("table_fill");
+    fn table_copy("table_copy");
+    fn table_fill("table_fill");
     fn table_get("table_get");
-    // fn table_grow("table_grow");
-    // fn table_init("table_init");
+    fn table_grow("table_grow");
+    fn table_init("table_init");
     fn table_set("table_set");
-    // fn table_size("table_size");
+    fn table_size("table_size");
     fn token("token");
     fn tokens("tokens");
     fn traps("traps");

@@ -14,7 +14,7 @@ use self::ops::*;
 use crate::{
     store::{Addr, Func, Global, StoreData, StoreMut},
     value::{Value, ValueUntyped},
-    Instance,
+    Instance, Ref,
 };
 
 /// The WebAssembly virtual machine that this crate uses internally.
@@ -502,9 +502,8 @@ impl<'s> Vm<'s> {
                     let new_size = self.pop::<u32>();
                     let addr = self.frame.module.mem_addrs()[0];
                     let mem = &mut self.store_mut.memories[addr];
-                    let old_size = mem.size();
-                    if mem.grow(new_size as usize).is_some() {
-                        self.push(old_size as u32);
+                    if let Some(size) = mem.grow(new_size as usize) {
+                        self.push(size as u32);
                     } else {
                         self.push(-1i32);
                     }
@@ -690,13 +689,33 @@ impl<'s> Vm<'s> {
                             index: idx,
                         })? = val;
                 }
-                I::TableGrow { .. } => todo!(),
+                I::TableGrow { table } => {
+                    let (val, n) = self.pop2::<Ref, u32>();
+                    let addr = self.frame.module.table_addrs()[*table as usize];
+                    let table = &mut self.store_mut.tables[addr];
+                    if let Some(size) = table.grow(n as usize, val) {
+                        self.push(size as u32);
+                    } else {
+                        self.push(-1i32);
+                    }
+                }
                 I::TableSize { table } => {
                     let addr = self.frame.module.table_addrs()[*table as usize];
                     let table = &self.store_mut.tables[addr];
                     self.push(table.elements.len() as u32);
                 }
-                I::TableFill { .. } => todo!(),
+                I::TableFill { table } => {
+                    let (start, val, n) = self.pop3::<u32, Ref, u32>();
+                    let addr = self.frame.module.table_addrs()[*table as usize];
+                    let table = &mut self.store_mut.tables[addr];
+                    if start.saturating_add(n) > table.size() as u32 {
+                        return Err(Trap::TableGetOutOfBounds {
+                            table_size: table.size() as u32,
+                            index: start.saturating_add(n),
+                        });
+                    }
+                    table.elements[start as usize..(start + n) as usize].fill(val);
+                }
                 I::RefNull { ty } => {
                     self.push(ValueUntyped::type_default((*ty).into()));
                 }
@@ -739,17 +758,24 @@ impl<'s> Vm<'s> {
                     let src_table = &self.store_mut.tables[src_addr];
                     let dst_table = &self.store_mut.tables[dst_addr];
 
-                    if src_start + n > src_table.size() as u32
-                        || dst_start + n > dst_table.size() as u32
-                    {
-                        todo!("err")
+                    if src_start.saturating_add(n) > src_table.size() as u32 {
+                        return Err(Trap::TableGetOutOfBounds {
+                            index: src_start.saturating_add(n),
+                            table_size: src_table.size() as u32,
+                        });
+                    }
+                    if dst_start.saturating_add(n) > dst_table.size() as u32 {
+                        return Err(Trap::TableGetOutOfBounds {
+                            index: dst_start.saturating_add(n),
+                            table_size: dst_table.size() as u32,
+                        });
                     }
 
                     // TODO: no clone here
                     let src =
                         src_table.elements[src_start as usize..(src_start + n) as usize].to_vec();
                     self.store_mut.tables[dst_addr].elements
-                        [src_start as usize..(dst_start + n) as usize]
+                        [dst_start as usize..(dst_start + n) as usize]
                         .copy_from_slice(&src);
                 }
                 I::TableInit {
@@ -762,24 +788,23 @@ impl<'s> Vm<'s> {
                     let elem = &self.store_mut.elems[elem_addr];
                     let table = &self.store_mut.tables[table_addr];
 
-                    if src_start + n > elem.elems.len() as u32 {
+                    if src_start.saturating_add(n) > elem.elems.len() as u32 {
                         return Err(Trap::TableGetOutOfBounds {
-                            index: src_start + n,
+                            index: src_start.saturating_add(n),
                             table_size: elem.elems.len() as u32,
                         });
                     }
-                    if dst_start + n > table.size() as u32 {
+                    if dst_start.saturating_add(n) > table.size() as u32 {
                         return Err(Trap::TableGetOutOfBounds {
-                            index: dst_start + n,
+                            index: dst_start.saturating_add(n),
                             table_size: table.size() as u32,
                         });
                     }
 
-                    // TODO: no clone here?
-                    let elems = elem.elems.clone();
+                    let elems = &elem.elems[src_start as usize..(src_start + n) as usize];
                     self.store_mut.tables[table_addr].elements
-                        [src_start as usize..(dst_start + n) as usize]
-                        .copy_from_slice(&elems);
+                        [dst_start as usize..(dst_start + n) as usize]
+                        .copy_from_slice(elems);
                 }
             }
 
