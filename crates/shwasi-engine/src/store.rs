@@ -1,35 +1,31 @@
-use std::{collections::HashMap, fmt};
+use std::{
+    collections::HashMap,
+    fmt,
+    marker::PhantomData,
+    ops::{Deref, DerefMut, Index, IndexMut},
+};
 
-use shwasi_parser::{Code, FuncType, GlobalType, Limit, MemoryType, RefType, TableType};
+use shwasi_parser::{Code, FuncType, GlobalType, Limit, MemoryType, TableType};
 
 use crate::{
     instance::Instance,
     value::{Ref, Value, ValueUntyped},
     vm::Vm,
-    IntoHostFunc, PAGE_SIZE,
+    IntoHostFunc, Trap, PAGE_SIZE,
 };
 
 /// A WebAssembly store, holding all global data of given module.
 #[derive(Debug, Default)]
 pub struct Store {
-    pub(crate) data: StoreData,
-    pub(crate) mut_: StoreMut,
-}
+    pub(crate) functions: StoreField<Func>,
+    pub(crate) datas: StoreField<Data>,
+    pub(crate) memories: StoreField<Memory>,
+    pub(crate) globals: StoreField<Global>,
+    pub(crate) elems: StoreField<Element>,
+    pub(crate) tables: StoreField<Table>,
 
-#[derive(Debug, Default)]
-pub(crate) struct StoreData {
-    pub functions: Vec<Func>,
-    pub instances: HashMap<String, Instance>,
-    pub hosts: HashMap<(String, String), ExternVal>,
-}
-
-#[derive(Debug, Default)]
-pub(crate) struct StoreMut {
-    pub datas: Vec<Data>,
-    pub memories: Vec<Memory>,
-    pub globals: Vec<Global>,
-    pub elems: Vec<Element>,
-    pub tables: Vec<Table>,
+    pub(crate) instances: HashMap<String, Instance>,
+    pub(crate) hosts: HashMap<(String, String), ExternVal>,
 }
 
 impl Store {
@@ -41,20 +37,21 @@ impl Store {
     /// Drop all items in the store.
     ///
     /// This will clear all items in the store, but will not free the store allocations themselves.
-    /// The allocations can be used for future items.
+    /// The allocations can be used for future items. As such, it is useful for reusing memory.
     pub fn clear(&mut self) {
-        self.data.functions.clear();
-        self.mut_.datas.clear();
-        self.mut_.memories.clear();
-        self.mut_.globals.clear();
-        self.mut_.elems.clear();
-        self.mut_.tables.clear();
+        self.functions.clear();
+        self.datas.clear();
+        self.memories.clear();
+        self.globals.clear();
+        self.elems.clear();
+        self.tables.clear();
+        self.instances.clear();
+        self.hosts.clear();
     }
 
     pub fn define(&mut self, module: &str, field: &str, val: impl HostValue) {
         let extern_val = val.store(self);
-        self.data
-            .hosts
+        self.hosts
             .insert((module.to_owned(), field.to_owned()), extern_val);
     }
 
@@ -64,14 +61,13 @@ impl Store {
     }
 
     fn resolve_host(&self, module: &str, field: &str) -> Option<ExternVal> {
-        self.data
-            .hosts
+        self.hosts
             .get(&(module.to_owned(), field.to_owned()))
             .copied()
     }
 
     fn resolve_module(&self, module: &str, field: &str) -> Option<ExternVal> {
-        let instance = self.data.instances.get(module)?;
+        let instance = self.instances.get(module)?;
         instance
             .exports()
             .iter()
@@ -83,6 +79,91 @@ impl Store {
                 }
             })
     }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct StoreField<T> {
+    inner: Vec<T>,
+}
+
+impl<T> Default for StoreField<T> {
+    fn default() -> Self {
+        Self { inner: Vec::new() }
+    }
+}
+
+impl<T> StoreField<T> {
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
+
+    /// Allocate a new item in the store and return a handle to it.
+    pub fn alloc(&mut self, val: T) -> Addr<T> {
+        self.inner.push(val);
+        Addr::new(self.inner.len() - 1)
+    }
+
+    pub fn clear(&mut self) {
+        self.inner.clear();
+    }
+
+    /// Get two mutable references to items in the store.
+    ///
+    /// This function will return [`None`] if the two addresses are equal, or if the larger address
+    /// is greater than the length of the store.
+    pub fn get_pair_mut(&mut self, first: Addr<T>, second: Addr<T>) -> Option<(&mut T, &mut T)> {
+        // Four cases:
+        // 1. first == second => None
+        // 2. second > len => None
+        // 3. first > second => swap and call again
+        // 4. first < second => split and get the exclusive references
+
+        if first == second || second.as_usize() > self.len() {
+            return None;
+        }
+        if first > second {
+            let (tbl1, tbl2) = self.get_pair_mut(second, first)?;
+            return Some((tbl2, tbl1));
+        }
+        // By this point, we know that first < second
+        let (a1, a2) = self.inner.split_at_mut(second.as_usize());
+        Some((a1.get_mut(first.as_usize())?, a2.get_mut(0)?))
+    }
+}
+
+impl<T> Index<Addr<T>> for StoreField<T> {
+    type Output = T;
+
+    fn index(&self, idx: Addr<T>) -> &Self::Output {
+        self.inner.index(idx.as_usize())
+    }
+}
+
+impl<T> IndexMut<Addr<T>> for StoreField<T> {
+    fn index_mut(&mut self, idx: Addr<T>) -> &mut Self::Output {
+        self.inner.index_mut(idx.as_usize())
+    }
+}
+
+impl<T> Deref for StoreField<T> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<T> DerefMut for StoreField<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
+    }
+}
+
+/// An instance of a WebAssembly function.
+#[derive(Debug)]
+pub(crate) enum Func {
+    Host(HostFunc),
+    Module(ModuleFunc),
 }
 
 /// A function defined outside of the WebAssembly module, imported into the store.
@@ -102,13 +183,6 @@ impl HostFunc {
     }
 }
 
-/// An instance of a WebAssembly function.
-#[derive(Debug)]
-pub(crate) enum Func {
-    Host(HostFunc),
-    Module(ModuleFunc),
-}
-
 /// A function defined inside of the WebAssembly module.
 #[derive(Debug)]
 pub(crate) struct ModuleFunc {
@@ -120,40 +194,140 @@ pub(crate) struct ModuleFunc {
 /// An instance of a WebAssembly table.
 #[derive(Debug)]
 pub struct Table {
-    pub ty: TableType,
-    pub elements: Vec<Ref>,
+    ty: TableType,
+    elements: Vec<Ref>,
 }
 
 impl Table {
-    pub fn new(limit: Limit, ty: RefType) -> Self {
+    pub fn new(ty: TableType) -> Self {
         Self {
-            ty: TableType {
-                limit: limit.clone(),
-                elem_type: ty,
-            },
-            elements: vec![None; limit.initial as usize],
+            elements: vec![None; ty.limit.initial as usize],
+            ty,
         }
     }
 
-    pub fn grow(&mut self, grow_by: usize, init: Ref) -> Option<usize> {
+    pub fn grow(&mut self, grow_by: u32, init: Ref) -> Option<u32> {
         let old_size = self.size();
-        let new_size = self.size() + grow_by;
+        // We use u64 here to avoid potential overflow
+        let new_size = self.size() as u64 + grow_by as u64;
         if let Some(max) = self.ty.limit.max {
-            if (max as usize) < new_size {
+            if max < new_size as u32 {
                 return None;
             }
         }
-        if new_size as u64 >= 2u64.pow(32) {
+        if new_size >= 2u64.pow(32) {
             return None;
         }
-        self.elements.resize(new_size, init);
+        self.elements.resize(new_size as usize, init);
         self.ty.limit.initial = new_size as u32;
         Some(old_size)
     }
 
-    #[inline]
-    pub fn size(&self) -> usize {
-        self.elements.len()
+    pub fn get(&self, idx: u32) -> Result<Ref, Trap> {
+        self.elements
+            .get(idx as usize)
+            .copied()
+            .ok_or(Trap::TableGetOutOfBounds {
+                table_size: self.size(),
+                index: idx,
+            })
+    }
+
+    pub fn set(&mut self, idx: u32, val: Ref) -> Result<(), Trap> {
+        self.elements
+            .get_mut(idx as usize)
+            .map(|e| *e = val)
+            .ok_or(Trap::TableGetOutOfBounds {
+                table_size: self.size(),
+                index: idx,
+            })
+    }
+
+    pub fn fill(&mut self, start: u32, len: u32, val: Ref) -> Result<(), Trap> {
+        if start.saturating_add(len) > self.size() {
+            return Err(Trap::TableGetOutOfBounds {
+                table_size: self.size(),
+                index: start.saturating_add(len),
+            });
+        }
+        self.elements[start as usize..(start + len) as usize].fill(val);
+        Ok(())
+    }
+
+    pub fn copy(&mut self, other: &Table, dst: u32, src: u32, len: u32) -> Result<(), Trap> {
+        if src.saturating_add(len) > other.size() {
+            return Err(Trap::TableGetOutOfBounds {
+                index: src.saturating_add(len),
+                table_size: other.size(),
+            });
+        }
+        if dst.saturating_add(len) > self.size() {
+            return Err(Trap::TableGetOutOfBounds {
+                index: dst.saturating_add(len),
+                table_size: self.size(),
+            });
+        }
+
+        self.elements[dst as usize..(dst + len) as usize]
+            .copy_from_slice(&other.elements[src as usize..(src + len) as usize]);
+
+        Ok(())
+    }
+
+    pub fn copy_within(&mut self, dst: u32, src: u32, len: u32) -> Result<(), Trap> {
+        if src.saturating_add(len) > self.size() {
+            return Err(Trap::TableGetOutOfBounds {
+                index: src.saturating_add(len),
+                table_size: self.size(),
+            });
+        }
+        if dst.saturating_add(len) > self.size() {
+            return Err(Trap::TableGetOutOfBounds {
+                index: dst.saturating_add(len),
+                table_size: self.size(),
+            });
+        }
+
+        self.elements
+            .copy_within(src as usize..(src + len) as usize, dst as usize);
+
+        Ok(())
+    }
+
+    pub fn init(&mut self, elem: &Element, dst: u32, src: u32, len: u32) -> Result<(), Trap> {
+        if src.saturating_add(len) > elem.elems.len() as u32 {
+            return Err(Trap::TableGetOutOfBounds {
+                index: src.saturating_add(len),
+                table_size: elem.elems.len() as u32,
+            });
+        }
+        if dst.saturating_add(len) > self.size() {
+            return Err(Trap::TableGetOutOfBounds {
+                index: dst.saturating_add(len),
+                table_size: self.size(),
+            });
+        }
+
+        self.elements[dst as usize..(dst + len) as usize]
+            .copy_from_slice(&elem.elems[src as usize..(src + len) as usize]);
+
+        Ok(())
+    }
+
+    pub fn size(&self) -> u32 {
+        self.elements.len() as u32
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.size() == 0
+    }
+
+    pub fn ty(&self) -> &TableType {
+        &self.ty
+    }
+
+    pub fn elements(&self) -> &[Ref] {
+        self.elements.as_ref()
     }
 }
 
@@ -219,20 +393,20 @@ impl Global {
 
 /// An instance of a WebAssembly element.
 #[derive(Debug)]
-pub(crate) struct Element {
+pub struct Element {
     pub elems: Vec<Ref>,
 }
 
 /// An instance of a field exported from a WebAssembly module.
 #[derive(Debug)]
-pub(crate) struct Export {
+pub struct Export {
     pub name: String,
-    pub reference: ExternVal,
+    pub(crate) reference: ExternVal,
 }
 
 /// An instance of a WebAssembly data segment.
 #[derive(Debug)]
-pub(crate) struct Data(pub Vec<u8>);
+pub struct Data(pub Vec<u8>);
 
 impl Data {
     pub fn data_drop(&mut self) {
@@ -240,16 +414,33 @@ impl Data {
     }
 }
 
-/// An address into a [`Store`].
-pub(crate) type Addr = usize;
+/// An address into a [`StoreField`] of a [`Store`].
+// Boring standard trait impls below.
+pub(crate) struct Addr<T> {
+    addr: usize,
+    _phantom: PhantomData<T>,
+}
+
+impl<T> Addr<T> {
+    pub fn new(u: usize) -> Self {
+        Self {
+            addr: u,
+            _phantom: PhantomData,
+        }
+    }
+
+    pub fn as_usize(&self) -> usize {
+        self.addr
+    }
+}
 
 /// A reference to a value in the store, but not in the module.
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash, Copy)]
 pub(crate) enum ExternVal {
-    Func(Addr),
-    Table(Addr),
-    Mem(Addr),
-    Global(Addr),
+    Func(Addr<Func>),
+    Table(Addr<Table>),
+    Mem(Addr<Memory>),
+    Global(Addr<Global>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -278,19 +469,17 @@ pub trait HostValue {
 impl HostValue for HostFunc {
     #[allow(private_interfaces)]
     fn store(self, store: &mut Store) -> ExternVal {
-        store.data.functions.push(Func::Host(self));
-        ExternVal::Func(store.data.functions.len() - 1)
+        ExternVal::Func(store.functions.alloc(Func::Host(self)))
     }
 }
 
 impl HostValue for Global {
     #[allow(private_interfaces)]
     fn store(self, store: &mut Store) -> ExternVal {
-        store.mut_.globals.push(Global {
+        let addr = store.globals.alloc(Global {
             mutable: self.mutable,
             value: self.value,
         });
-        let addr = store.mut_.globals.len() - 1;
         ExternVal::Global(addr)
     }
 }
@@ -298,23 +487,18 @@ impl HostValue for Global {
 impl HostValue for Memory {
     #[allow(private_interfaces)]
     fn store(self, store: &mut Store) -> ExternVal {
-        let addr = store.mut_.memories.len();
-        store.mut_.memories.push(self);
-        ExternVal::Mem(addr)
+        ExternVal::Mem(store.memories.alloc(self))
     }
 }
 
 impl HostValue for Table {
     #[allow(private_interfaces)]
     fn store(self, store: &mut Store) -> ExternVal {
-        let addr = store.mut_.tables.len();
-        store.mut_.tables.push(self);
-        ExternVal::Table(addr)
+        ExternVal::Table(store.tables.alloc(self))
     }
 }
 
 impl Element {
-    #[inline]
     pub fn elem_drop(&mut self) {
         self.elems.clear();
     }
@@ -402,3 +586,58 @@ impl ExternVal {
         }
     }
 }
+
+impl<T> Default for Addr<T> {
+    fn default() -> Self {
+        Self {
+            addr: 0,
+            _phantom: PhantomData,
+        }
+    }
+}
+
+impl<T> PartialEq for Addr<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.addr == other.addr
+    }
+}
+
+impl<T> std::hash::Hash for Addr<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.addr.hash(state);
+    }
+}
+
+impl<T> PartialOrd for Addr<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<T> std::fmt::Debug for Addr<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.addr)
+    }
+}
+
+impl<T> std::fmt::Display for Addr<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.addr)
+    }
+}
+
+impl<T> Ord for Addr<T> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.addr.cmp(&other.addr)
+    }
+}
+
+impl<T> Eq for Addr<T> {}
+
+impl<T> Clone for Addr<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T> Copy for Addr<T> {}

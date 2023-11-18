@@ -7,7 +7,7 @@ use crate::{
     store::Addr,
     value::{Value, ValueUntyped},
     vm::Vm,
-    Instance, Store,
+    Func, Instance, Store,
 };
 
 /// An untyped WebAssembly function.
@@ -16,12 +16,12 @@ use crate::{
 /// compile time. For a well-typed version of this function, see [`WasmFunc`].
 #[derive(Debug)]
 pub struct WasmFuncUntyped {
-    func_addr: Addr,
+    func_addr: Addr<Func>,
     inst: Instance,
 }
 
 impl WasmFuncUntyped {
-    pub(crate) fn new(func_addr: Addr, inst: Instance) -> Self {
+    pub(crate) fn new(func_addr: Addr<Func>, inst: Instance) -> Self {
         Self { func_addr, inst }
     }
 
@@ -30,7 +30,7 @@ impl WasmFuncUntyped {
     /// Note that this function will perform type validation, and will return
     /// [`Error::FunctionArgsMismatch`] given a mismatch.
     pub fn call(&self, store: &mut Store, args: &[Value]) -> Result<Vec<Value>> {
-        let func = &store.data.functions[self.func_addr];
+        let func = &store.functions[self.func_addr];
         if func.ty().0.len() != args.len()
             || !func
                 .ty()
@@ -44,7 +44,7 @@ impl WasmFuncUntyped {
                 got: args.iter().map(|v| v.ty()).collect(),
             });
         }
-        let mut vm = Vm::new(&store.data, &mut store.mut_, self.inst.clone());
+        let mut vm = Vm::new(store, self.inst.clone());
         let res = vm
             .call(self.func_addr, args.iter().map(|v| (*v).into()))
             .map_err(Error::Trap)?;
@@ -57,7 +57,7 @@ impl WasmFuncUntyped {
 /// For the untyped counterpart of this type, see [`WasmFuncUntyped`].
 #[derive(Debug)]
 pub struct WasmFunc<Params, Results> {
-    func_addr: Addr,
+    func_addr: Addr<Func>,
     inst: Instance,
     _phantom: PhantomData<(Params, Results)>,
 }
@@ -67,7 +67,7 @@ where
     Params: WasmParams,
     Results: WasmResults,
 {
-    pub(crate) fn new(func_addr: Addr, inst: Instance) -> Self {
+    pub(crate) fn new(func_addr: Addr<Func>, inst: Instance) -> Self {
         Self {
             func_addr,
             inst,
@@ -77,7 +77,7 @@ where
 
     /// Call the function with the given arguments, returning the results.
     pub fn call(&self, store: &mut Store, args: Params) -> Result<Results> {
-        let mut vm = Vm::new(&store.data, &mut store.mut_, self.inst.clone());
+        let mut vm = Vm::new(store, self.inst.clone());
         let res = vm
             .call(self.func_addr, args.as_values())
             .map_err(Error::Trap)?;

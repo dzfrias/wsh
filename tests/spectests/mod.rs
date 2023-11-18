@@ -2,7 +2,7 @@ use std::{collections::HashMap, fs, path::Path};
 
 use anyhow::{bail, ensure, Context, Result};
 use shwasi_engine::{Global, HostFunc, Instance, Memory, Store, Table, Value};
-use shwasi_parser::{validate, Limit, Parser, RefType};
+use shwasi_parser::{validate, Limit, Parser, RefType, TableType};
 use tracing::info;
 use wast::{
     core::{HeapType, Module, NanPattern, WastArgCore, WastRetCore},
@@ -72,7 +72,10 @@ pub fn run_spectest(name: &str) -> Result<()> {
     store.define(
         "spectest",
         "table",
-        Table::new(Limit::new(10, Some(20)), RefType::Func),
+        Table::new(TableType {
+            limit: Limit::new(10, Some(20)),
+            elem_type: RefType::Func,
+        }),
     );
     store.define("spectest", "memory", Memory::new(Limit::new(1, Some(2))));
     store.define(

@@ -12,9 +12,9 @@ use tracing::trace;
 
 use self::ops::*;
 use crate::{
-    store::{Addr, Func, Global, StoreData, StoreMut},
+    store::{Addr, Func, Global},
     value::{Value, ValueUntyped},
-    Instance, Ref,
+    Instance, Ref, Store,
 };
 
 /// The WebAssembly virtual machine that this crate uses internally.
@@ -32,8 +32,7 @@ pub struct Vm<'s> {
     frame: StackFrame,
     /// Stack of labels.
     labels: Vec<Label>,
-    store: &'s StoreData,
-    store_mut: &'s mut StoreMut,
+    store: &'s mut Store,
 }
 
 /// The maximum number of nested levels we can have on the frame stack.
@@ -118,30 +117,34 @@ pub(crate) type Result<T> = std::result::Result<T, Trap>;
 
 impl<'s> Vm<'s> {
     #[allow(private_interfaces)]
-    pub fn new(store: &'s StoreData, store_mut: &'s mut StoreMut, module: Instance) -> Self {
+    pub fn new(store: &'s mut Store, module: Instance) -> Self {
         Self {
             stack: vec![],
             frame: StackFrame::new(module),
             labels: vec![],
             store,
-            store_mut,
         }
     }
 
-    pub fn call<I>(&mut self, f_addr: Addr, args: I) -> Result<Vec<Value>>
+    pub fn call<I>(&mut self, f_addr: Addr<Func>, args: I) -> Result<Vec<Value>>
     where
         I: IntoIterator<Item = ValueUntyped>,
     {
-        let f = &self.store.functions[f_addr];
         // Push arguments onto the stack
         for arg in args {
             self.push(arg);
         }
 
-        self.call_inner(f)?;
+        let f = &self.store.functions[f_addr];
+        // SAFETY:
+        // As long as the function is never mutated, we should be fine here. This is also a
+        // non-null pointer.
+        unsafe { self.call_raw(f)? };
         // We can just take the stack because we know that call_inner will clear any values that
         // are not results.
         let res = std::mem::take(&mut self.stack);
+        // Renew the borrow
+        let f = &self.store.functions[f_addr];
         Ok(res
             .into_iter()
             .enumerate()
@@ -149,8 +152,21 @@ impl<'s> Vm<'s> {
             .collect())
     }
 
-    fn call_inner(&mut self, f: &Func) -> Result<()> {
-        match f {
+    /// Call a raw function pointer.
+    ///
+    /// # Safety
+    /// This function is unsafe because it dereferences a raw pointer. Additionally, given that the
+    /// function pointer will come from a store, there is no guarantee about the validity of the
+    /// underlying function post-execution.
+    ///
+    /// This function is only safe to call if the function pointer is valid, and if the funtion
+    /// field of the store is **never**, **ever** mutated. This is an invariant that must be
+    /// upheld diligently throughout the **entire** virtual machine. In WebAssembly, there's no
+    /// reason why a function should ever be mutated.
+    unsafe fn call_raw(&mut self, f: *const Func) -> Result<()> {
+        // This dereference is the only unsafe part of this function. We cast it to a shared
+        // reference out of convenience.
+        match &unsafe { &*f } {
             Func::Module(f) => {
                 // Args should already be on the stack (due to validation), so push locals
                 let mut pushed_locals = 0;
@@ -495,13 +511,13 @@ impl<'s> Vm<'s> {
                 I::F64ReinterpretI64 => unop!(reinterpret for f64),
                 I::MemorySize => {
                     let addr = self.frame.module.mem_addrs()[0];
-                    let mem = &self.store_mut.memories[addr];
+                    let mem = &self.store.memories[addr];
                     self.push(mem.size() as u32);
                 }
                 I::MemoryGrow => {
                     let new_size = self.pop::<u32>();
                     let addr = self.frame.module.mem_addrs()[0];
-                    let mem = &mut self.store_mut.memories[addr];
+                    let mem = &mut self.store.memories[addr];
                     if let Some(size) = mem.grow(new_size as usize) {
                         self.push(size as u32);
                     } else {
@@ -510,7 +526,7 @@ impl<'s> Vm<'s> {
                 }
                 I::MemoryCopy => {
                     let (dst, src, len) = self.pop3::<u32, u32, u32>();
-                    let mem = &mut self.store_mut.memories[self.frame.module.mem_addrs()[0]];
+                    let mem = &mut self.store.memories[self.frame.module.mem_addrs()[0]];
                     if src.saturating_add(len) > mem.len() as u32 {
                         return Err(Trap::MemoryAccessOutOfBounds {
                             offset: src.saturating_add(len),
@@ -528,7 +544,7 @@ impl<'s> Vm<'s> {
                 }
                 I::MemoryFill => {
                     let (dst, val, len) = self.pop3::<u32, u8, u32>();
-                    let mem = &mut self.store_mut.memories[self.frame.module.mem_addrs()[0]];
+                    let mem = &mut self.store.memories[self.frame.module.mem_addrs()[0]];
                     if dst.saturating_add(len) > mem.len() as u32 {
                         return Err(Trap::MemoryAccessOutOfBounds {
                             offset: dst.saturating_add(len),
@@ -609,9 +625,9 @@ impl<'s> Vm<'s> {
                 I::I64Store16(MemArg { offset, align: _ }) => store!(u16, offset),
                 I::I64Store32(MemArg { offset, align: _ }) => store!(u32, offset),
                 I::Call { func_idx } => {
-                    let f = &self.frame.module.func_addrs()[*func_idx as usize];
-                    let f = &self.store.functions[*f];
-                    self.call_inner(f)?;
+                    let f_addr = &self.frame.module.func_addrs()[*func_idx as usize];
+                    let f = &self.store.functions[*f_addr];
+                    unsafe { self.call_raw(f) }?;
                 }
                 I::LocalGet { idx } => {
                     let val = self.stack[self.frame.bp + *idx as usize];
@@ -626,104 +642,84 @@ impl<'s> Vm<'s> {
                 }
                 I::GlobalGet { idx } => {
                     let addr = self.frame.module.global_addrs()[*idx as usize];
-                    let val = self.store_mut.globals[addr].value;
+                    let val = self.store.globals[addr].value;
                     self.push(val);
                 }
                 I::GlobalSet { idx } => {
                     let addr = self.frame.module.global_addrs()[*idx as usize];
                     let val = self.pop::<ValueUntyped>();
-                    let typed = val.into_typed(self.store_mut.globals[addr].value.ty());
-                    self.store_mut.globals[addr].value = typed;
+                    let typed = val.into_typed(self.store.globals[addr].value.ty());
+                    self.store.globals[addr].value = typed;
                 }
                 I::DataDrop { data_idx } => {
                     let addr = self.frame.module.data_addrs()[*data_idx as usize];
-                    self.store_mut.datas[addr].data_drop();
+                    self.store.datas[addr].data_drop();
                 }
                 I::ElemDrop { elem_idx } => {
                     let addr = self.frame.module.elem_addrs()[*elem_idx as usize];
-                    self.store_mut.elems[addr].elem_drop();
+                    self.store.elems[addr].elem_drop();
                 }
                 I::MemoryInit { data_idx } => {
                     let data_addr = self.frame.module.data_addrs()[*data_idx as usize];
                     let mem_addr = self.frame.module.mem_addrs()[0];
                     let (dst, src, n) = self.pop3::<u32, u32, u32>();
 
-                    if src.saturating_add(n) > self.store_mut.datas[data_addr].0.len() as u32 {
+                    if src.saturating_add(n) > self.store.datas[data_addr].0.len() as u32 {
                         return Err(Trap::MemoryAccessOutOfBounds {
                             offset: src.saturating_add(n),
-                            mem_size: self.store_mut.datas[data_addr].0.len() as u32,
+                            mem_size: self.store.datas[data_addr].0.len() as u32,
                         });
                     }
-                    if dst.saturating_add(n) > self.store_mut.memories[mem_addr].len() as u32 {
+                    if dst.saturating_add(n) > self.store.memories[mem_addr].len() as u32 {
                         return Err(Trap::MemoryAccessOutOfBounds {
                             offset: dst.saturating_add(n),
-                            mem_size: self.store_mut.memories[mem_addr].len() as u32,
+                            mem_size: self.store.memories[mem_addr].len() as u32,
                         });
                     }
 
-                    let data = &self.store_mut.datas[data_addr].0[src as usize..(src + n) as usize];
-                    let mem = &mut self.store_mut.memories[mem_addr];
+                    let data = &self.store.datas[data_addr].0[src as usize..(src + n) as usize];
+                    let mem = &mut self.store.memories[mem_addr];
                     mem.data[dst as usize..(dst + n) as usize].copy_from_slice(data);
                 }
                 I::RefFunc { func_idx } => {
                     let f = &self.frame.module.func_addrs()[*func_idx as usize];
-                    self.push(Some(*f as u32));
+                    self.push(Some(f.as_usize() as u32));
                 }
                 I::TableGet { table } => {
                     let idx = self.pop::<u32>();
                     let addr = self.frame.module.table_addrs()[*table as usize];
-                    let table = &self.store_mut.tables[addr];
-                    let ref_ =
-                        table
-                            .elements
-                            .get(idx as usize)
-                            .ok_or(Trap::TableGetOutOfBounds {
-                                table_size: table.size() as u32,
-                                index: idx,
-                            })?;
-                    self.push(*ref_);
+                    let table = &self.store.tables[addr];
+                    let ref_ = table.get(idx)?;
+                    self.push(ref_);
                 }
                 I::TableSet { table } => {
                     let val = self.pop::<Option<u32>>();
                     let idx = self.pop::<u32>();
 
                     let addr = self.frame.module.table_addrs()[*table as usize];
-                    let table = &mut self.store_mut.tables[addr];
-                    let size = table.size();
-                    *table
-                        .elements
-                        .get_mut(idx as usize)
-                        .ok_or(Trap::TableGetOutOfBounds {
-                            table_size: size as u32,
-                            index: idx,
-                        })? = val;
+                    let table = &mut self.store.tables[addr];
+                    table.set(idx, val)?;
                 }
                 I::TableGrow { table } => {
                     let (val, n) = self.pop2::<Ref, u32>();
                     let addr = self.frame.module.table_addrs()[*table as usize];
-                    let table = &mut self.store_mut.tables[addr];
-                    if let Some(size) = table.grow(n as usize, val) {
-                        self.push(size as u32);
+                    let table = &mut self.store.tables[addr];
+                    if let Some(size) = table.grow(n, val) {
+                        self.push(size);
                     } else {
                         self.push(-1i32);
                     }
                 }
                 I::TableSize { table } => {
                     let addr = self.frame.module.table_addrs()[*table as usize];
-                    let table = &self.store_mut.tables[addr];
-                    self.push(table.elements.len() as u32);
+                    let table = &self.store.tables[addr];
+                    self.push(table.size());
                 }
                 I::TableFill { table } => {
                     let (start, val, n) = self.pop3::<u32, Ref, u32>();
                     let addr = self.frame.module.table_addrs()[*table as usize];
-                    let table = &mut self.store_mut.tables[addr];
-                    if start.saturating_add(n) > table.size() as u32 {
-                        return Err(Trap::TableGetOutOfBounds {
-                            table_size: table.size() as u32,
-                            index: start.saturating_add(n),
-                        });
-                    }
-                    table.elements[start as usize..(start + n) as usize].fill(val);
+                    let table = &mut self.store.tables[addr];
+                    table.fill(start, n, val)?;
                 }
                 I::RefNull { ty } => {
                     self.push(ValueUntyped::type_default((*ty).into()));
@@ -734,18 +730,11 @@ impl<'s> Vm<'s> {
                 } => {
                     let tbl_idx = self.pop::<u32>();
                     let table_addr = self.frame.module.table_addrs()[*table_idx as usize];
-                    let table = &self.store_mut.tables[table_addr];
+                    let table = &self.store.tables[table_addr];
                     let expect_ty = &self.frame.module.types()[*type_idx as usize];
 
-                    let f_addr = table
-                        .elements
-                        .get(tbl_idx as usize)
-                        .ok_or(Trap::TableGetOutOfBounds {
-                            table_size: table.size() as u32,
-                            index: tbl_idx,
-                        })?
-                        .ok_or(Trap::CallNullRef)?;
-                    let f = &self.store.functions[f_addr as usize];
+                    let ref_ = table.get(tbl_idx)?.ok_or(Trap::CallNullRef)?;
+                    let f = &self.store.functions[Addr::new(ref_ as usize)];
                     let actual_ty = f.ty();
 
                     if expect_ty != actual_ty {
@@ -755,7 +744,7 @@ impl<'s> Vm<'s> {
                         });
                     }
 
-                    self.call_inner(f)?;
+                    unsafe { self.call_raw(f) }?;
                 }
                 I::TableCopy {
                     src_table,
@@ -764,28 +753,18 @@ impl<'s> Vm<'s> {
                     let src_addr = self.frame.module.table_addrs()[*src_table as usize];
                     let dst_addr = self.frame.module.table_addrs()[*dst_table as usize];
                     let (dst_start, src_start, n) = self.pop3::<u32, u32, u32>();
-                    let src_table = &self.store_mut.tables[src_addr];
-                    let dst_table = &self.store_mut.tables[dst_addr];
 
-                    if src_start.saturating_add(n) > src_table.size() as u32 {
-                        return Err(Trap::TableGetOutOfBounds {
-                            index: src_start.saturating_add(n),
-                            table_size: src_table.size() as u32,
-                        });
+                    if src_addr == dst_addr {
+                        let tbl = &mut self.store.tables[src_addr];
+                        tbl.copy_within(dst_start, src_start, n)?;
+                    } else {
+                        let (src, dst) = self
+                            .store
+                            .tables
+                            .get_pair_mut(src_addr, dst_addr)
+                            .expect("should not fail: same table case already covered");
+                        dst.copy(src, dst_start, src_start, n)?;
                     }
-                    if dst_start.saturating_add(n) > dst_table.size() as u32 {
-                        return Err(Trap::TableGetOutOfBounds {
-                            index: dst_start.saturating_add(n),
-                            table_size: dst_table.size() as u32,
-                        });
-                    }
-
-                    // TODO: no clone here
-                    let src =
-                        src_table.elements[src_start as usize..(src_start + n) as usize].to_vec();
-                    self.store_mut.tables[dst_addr].elements
-                        [dst_start as usize..(dst_start + n) as usize]
-                        .copy_from_slice(&src);
                 }
                 I::TableInit {
                     table_idx,
@@ -794,26 +773,10 @@ impl<'s> Vm<'s> {
                     let table_addr = self.frame.module.table_addrs()[*table_idx as usize];
                     let elem_addr = self.frame.module.elem_addrs()[*elem_idx as usize];
                     let (dst_start, src_start, n) = self.pop3::<u32, u32, u32>();
-                    let elem = &self.store_mut.elems[elem_addr];
-                    let table = &self.store_mut.tables[table_addr];
+                    let elem = &self.store.elems[elem_addr];
+                    let table = &mut self.store.tables[table_addr];
 
-                    if src_start.saturating_add(n) > elem.elems.len() as u32 {
-                        return Err(Trap::TableGetOutOfBounds {
-                            index: src_start.saturating_add(n),
-                            table_size: elem.elems.len() as u32,
-                        });
-                    }
-                    if dst_start.saturating_add(n) > table.size() as u32 {
-                        return Err(Trap::TableGetOutOfBounds {
-                            index: dst_start.saturating_add(n),
-                            table_size: table.size() as u32,
-                        });
-                    }
-
-                    let elems = &elem.elems[src_start as usize..(src_start + n) as usize];
-                    self.store_mut.tables[table_addr].elements
-                        [dst_start as usize..(dst_start + n) as usize]
-                        .copy_from_slice(elems);
+                    table.init(elem, dst_start, src_start, n)?;
                 }
             }
 
@@ -882,7 +845,7 @@ impl<'s> Vm<'s> {
 
     /// Get the `N` bytes of data at the given offset in the current memory.
     fn load<const N: usize>(&self, offset: u32) -> Result<[u8; N]> {
-        let mem = &self.store_mut.memories[self.frame.module.mem_addrs()[0]];
+        let mem = &self.store.memories[self.frame.module.mem_addrs()[0]];
         if offset.saturating_add(N as u32) > mem.len() as u32 {
             return Err(Trap::MemoryAccessOutOfBounds {
                 mem_size: mem.len() as u32,
@@ -897,7 +860,7 @@ impl<'s> Vm<'s> {
 
     /// Store the `N` bytes of data at the given offset in the current memory.
     fn store<const N: usize>(&mut self, offset: u32, val: [u8; N]) -> Result<()> {
-        let mem = &mut self.store_mut.memories[self.frame.module.mem_addrs()[0]];
+        let mem = &mut self.store.memories[self.frame.module.mem_addrs()[0]];
         if offset as usize + N > mem.len() {
             return Err(Trap::MemoryAccessOutOfBounds {
                 mem_size: mem.len() as u32,
@@ -911,8 +874,8 @@ impl<'s> Vm<'s> {
 
 pub fn eval_const_expr(
     globals: &[Global],
-    module_globals: &[Addr],
-    module_funcs: &[Addr],
+    module_globals: &[Addr<Global>],
+    module_funcs: &[Addr<Func>],
     expr: &InitExpr,
 ) -> ValueUntyped {
     match expr {
@@ -920,12 +883,14 @@ pub fn eval_const_expr(
         InitExpr::I64Const(i64) => (*i64).into(),
         InitExpr::F32Const(f32) => f32::from_bits(f32.raw()).into(),
         InitExpr::F64Const(f64) => f64::from_bits(f64.raw()).into(),
-        InitExpr::ConstGlobalGet(idx) => globals[module_globals[*idx as usize]].value.into(),
+        InitExpr::ConstGlobalGet(idx) => globals[module_globals[*idx as usize].as_usize()]
+            .value
+            .into(),
         InitExpr::RefNull(t) => match t {
-            RefType::Func => 0.into(),
-            RefType::Extern => 0.into(),
+            RefType::Func => None.into(),
+            RefType::Extern => None.into(),
         },
-        InitExpr::RefFunc(idx) => Some(module_funcs[*idx as usize] as u32).into(),
+        InitExpr::RefFunc(idx) => Some(module_funcs[*idx as usize].as_usize() as u32).into(),
     }
 }
 
@@ -966,8 +931,8 @@ mod tests {
                 ..Default::default()
             };
             let inst = Instance::instantiate(&mut store, module).unwrap();
-            let mut vm = Vm::new(&store.data, &mut store.mut_, inst.clone());
-            let res = vm.call(0, []).unwrap();
+            let mut vm = Vm::new(&mut store, inst.clone());
+            let res = vm.call(Addr::default(), []).unwrap();
             let expect: Vec<Value> = vec![$($val),*];
             assert_eq!(expect, res);
         };
