@@ -550,11 +550,26 @@ impl<'s> Vm<'s> {
                 I::I64TruncSatF32U => unop!(trunc_u64_sat for f32),
                 I::I64TruncSatF64S => unop!(trunc_i64_sat for f64),
                 I::I64TruncSatF64U => unop!(trunc_u64_sat for f64),
-                I::I32Extend8S => todo!(),
-                I::I32Extend16S => todo!(),
-                I::I64Extend8S => todo!(),
-                I::I64Extend16S => todo!(),
-                I::I64Extend32S => todo!(),
+                I::I32Extend8S => {
+                    let val = self.pop::<u32>() as i32;
+                    self.push(val as i8 as u32);
+                }
+                I::I32Extend16S => {
+                    let val = self.pop::<u32>() as i32;
+                    self.push(val as i16 as u32);
+                }
+                I::I64Extend8S => {
+                    let val = self.pop::<u64>() as i64;
+                    self.push(val as i8 as u64);
+                }
+                I::I64Extend16S => {
+                    let val = self.pop::<u64>() as i64;
+                    self.push(val as i16 as u64);
+                }
+                I::I64Extend32S => {
+                    let val = self.pop::<u64>() as i64;
+                    self.push(val as i32 as i64);
+                }
                 I::I32Load(MemArg { offset, align: _ }) => load!(u32, u32, *offset),
                 I::I64Load(MemArg { offset, align: _ }) => load!(u64, u64, *offset),
                 I::F32Load(MemArg { offset, align: _ }) => {

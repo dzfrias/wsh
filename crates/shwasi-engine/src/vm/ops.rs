@@ -287,23 +287,26 @@ pub trait FloatOp {
     fn ge(self, rhs: Self) -> bool;
 
     // Convert
-    fn trunc_i32(self) -> Option<i32>;
-    fn trunc_i64(self) -> Option<i64>;
-    fn trunc_u32(self) -> Option<u32>;
-    fn trunc_u64(self) -> Option<u64>;
-    fn trunc_i32_sat(self) -> i32;
-    fn trunc_i64_sat(self) -> i64;
-    fn trunc_u32_sat(self) -> u32;
-    fn trunc_u64_sat(self) -> u64;
     fn reinterpret(self) -> Self::IntType;
 
     // Canonical NaN
     fn is_canonical_nan(&self) -> bool;
 }
 
+pub trait ConvertFloat {
+    fn trunc_i32(self) -> Option<i32>;
+    fn trunc_i32_sat(self) -> i32;
+    fn trunc_i64(self) -> Option<i64>;
+    fn trunc_i64_sat(self) -> i64;
+    fn trunc_u32(self) -> Option<u32>;
+    fn trunc_u32_sat(self) -> u32;
+    fn trunc_u64(self) -> Option<u64>;
+    fn trunc_u64_sat(self) -> u64;
+}
+
 // Convert self (a float) into a signed integer of type $ty
 macro_rules! impl_convert_float {
-    ($f_ty:ty, $ty:ty) => {
+    ($f_ty:ty, $ty:ty, $min:literal, $max:literal) => {
         paste::paste! {
             #[inline]
             fn [<trunc_ $ty>](self) -> Option<$ty> {
@@ -311,11 +314,10 @@ macro_rules! impl_convert_float {
                     return None;
                 }
 
-                if !(<$ty>::MIN as $f_ty..=<$ty>::MAX as $f_ty).contains(&self) {
-                    None
-                } else {
-                    Some(self.trunc() as $ty)
+                if self <= $min || self >= $max {
+                    return None;
                 }
+                Some(self.trunc() as $ty)
             }
 
             #[inline]
@@ -324,10 +326,10 @@ macro_rules! impl_convert_float {
                     return 0;
                 }
 
-                if self < <$ty>::MIN as $f_ty {
+                if self < $min {
                     return <$ty>::MIN;
                 }
-                if self > <$ty>::MAX as $f_ty {
+                if self > $max {
                     return <$ty>::MAX;
                 }
 
@@ -475,11 +477,6 @@ macro_rules! impl_float_op {
                 self >= rhs
             }
 
-            impl_convert_float!($T, i32);
-            impl_convert_float!($T, i64);
-            impl_convert_float!($T, u32);
-            impl_convert_float!($T, u64);
-
             #[inline]
             fn reinterpret(self) -> $I {
                 self.to_bits()
@@ -496,23 +493,51 @@ macro_rules! impl_float_op {
 impl_float_op!(f32, u32);
 impl_float_op!(f64, u64);
 
-// Promote/Demote are only available in one way
-pub trait FloatPromoteOp {
+// The numbers here are somehwat arbitrary (to me). Neither the spec nor Rust seems to line up with
+// why these numbers exist, but the spectests were failing and this is what got them to pass...
+//
+// I got them from https://github.com/paritytech/wasmi/blob/72be93b3598a995efbd47df715a8910403402586/crates/core/src/value.rs#L359
+#[allow(clippy::lossy_float_literal, clippy::unreadable_literal)]
+impl ConvertFloat for f32 {
+    impl_convert_float!(f32, i32, -2147483904.0_f32, 2147483648.0_f32);
+    impl_convert_float!(f32, u32, -1.0_f32, 4294967296.0_f32);
+    impl_convert_float!(
+        f32,
+        i64,
+        -9223373136366403584.0_f32,
+        9223372036854775808.0_f32
+    );
+    impl_convert_float!(f32, u64, -1.0_f32, 18446744073709551616.0_f32);
+}
+#[allow(clippy::lossy_float_literal, clippy::unreadable_literal)]
+impl ConvertFloat for f64 {
+    impl_convert_float!(f64, i32, -2147483649.0_f64, 2147483648.0_f64);
+    impl_convert_float!(
+        f64,
+        i64,
+        -9223372036854777856.0_f64,
+        9223372036854775808.0_f64
+    );
+    impl_convert_float!(f64, u32, -1.0_f64, 4294967296.0_f64);
+    impl_convert_float!(f64, u64, -1.0_f64, 18446744073709551616.0_f64);
+}
+
+pub trait FloatPromote {
     fn promote(self) -> f64;
 }
 
-pub trait FloatDemoteOp {
+pub trait FloatDemote {
     fn demote(self) -> f32;
 }
 
-impl FloatPromoteOp for f32 {
+impl FloatPromote for f32 {
     #[inline]
     fn promote(self) -> f64 {
         self as f64
     }
 }
 
-impl FloatDemoteOp for f64 {
+impl FloatDemote for f64 {
     #[inline]
     fn demote(self) -> f32 {
         self as f32
