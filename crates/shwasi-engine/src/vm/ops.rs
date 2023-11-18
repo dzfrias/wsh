@@ -274,8 +274,8 @@ pub trait FloatOp {
     fn sub(self, rhs: Self) -> Self;
     fn mul(self, rhs: Self) -> Self;
     fn div(self, rhs: Self) -> Self;
-    fn min(self, rhs: Self) -> Self;
-    fn max(self, rhs: Self) -> Self;
+    fn nan_min(self, rhs: Self) -> Self;
+    fn nan_max(self, rhs: Self) -> Self;
     fn copysign(self, rhs: Self) -> Self;
 
     // FRelOp
@@ -414,30 +414,32 @@ macro_rules! impl_float_op {
             }
 
             #[inline]
-            fn min(self, rhs: $T) -> $T {
-                // min(-0.0, 0.0) == -0.0
-                if self == rhs {
-                    (self.to_bits() | rhs.to_bits()).reinterpret()
-                } else if self < rhs {
-                    self
-                } else if self > rhs {
-                    rhs
-                } else {
-                    <$T>::NAN
+            fn nan_min(self, other: $T) -> $T {
+                match (self.is_nan(), other.is_nan()) {
+                    (true, false) => self,
+                    (false, true) => other,
+                    _ => {
+                        // Case: Both values are NaN; OR both values are non-NaN.
+                        if other.is_sign_negative() {
+                            return other.min(self);
+                        }
+                        self.min(other)
+                    }
                 }
             }
 
             #[inline]
-            fn max(self, rhs: $T) -> $T {
-                // max(-0.0, 0.0) == 0.0
-                if self == rhs {
-                    (self.to_bits() & rhs.to_bits()).reinterpret()
-                } else if self > rhs {
-                    self
-                } else if self < rhs {
-                    rhs
-                } else {
-                    <$T>::NAN
+            fn nan_max(self, other: $T) -> $T {
+                match (self.is_nan(), other.is_nan()) {
+                    (true, false) => self,
+                    (false, true) => other,
+                    _ => {
+                        // Case: Both values are NaN; OR both values are non-NaN.
+                        if other.is_sign_negative() {
+                            return other.max(self);
+                        }
+                        self.max(other)
+                    }
                 }
             }
 

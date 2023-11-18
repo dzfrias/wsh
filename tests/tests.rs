@@ -38,10 +38,10 @@ spectests!(
     fn elem("elem");
     fn endianness("endianness");
     fn exports("exports");
-    // fn f32("f32");
+    fn f32("f32");
     fn f32_bitwise("f32_bitwise");
     fn f32_cmp("f32_cmp");
-    // fn f64("f64");
+    fn f64("f64");
     fn f64_bitwise("f64_bitwise");
     fn f64_cmp("f64_cmp");
     fn fac("fac");

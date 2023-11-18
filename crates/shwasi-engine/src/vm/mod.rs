@@ -136,10 +136,9 @@ impl<'s> Vm<'s> {
         }
 
         let f = &self.store.functions[f_addr];
-        // SAFETY:
-        // As long as the function is never mutated, we should be fine here. This is also a
+        // SAFETY: As long as the function is never mutated, we should be fine here. This is also a
         // non-null pointer.
-        unsafe { self.call_raw(f)? };
+        unsafe { self.call_raw(f) }?;
         // We can just take the stack because we know that call_inner will clear any values that
         // are not results.
         let res = std::mem::take(&mut self.stack);
@@ -428,8 +427,8 @@ impl<'s> Vm<'s> {
                 I::F32Sub => binop!(sub for f32),
                 I::F32Mul => binop!(mul for f32),
                 I::F32Div => binop!(div for f32),
-                I::F32Min => binop!(min for f32),
-                I::F32Max => binop!(max for f32),
+                I::F32Min => binop!(nan_min for f32),
+                I::F32Max => binop!(nan_max for f32),
                 I::F32Copysign => binop!(copysign for f32),
                 I::F64Abs => unop!(abs for f64),
                 I::F64Neg => unop!(neg for f64),
@@ -476,8 +475,8 @@ impl<'s> Vm<'s> {
                 I::F64Sub => binop!(sub for f64),
                 I::F64Mul => binop!(mul for f64),
                 I::F64Div => binop!(div for f64),
-                I::F64Min => binop!(min for f64),
-                I::F64Max => binop!(max for f64),
+                I::F64Min => binop!(nan_min for f64),
+                I::F64Max => binop!(nan_max for f64),
                 I::F64Copysign => binop!(copysign for f64),
 
                 I::F32Const(f32) => self.push(f32::from_bits(f32.raw())),
@@ -627,6 +626,11 @@ impl<'s> Vm<'s> {
                 I::Call { func_idx } => {
                     let f_addr = &self.frame.module.func_addrs()[*func_idx as usize];
                     let f = &self.store.functions[*f_addr];
+                    // SAFETY: the pointer is not null because we just coerced it from a reference.
+                    // Because functions are never mutated it is safe to think of this as a shared
+                    // reference (more or less).
+                    //
+                    // Additionall details can be found in the `call` method.
                     unsafe { self.call_raw(f) }?;
                 }
                 I::LocalGet { idx } => {
@@ -744,6 +748,11 @@ impl<'s> Vm<'s> {
                         });
                     }
 
+                    // SAFETY: the pointer is not null because we just coerced it from a reference.
+                    // Because functions are never mutated it is safe to think of this as a shared
+                    // reference (more or less).
+                    //
+                    // Additionall details can be found in the `call` method.
                     unsafe { self.call_raw(f) }?;
                 }
                 I::TableCopy {
