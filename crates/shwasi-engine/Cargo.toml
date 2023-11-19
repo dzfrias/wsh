@@ -11,5 +11,12 @@ paste.workspace = true
 shwasi-parser = { path = "../shwasi-parser" }
 stacker = "0.1.15"
 
+[dev-dependencies]
+criterion.workspace = true
+
+[[bench]]
+name = "benchmark"
+harness = false
+
 [lints]
 workspace = true

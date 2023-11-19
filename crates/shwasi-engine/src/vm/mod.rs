@@ -1,13 +1,10 @@
-#![allow(clippy::match_same_arms)]
-
 mod ops;
 
 use std::mem;
 
-use shwasi_parser::{
-    BlockType, FuncType, InitExpr, InstrBuffer, Instruction, MemArg, NumLocals, RefType,
-};
+use shwasi_parser::{BlockType, FuncType, InitExpr, InstrBuffer, Instruction, MemArg, NumLocals};
 use thiserror::Error;
+#[cfg(debug_assertions)]
 use tracing::trace;
 
 use self::ops::*;
@@ -199,11 +196,11 @@ impl<'s> Vm<'s> {
                     // ton of arms in the `execute` method, each matching an instruction.
                     //
                     // The solution for this is to use the `stacker` crate, which will allocate
-                    // more stack space when we're in a certain "red zone" (here is 32kb). If we
+                    // more stack space when we're in a certain "red zone" (here is 64kb). If we
                     // reach this, we allocate more stack space (1mb in this case).
                     //
                     // This behavior is **not** present in release mode.
-                    stacker::maybe_grow(32 * 1024, 1024 * 1024, || -> Result<()> {
+                    stacker::maybe_grow(64 * 1024, 1024 * 1024, || -> Result<()> {
                         self.execute(&f.code.body)
                     })?;
                 } else {
@@ -266,15 +263,20 @@ impl<'s> Vm<'s> {
         // Our instruction pointer. We don't use a for loop because we need to be able to jump to
         // instructions.
         let mut ip = 0;
-        while ip < body.len() {
-            // TODO: unchecked here?
-            let instr = &body.get(ip).unwrap();
+        // We extract into a variable so to not recompute the length every time. This is a sizeable
+        // performance improvement.
+        let len = body.len();
+        while ip < len {
+            // SAFETY: We know that the instruction pointer is always in bounds because we checked
+            // above.
+            let instr = unsafe { body.get_unchecked(ip) };
+            #[cfg(debug_assertions)]
             trace!("executing instruction: {instr}");
 
             match instr {
                 I::Nop => {}
                 I::Unreachable => return Err(Trap::Unreachable),
-                I::I32Const(i32) => self.push(*i32),
+                I::I32Const(i32) => self.push(i32),
                 I::I32Add => binop!(add for u32),
                 I::I32Sub => binop!(sub for u32),
                 I::I32Mul => binop!(mul for u32),
@@ -321,6 +323,12 @@ impl<'s> Vm<'s> {
                 }
                 I::If { block, else_ } => {
                     let cond = self.pop::<bool>();
+                    // False with no else fast path
+                    if !cond && else_.is_none() {
+                        ip = block.end + 1;
+                        continue;
+                    }
+
                     self.labels.push(Label {
                         arity: self.return_arity(block.ty),
                         cont_arity: self.return_arity(block.ty),
@@ -330,18 +338,12 @@ impl<'s> Vm<'s> {
                     if !cond {
                         if let Some(else_) = else_ {
                             // NOTE: we do intentionally let it fall through to the ip increment
-                            ip = *else_;
-                        } else {
-                            // If there is no else block, we need to jump to the normal end
-                            // continuation. We also let it fall through to the ip increment.
-                            let label = self.labels.pop().unwrap();
-                            ip = label.ra;
-                            self.clear_block(label.stack_height, label.arity);
+                            ip = else_;
                         }
                     }
                 }
                 I::Br { depth } => {
-                    for _ in 0..*depth {
+                    for _ in 0..depth {
                         self.labels.pop();
                     }
                     // Due to validation, there must be at least one label on the stack, so unwrap
@@ -370,7 +372,7 @@ impl<'s> Vm<'s> {
                 I::BrIf { depth } => {
                     let cond = self.pop::<bool>();
                     if cond {
-                        for _ in 0..*depth {
+                        for _ in 0..depth {
                             self.labels.pop();
                         }
                         let label = self.labels.last().unwrap();
@@ -481,7 +483,7 @@ impl<'s> Vm<'s> {
 
                 I::F32Const(f32) => self.push(f32::from_bits(f32.raw())),
                 I::F64Const(f64) => self.push(f64::from_bits(f64.raw())),
-                I::I64Const(i64) => self.push(*i64),
+                I::I64Const(i64) => self.push(i64),
 
                 I::I32WrapI64 => unop!(wrap for u64),
                 I::I32TruncF32S => unop!(trunc_i32 for f32, Trap::BadTruncate),
@@ -584,28 +586,28 @@ impl<'s> Vm<'s> {
                     let val = self.pop::<u64>() as i64;
                     self.push(val as i32 as i64);
                 }
-                I::I32Load(MemArg { offset, align: _ }) => load!(u32, u32, *offset),
-                I::I64Load(MemArg { offset, align: _ }) => load!(u64, u64, *offset),
+                I::I32Load(MemArg { offset, align: _ }) => load!(u32, u32, offset),
+                I::I64Load(MemArg { offset, align: _ }) => load!(u64, u64, offset),
                 I::F32Load(MemArg { offset, align: _ }) => {
-                    let offset = self.pop::<u32>().saturating_add(*offset);
+                    let offset = self.pop::<u32>().saturating_add(offset);
                     let bytes = self.load(offset)?;
                     self.push(f32::from_bits(u32::from_le_bytes(bytes)));
                 }
                 I::F64Load(MemArg { offset, align: _ }) => {
-                    let offset = self.pop::<u32>().saturating_add(*offset);
+                    let offset = self.pop::<u32>().saturating_add(offset);
                     let bytes = self.load(offset)?;
                     self.push(f64::from_bits(u64::from_le_bytes(bytes)));
                 }
-                I::I32Load8S(MemArg { offset, align: _ }) => load!(i8, u32, *offset),
-                I::I32Load8U(MemArg { offset, align: _ }) => load!(u8, u32, *offset),
-                I::I32Load16S(MemArg { offset, align: _ }) => load!(i16, u32, *offset),
-                I::I32Load16U(MemArg { offset, align: _ }) => load!(u16, u32, *offset),
-                I::I64Load8S(MemArg { offset, align: _ }) => load!(i8, u64, *offset),
-                I::I64Load8U(MemArg { offset, align: _ }) => load!(u8, u64, *offset),
-                I::I64Load16S(MemArg { offset, align: _ }) => load!(i16, u64, *offset),
-                I::I64Load16U(MemArg { offset, align: _ }) => load!(u16, u64, *offset),
-                I::I64Load32S(MemArg { offset, align: _ }) => load!(i32, u64, *offset),
-                I::I64Load32U(MemArg { offset, align: _ }) => load!(u32, u64, *offset),
+                I::I32Load8S(MemArg { offset, align: _ }) => load!(i8, u32, offset),
+                I::I32Load8U(MemArg { offset, align: _ }) => load!(u8, u32, offset),
+                I::I32Load16S(MemArg { offset, align: _ }) => load!(i16, u32, offset),
+                I::I32Load16U(MemArg { offset, align: _ }) => load!(u16, u32, offset),
+                I::I64Load8S(MemArg { offset, align: _ }) => load!(i8, u64, offset),
+                I::I64Load8U(MemArg { offset, align: _ }) => load!(u8, u64, offset),
+                I::I64Load16S(MemArg { offset, align: _ }) => load!(i16, u64, offset),
+                I::I64Load16U(MemArg { offset, align: _ }) => load!(u16, u64, offset),
+                I::I64Load32S(MemArg { offset, align: _ }) => load!(i32, u64, offset),
+                I::I64Load32U(MemArg { offset, align: _ }) => load!(u32, u64, offset),
                 I::I32Store(MemArg { offset, align: _ }) => store!(u32, offset),
                 I::I64Store(MemArg { offset, align: _ }) => store!(u64, offset),
                 I::F32Store(MemArg { offset, align: _ }) => {
@@ -624,7 +626,7 @@ impl<'s> Vm<'s> {
                 I::I64Store16(MemArg { offset, align: _ }) => store!(u16, offset),
                 I::I64Store32(MemArg { offset, align: _ }) => store!(u32, offset),
                 I::Call { func_idx } => {
-                    let f_addr = &self.frame.module.func_addrs()[*func_idx as usize];
+                    let f_addr = &self.frame.module.func_addrs()[func_idx as usize];
                     let f = &self.store.functions[*f_addr];
                     // SAFETY: the pointer is not null because we just coerced it from a reference.
                     // Because functions are never mutated it is safe to think of this as a shared
@@ -634,37 +636,37 @@ impl<'s> Vm<'s> {
                     unsafe { self.call_raw(f) }?;
                 }
                 I::LocalGet { idx } => {
-                    let val = self.stack[self.frame.bp + *idx as usize];
+                    let val = self.stack[self.frame.bp + idx as usize];
                     self.push(val);
                 }
                 I::LocalSet { idx } => {
                     let val = self.pop();
-                    self.stack[self.frame.bp + *idx as usize] = val;
+                    self.stack[self.frame.bp + idx as usize] = val;
                 }
                 I::LocalTee { idx } => {
-                    self.stack[self.frame.bp + (*idx as usize)] = *self.stack.last().unwrap();
+                    self.stack[self.frame.bp + (idx as usize)] = *self.stack.last().unwrap();
                 }
                 I::GlobalGet { idx } => {
-                    let addr = self.frame.module.global_addrs()[*idx as usize];
+                    let addr = self.frame.module.global_addrs()[idx as usize];
                     let val = self.store.globals[addr].value;
                     self.push(val);
                 }
                 I::GlobalSet { idx } => {
-                    let addr = self.frame.module.global_addrs()[*idx as usize];
+                    let addr = self.frame.module.global_addrs()[idx as usize];
                     let val = self.pop::<ValueUntyped>();
                     let typed = val.into_typed(self.store.globals[addr].value.ty());
                     self.store.globals[addr].value = typed;
                 }
                 I::DataDrop { data_idx } => {
-                    let addr = self.frame.module.data_addrs()[*data_idx as usize];
+                    let addr = self.frame.module.data_addrs()[data_idx as usize];
                     self.store.datas[addr].data_drop();
                 }
                 I::ElemDrop { elem_idx } => {
-                    let addr = self.frame.module.elem_addrs()[*elem_idx as usize];
+                    let addr = self.frame.module.elem_addrs()[elem_idx as usize];
                     self.store.elems[addr].elem_drop();
                 }
                 I::MemoryInit { data_idx } => {
-                    let data_addr = self.frame.module.data_addrs()[*data_idx as usize];
+                    let data_addr = self.frame.module.data_addrs()[data_idx as usize];
                     let mem_addr = self.frame.module.mem_addrs()[0];
                     let (dst, src, n) = self.pop3::<u32, u32, u32>();
 
@@ -686,12 +688,12 @@ impl<'s> Vm<'s> {
                     mem.data[dst as usize..(dst + n) as usize].copy_from_slice(data);
                 }
                 I::RefFunc { func_idx } => {
-                    let f = &self.frame.module.func_addrs()[*func_idx as usize];
+                    let f = &self.frame.module.func_addrs()[func_idx as usize];
                     self.push(Some(f.as_usize() as u32));
                 }
                 I::TableGet { table } => {
                     let idx = self.pop::<u32>();
-                    let addr = self.frame.module.table_addrs()[*table as usize];
+                    let addr = self.frame.module.table_addrs()[table as usize];
                     let table = &self.store.tables[addr];
                     let ref_ = table.get(idx)?;
                     self.push(ref_);
@@ -700,13 +702,13 @@ impl<'s> Vm<'s> {
                     let val = self.pop::<Option<u32>>();
                     let idx = self.pop::<u32>();
 
-                    let addr = self.frame.module.table_addrs()[*table as usize];
+                    let addr = self.frame.module.table_addrs()[table as usize];
                     let table = &mut self.store.tables[addr];
                     table.set(idx, val)?;
                 }
                 I::TableGrow { table } => {
                     let (val, n) = self.pop2::<Ref, u32>();
-                    let addr = self.frame.module.table_addrs()[*table as usize];
+                    let addr = self.frame.module.table_addrs()[table as usize];
                     let table = &mut self.store.tables[addr];
                     if let Some(size) = table.grow(n, val) {
                         self.push(size);
@@ -715,27 +717,27 @@ impl<'s> Vm<'s> {
                     }
                 }
                 I::TableSize { table } => {
-                    let addr = self.frame.module.table_addrs()[*table as usize];
+                    let addr = self.frame.module.table_addrs()[table as usize];
                     let table = &self.store.tables[addr];
                     self.push(table.size());
                 }
                 I::TableFill { table } => {
                     let (start, val, n) = self.pop3::<u32, Ref, u32>();
-                    let addr = self.frame.module.table_addrs()[*table as usize];
+                    let addr = self.frame.module.table_addrs()[table as usize];
                     let table = &mut self.store.tables[addr];
                     table.fill(start, n, val)?;
                 }
                 I::RefNull { ty } => {
-                    self.push(ValueUntyped::type_default((*ty).into()));
+                    self.push(ValueUntyped::type_default(ty.into()));
                 }
                 I::CallIndirect {
                     table_idx,
                     type_idx,
                 } => {
                     let tbl_idx = self.pop::<u32>();
-                    let table_addr = self.frame.module.table_addrs()[*table_idx as usize];
+                    let table_addr = self.frame.module.table_addrs()[table_idx as usize];
                     let table = &self.store.tables[table_addr];
-                    let expect_ty = &self.frame.module.types()[*type_idx as usize];
+                    let expect_ty = &self.frame.module.types()[type_idx as usize];
 
                     let ref_ = table.get(tbl_idx)?.ok_or(Trap::CallNullRef)?;
                     let f = &self.store.functions[Addr::new(ref_ as usize)];
@@ -759,8 +761,8 @@ impl<'s> Vm<'s> {
                     src_table,
                     dst_table,
                 } => {
-                    let src_addr = self.frame.module.table_addrs()[*src_table as usize];
-                    let dst_addr = self.frame.module.table_addrs()[*dst_table as usize];
+                    let src_addr = self.frame.module.table_addrs()[src_table as usize];
+                    let dst_addr = self.frame.module.table_addrs()[dst_table as usize];
                     let (dst_start, src_start, n) = self.pop3::<u32, u32, u32>();
 
                     if src_addr == dst_addr {
@@ -779,8 +781,8 @@ impl<'s> Vm<'s> {
                     table_idx,
                     elem_idx,
                 } => {
-                    let table_addr = self.frame.module.table_addrs()[*table_idx as usize];
-                    let elem_addr = self.frame.module.elem_addrs()[*elem_idx as usize];
+                    let table_addr = self.frame.module.table_addrs()[table_idx as usize];
+                    let elem_addr = self.frame.module.elem_addrs()[elem_idx as usize];
                     let (dst_start, src_start, n) = self.pop3::<u32, u32, u32>();
                     let elem = &self.store.elems[elem_addr];
                     let table = &mut self.store.tables[table_addr];
@@ -789,7 +791,9 @@ impl<'s> Vm<'s> {
                 }
             }
 
+            #[cfg(debug_assertions)]
             trace!("executed instruction with stack: {:?}", self.stack);
+
             ip += 1;
         }
 
@@ -797,17 +801,19 @@ impl<'s> Vm<'s> {
     }
 
     /// Clears any extra stuff on the stack, leaving only the block's result.
+    #[inline(always)]
     fn clear_block(&mut self, begin: usize, arity: usize) {
         // Maybe we should pop until `begin` and then re-push the result? Would need some
         // performance testing
         self.stack.drain(begin..self.stack.len() - arity);
     }
 
+    #[inline(always)]
     fn push(&mut self, val: impl Into<ValueUntyped>) {
         self.stack.push(val.into());
     }
 
-    // TODO: inline?
+    #[inline(always)]
     fn pop<T: From<ValueUntyped>>(&mut self) -> T {
         self.stack
             .pop()
@@ -815,6 +821,7 @@ impl<'s> Vm<'s> {
             .into()
     }
 
+    #[inline(always)]
     fn pop2<T, U>(&mut self) -> (T, U)
     where
         T: From<ValueUntyped>,
@@ -825,6 +832,7 @@ impl<'s> Vm<'s> {
         (a, b)
     }
 
+    #[inline(always)]
     fn pop3<T, U, S>(&mut self) -> (T, U, S)
     where
         T: From<ValueUntyped>,
@@ -837,6 +845,7 @@ impl<'s> Vm<'s> {
         (a, b, c)
     }
 
+    #[inline(always)]
     fn return_arity(&self, blockty: BlockType) -> usize {
         match blockty {
             BlockType::Empty => 0,
@@ -845,6 +854,7 @@ impl<'s> Vm<'s> {
         }
     }
 
+    #[inline(always)]
     fn param_arity(&self, blockty: BlockType) -> usize {
         match blockty {
             BlockType::Empty | BlockType::Type(_) => 0,
@@ -853,6 +863,7 @@ impl<'s> Vm<'s> {
     }
 
     /// Get the `N` bytes of data at the given offset in the current memory.
+    #[inline(always)]
     fn load<const N: usize>(&self, offset: u32) -> Result<[u8; N]> {
         let mem = &self.store.memories[self.frame.module.mem_addrs()[0]];
         if offset.saturating_add(N as u32) > mem.len() as u32 {
@@ -868,6 +879,7 @@ impl<'s> Vm<'s> {
     }
 
     /// Store the `N` bytes of data at the given offset in the current memory.
+    #[inline(always)]
     fn store<const N: usize>(&mut self, offset: u32, val: [u8; N]) -> Result<()> {
         let mem = &mut self.store.memories[self.frame.module.mem_addrs()[0]];
         if offset as usize + N > mem.len() {
@@ -895,10 +907,7 @@ pub fn eval_const_expr(
         InitExpr::ConstGlobalGet(idx) => globals[module_globals[*idx as usize].as_usize()]
             .value
             .into(),
-        InitExpr::RefNull(t) => match t {
-            RefType::Func => None.into(),
-            RefType::Extern => None.into(),
-        },
+        InitExpr::RefNull(_) => None.into(),
         InitExpr::RefFunc(idx) => Some(module_funcs[*idx as usize].as_usize() as u32).into(),
     }
 }

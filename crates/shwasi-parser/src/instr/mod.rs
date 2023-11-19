@@ -102,6 +102,7 @@ impl InstrBuffer {
     }
 
     /// Get the number of instructions in the buffer.
+    #[inline]
     pub fn len(&self) -> usize {
         self.infos.len()
     }

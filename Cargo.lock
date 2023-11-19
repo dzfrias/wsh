@@ -1139,6 +1139,7 @@ name = "shwasi-engine"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "criterion",
  "paste",
  "shwasi-parser",
  "stacker",

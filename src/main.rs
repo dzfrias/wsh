@@ -38,7 +38,7 @@ fn main() -> Result<()> {
     let mut store = Store::default();
     let instance = Instance::instantiate(&mut store, module)?;
     let fib = instance.get_func::<u32, u32>(&store, "fib")?;
-    let result = fib.call(&mut store, 32)?;
+    let result = fib.call(&mut store, 39)?;
     dbg!(result);
 
     Ok(())
