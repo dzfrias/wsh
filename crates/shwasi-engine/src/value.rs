@@ -16,17 +16,6 @@ pub enum Value {
 }
 
 impl Value {
-    pub const fn type_default(ty: ValType) -> Self {
-        match ty {
-            ValType::I32 => Self::I32(0),
-            ValType::I64 => Self::I64(0),
-            ValType::F32 => Self::F32(0.0),
-            ValType::F64 => Self::F64(0.0),
-            ValType::Func => Self::Ref(None),
-            ValType::Extern => Self::ExternRef(None),
-        }
-    }
-
     pub const fn ty(&self) -> ValType {
         match self {
             Self::I32(_) => ValType::I32,
@@ -91,8 +80,11 @@ impl ValueUntyped {
         self.as_ref().is_none()
     }
 
-    pub fn type_default(_ty: ValType) -> Self {
-        ValueUntyped(0)
+    pub fn type_default(ty: ValType) -> Self {
+        match ty {
+            ValType::I32 | ValType::I64 | ValType::F32 | ValType::F64 => Self(0),
+            ValType::Func | ValType::Extern => Self(unsafe { mem::transmute::<Ref, _>(None) }),
+        }
     }
 
     pub fn into_typed(self, ty: ValType) -> Value {

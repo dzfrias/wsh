@@ -169,7 +169,7 @@ impl<'s> Vm<'s> {
                 for NumLocals { num, locals_type } in &f.code.locals {
                     for _ in 0..*num {
                         // Locals are initialized to their default value
-                        self.push(Value::type_default(*locals_type));
+                        self.push(ValueUntyped::type_default(*locals_type));
                         pushed_locals += 1;
                     }
                 }
