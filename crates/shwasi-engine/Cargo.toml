@@ -10,6 +10,7 @@ tracing.workspace = true
 paste.workspace = true
 shwasi-parser = { path = "../shwasi-parser" }
 stacker = "0.1.15"
+libc = "0.2.150"
 
 [dev-dependencies]
 criterion.workspace = true

@@ -1,3 +1,4 @@
+mod jit;
 mod ops;
 
 use std::mem;
@@ -6,6 +7,7 @@ use shwasi_parser::{BlockType, FuncType, InitExpr, InstrBuffer, Instruction, Mem
 use thiserror::Error;
 #[cfg(debug_assertions)]
 use tracing::trace;
+use tracing::{info, warn};
 
 use self::ops::*;
 use crate::{
@@ -164,6 +166,19 @@ impl<'s> Vm<'s> {
         // reference out of convenience.
         match &unsafe { &*f } {
             Func::Module(f) => {
+                // For now, JIT compilation only works on macOS
+                #[cfg(target_arch = "aarch64")]
+                match jit::Compiler::new().compile(&f.code) {
+                    Ok(executable) => {
+                        info!("successfully JIT compiled function");
+                        executable.run();
+                        return Ok(());
+                    }
+                    Err(e) => {
+                        warn!("failed to JIT compile function: {e}");
+                    }
+                }
+
                 // Args should already be on the stack (due to validation), so push locals
                 let mut pushed_locals = 0;
                 for NumLocals { num, locals_type } in &f.code.locals {
