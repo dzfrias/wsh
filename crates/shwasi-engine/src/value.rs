@@ -26,6 +26,16 @@ impl Value {
             Self::ExternRef(_) => ValType::Extern,
         }
     }
+
+    pub fn untyped(self) -> ValueUntyped {
+        match self {
+            Value::I32(n) => ValueUntyped(n as u64),
+            Value::I64(n) => ValueUntyped(n),
+            Value::F32(f) => ValueUntyped(f.to_bits() as u64),
+            Value::F64(f) => ValueUntyped(f.to_bits()),
+            Value::Ref(r) | Value::ExternRef(r) => ValueUntyped(unsafe { mem::transmute(r) }),
+        }
+    }
 }
 
 /// A reference.
@@ -36,7 +46,7 @@ pub type Ref = Option<u32>;
 /// Note that because of [validation](https://webassembly.github.io/spec/core/valid/index.html), it
 /// is always correct to cast a `ValueUntyped` into a real type, so long as the caller casts to the
 /// same type as the validation requires.
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Debug, Clone, PartialEq, Copy, Default)]
 pub struct ValueUntyped(u64);
 
 impl ValueUntyped {
@@ -234,5 +244,15 @@ impl From<ValueUntyped> for u16 {
     #[inline]
     fn from(value: ValueUntyped) -> Self {
         value.as_u32() as u16
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn size_of_untyped_val() {
+        assert_eq!(mem::size_of::<ValueUntyped>(), 8);
     }
 }

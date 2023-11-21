@@ -1,23 +1,39 @@
+use std::{iter, mem, slice};
+
 use thiserror::Error;
+
+use crate::{value::ValueUntyped, vm::Vm, Value};
 
 #[derive(Debug)]
 pub struct Executable {
-    code: extern "C" fn(),
+    /// Function pointer to the executable code. The first arg is a pointer to the locals, and the
+    /// second arg is a pointer to the outputs.
+    code: extern "C" fn(*const ValueUntyped, *const ValueUntyped),
+    /// The size of the executable memory region.
     size: usize,
 }
 
 #[derive(Debug, Error)]
 pub enum ExecMapError {
+    /// mmap failed with the given errno.
     #[error("mmap failed with errno {0}")]
     MapFailed(i32),
+    /// mprotect failed with the given errno.
     #[error("mprotect failed with errno {0}")]
     MprotectFailed(i32),
+    /// The code buffer was empty.
     #[error("empty code buffer")]
     EmtpyCodeBuffer,
 }
 
 impl Executable {
-    pub fn map(code: &[u8]) -> Result<Self, ExecMapError> {
+    /// Creates new executable memory from the given code.
+    ///
+    /// # Safety
+    /// `code` must be valid executable code for the targetted system. It can to pretty much
+    /// anything when called, so it is very important that it does not cause any undefined behavior
+    /// or do malicious stuff.
+    pub unsafe fn map(code: &[u8]) -> Result<Self, ExecMapError> {
         let size = code.len();
         // mmap will fail with EINVAL when size == 0
         if size == 0 {
@@ -71,10 +87,12 @@ impl Executable {
         // code. It should also be the same size as the originally passed in code, as a result of
         // the memcpy above.
         let executable_memory =
-            unsafe { std::slice::from_raw_parts(executable_memory_ptr.cast::<u8>(), size) };
-        // SAFETY: executable_memory points to an executable memory region code. It is a slice.
-        let executable_function: extern "C" fn() =
-            unsafe { std::mem::transmute(executable_memory.as_ptr()) };
+            unsafe { slice::from_raw_parts(executable_memory_ptr.cast::<u8>(), size) };
+        // This is the function that we will call to execute the code. We transmute it to a
+        // function pointer, which means that the underlying `code` must be proper binary for the
+        // targetted system. This is the safety invariant that makes this function unsafe. `code`
+        // can be pretty much anything, so we must trust that it is valid.
+        let executable_function = unsafe { mem::transmute(executable_memory.as_ptr()) };
 
         Ok(Self {
             code: executable_function,
@@ -82,8 +100,29 @@ impl Executable {
         })
     }
 
-    pub fn run(&self) {
-        (self.code)();
+    /// Runs the executable code using the vm. It requires the base pointer to the stack frame and
+    /// the number of results that the executable should write to the stack.
+    pub fn run(&self, vm: &mut Vm, bp: usize, num_results: usize) {
+        vm.stack
+            .extend(iter::repeat(ValueUntyped::from(Value::I32(0))).take(num_results));
+        // It is important that we take these pointers AFTER we extend the stack, since the stack
+        // might've been reallocated.
+        let locals_ptr = vm.stack[bp..].as_ptr();
+        let out_ptr = vm.stack[vm.stack.len() - num_results..].as_ptr();
+        // We pass in the locals and the output arrays as pointers to the executable function.
+        // These are pointers to the same stack, in different positions. This will allow the
+        // executable to use the locals on the stack and write to the outputs on the stack.
+        (self.code)(locals_ptr, out_ptr);
+    }
+
+    #[cfg(test)]
+    pub(crate) fn run_with(&self, locals: &mut [ValueUntyped], out: &mut [ValueUntyped]) {
+        let locals_ptr = locals.as_ptr();
+        let out_ptr = out.as_ptr();
+        // We pass in the locals and the output arrays as pointers to the executable function.
+        // These are pointers to the same stack, in different positions. This will allow the
+        // executable to use the locals on the stack and write to the outputs on the stack.
+        (self.code)(locals_ptr, out_ptr);
     }
 }
 

@@ -167,19 +167,6 @@ impl<'s> Vm<'s> {
         // reference out of convenience.
         match &unsafe { &*f } {
             Func::Module(f) => {
-                // For now, JIT compilation only works on macOS
-                #[cfg(target_arch = "aarch64")]
-                match jit::Compiler::new().compile(&f.code) {
-                    Ok(executable) => {
-                        info!("successfully JIT compiled function");
-                        executable.run();
-                        return Ok(());
-                    }
-                    Err(e) => {
-                        warn!("failed to JIT compile function: {e}");
-                    }
-                }
-
                 // Args should already be on the stack (due to validation), so push locals
                 let mut pushed_locals = 0;
                 for NumLocals { num, locals_type } in &f.code.locals {
@@ -192,6 +179,21 @@ impl<'s> Vm<'s> {
 
                 // Base pointer, used to get locals and arguments
                 let bp = self.stack.len() - f.ty.0.len() - pushed_locals;
+
+                // For now, JIT compilation only works on macOS
+                #[cfg(target_arch = "aarch64")]
+                match jit::Compiler::new().compile(&f.code) {
+                    Ok(executable) => {
+                        info!("successfully JIT compiled function");
+                        executable.run(self, bp, f.ty.1.len());
+                        self.clear_block(bp, f.ty.1.len());
+                        return Ok(());
+                    }
+                    Err(e) => {
+                        warn!("failed to JIT compile function: {e}");
+                    }
+                }
+
                 self.labels.push(Label {
                     arity: f.ty.1.len(),
                     cont_arity: f.ty.1.len(),
@@ -216,7 +218,7 @@ impl<'s> Vm<'s> {
                     // reach this, we allocate more stack space (1mb in this case).
                     //
                     // This behavior is **not** present in release mode.
-                    stacker::maybe_grow(64 * 1024, 1024 * 1024, || -> Result<()> {
+                    stacker::maybe_grow(128 * 1024, 1024 * 1024, || -> Result<()> {
                         self.execute(&f.code.body)
                     })?;
                 } else {
