@@ -1,4 +1,6 @@
 mod assembler;
+#[cfg(test)]
+mod debug;
 mod executable;
 
 use std::{cmp::Reverse, collections::BinaryHeap};
@@ -39,6 +41,22 @@ impl Compiler {
         let mut free = FreeMem::default();
         let mut total_stack_size = 0;
 
+        macro_rules! binop {
+            ($method:ident or $fold:ident) => {{
+                let rhs = used.pop().unwrap();
+                let lhs = used.pop().unwrap();
+                if let (Operand::Imm64(rhs), Operand::Imm64(lhs)) = (rhs, lhs) {
+                    used.push(Operand::Imm64(lhs.$fold(rhs)));
+                } else {
+                    free.release(rhs);
+                    free.release(lhs);
+                    self.asm.$method(free.current, lhs, rhs);
+                    used.push(free.current);
+                    free.next_free();
+                }
+            }};
+        }
+
         // This nop will be patched to subtract the stack size from the stack pointer later.
         self.asm.nop();
         for instr in &code.body {
@@ -52,32 +70,8 @@ impl Compiler {
                 I::I32Const(val) => {
                     used.push(Operand::Imm64(val as u64));
                 }
-                I::I32Add => {
-                    let rhs = used.pop().unwrap();
-                    let lhs = used.pop().unwrap();
-                    if let (Operand::Imm64(rhs), Operand::Imm64(lhs)) = (rhs, lhs) {
-                        used.push(Operand::Imm64(lhs.saturating_add(rhs)));
-                    } else {
-                        free.release(rhs);
-                        free.release(lhs);
-                        self.asm.add(free.current, lhs, rhs);
-                        used.push(free.current);
-                        free.next_free();
-                    }
-                }
-                I::I32Sub => {
-                    let rhs = used.pop().unwrap();
-                    let lhs = used.pop().unwrap();
-                    if let (Operand::Imm64(rhs), Operand::Imm64(lhs)) = (rhs, lhs) {
-                        used.push(Operand::Imm64(lhs.saturating_sub(rhs)));
-                    } else {
-                        free.release(rhs);
-                        free.release(lhs);
-                        self.asm.sub(free.current, lhs, rhs);
-                        used.push(free.current);
-                        free.next_free();
-                    }
-                }
+                I::I32Add => binop!(add or saturating_add),
+                I::I32Sub => binop!(sub or saturating_sub),
                 I::LocalSet { idx } => {
                     let reg = used.pop().unwrap();
                     free.release(reg);
@@ -194,9 +188,9 @@ impl FreeMem {
 mod tests {
     use shwasi_parser::InstrBuffer;
 
-    use crate::{value::ValueUntyped, Value};
-
     use super::*;
+    use crate::{value::ValueUntyped, Value};
+    use debug::asm_assert_eq;
 
     #[test]
     fn simple() {
@@ -254,5 +248,26 @@ mod tests {
         let mut out = [ValueUntyped::default(); 2];
         executable.run_with(&mut locals, &mut out);
         assert_eq!([Value::I32(42).untyped(), Value::I32(32).untyped()], out);
+    }
+
+    #[test]
+    fn constant_folding() {
+        let code = Code {
+            body: InstrBuffer::from_iter([
+                Instruction::I32Const(32),
+                Instruction::I32Const(10),
+                Instruction::I32Add,
+                Instruction::I32Const(32),
+                Instruction::I32Sub,
+                Instruction::End,
+            ]),
+            locals: vec![],
+        };
+        let compiler = Compiler::new();
+        let executable = compiler.compile(&code).unwrap();
+        asm_assert_eq!(
+            &[0xd503201f, 0xd2800158, 0xf9000038, 0xd65f03c0],
+            executable.as_bytes()
+        );
     }
 }

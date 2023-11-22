@@ -16,6 +16,7 @@ libc = "0.2.150"
 [dev-dependencies]
 capstone = "0.11.0"
 criterion.workspace = true
+pretty_assertions = "1.4.0"
 
 [[bench]]
 name = "benchmark"

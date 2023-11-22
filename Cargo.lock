@@ -1164,6 +1164,7 @@ dependencies = [
  "criterion",
  "libc",
  "paste",
+ "pretty_assertions",
  "shwasi-parser",
  "stacker",
  "thiserror",

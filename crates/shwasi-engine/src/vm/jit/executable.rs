@@ -115,6 +115,14 @@ impl Executable {
         (self.code)(locals_ptr, out_ptr);
     }
 
+    /// Returns a slice of the executable memory region.
+    #[cfg(test)]
+    pub fn as_bytes(&self) -> &[u8] {
+        // SAFETY: self.code is a function pointer to the executable memory region. It should be
+        // safe to cast it to a pointer to u8, since it is a pointer to memory.
+        unsafe { slice::from_raw_parts(self.code as *const u8, self.size) }
+    }
+
     #[cfg(test)]
     pub(crate) fn run_with(&self, locals: &mut [ValueUntyped], out: &mut [ValueUntyped]) {
         let locals_ptr = locals.as_ptr();
