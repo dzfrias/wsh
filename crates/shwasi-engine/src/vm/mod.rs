@@ -1,4 +1,4 @@
-#[cfg(target_os = "macos")]
+#[cfg(target_arch = "aarch64")]
 mod jit;
 mod ops;
 
@@ -180,7 +180,7 @@ impl<'s> Vm<'s> {
                 // Base pointer, used to get locals and arguments
                 let bp = self.stack.len() - f.ty.0.len() - pushed_locals;
 
-                // For now, JIT compilation only works on macOS
+                // For now, JIT compilation only works on aarch64 platforms
                 #[cfg(target_arch = "aarch64")]
                 match jit::Compiler::new().compile(&f.code) {
                     Ok(executable) => {
