@@ -45,6 +45,22 @@ pub struct Assembler {
     addr_offset: u64,
 }
 
+fn split_u64<const N: usize, const A: usize>(input: u64) -> [u64; A] {
+    let mut result = [0; A];
+    let mask: u64 = !0 >> (64 - N);
+    let mut shift = 0;
+    let mut i = 0;
+
+    while i < A {
+        let part = (input >> shift) & mask;
+        result[i] = part;
+        shift += N;
+        i += 1;
+    }
+
+    result
+}
+
 impl Assembler {
     pub fn new() -> Self {
         Self {
@@ -54,28 +70,30 @@ impl Assembler {
     }
 
     /// Return the assembled code.
-    pub fn consume(self) -> Vec<u8> {
-        self.out
+    pub fn consume(&mut self) -> Vec<u8> {
+        std::mem::take(&mut self.out)
     }
 
     pub fn mov(&mut self, dst: impl Into<Operand>, src: impl Into<Operand>) {
         match (dst.into(), src.into()) {
             (Operand::Reg(reg), Operand::Imm64(imm64)) => {
-                let low = (imm64 & 0xffff) as u32;
-                let mid_low = ((imm64 >> 16) & 0xffff) as u32;
-                let mid_high = ((imm64 >> 32) & 0xffff) as u32;
-                let high = ((imm64 >> 48) & 0xffff) as u32;
+                let [low, mid_low, mid_high, high] = split_u64::<16, 4>(imm64);
                 // mov (immediate)
-                self.emit_u32(0xd2800000 | (low << 5) | reg as u32);
-                // The following are movk's that shift incrementally
+                self.emit_u32(0xd2800000 | ((low as u32) << 5) | reg as u32);
+                // The following are movk's that shift incrementally. We don't want to compile them
+                // if the immediate's bits are representable by just the least significant 16.
                 if mid_low != 0 {
-                    self.emit_u32(0xf2000000 | (0b101 << 21) | (mid_low << 5) | reg as u32);
+                    self.emit_u32(
+                        0xf2000000 | (0b101 << 21) | ((mid_low as u32) << 5) | reg as u32,
+                    );
                 }
                 if mid_high != 0 {
-                    self.emit_u32(0xf2000000 | (0b110 << 21) | (mid_high << 5) | reg as u32);
+                    self.emit_u32(
+                        0xf2000000 | (0b110 << 21) | ((mid_high as u32) << 5) | reg as u32,
+                    );
                 }
                 if high != 0 {
-                    self.emit_u32(0xf2000000 | (0b111 << 21) | (high << 5) | reg as u32);
+                    self.emit_u32(0xf2000000 | (0b111 << 21) | ((high as u32) << 5) | reg as u32);
                 }
             }
             (Operand::Reg(dst), Operand::Reg(src)) => {
@@ -135,8 +153,8 @@ impl Assembler {
         rhs: impl Into<Operand>,
     ) {
         let old_dst = dst.into();
-        let dst_reg = self.dst_reg(old_dst);
-        let (lhs, rhs) = self.register_or_immediate(lhs, rhs);
+        let dst_reg = self.resolve_dst(old_dst);
+        let (lhs, rhs) = self.resolve(lhs, rhs);
         match (lhs, rhs) {
             (Operand::Reg(lhs), Operand::Reg(rhs)) => {
                 self.emit_u32(
@@ -144,10 +162,17 @@ impl Assembler {
                 );
             }
             (Operand::Reg(lhs), Operand::Imm64(rhs)) => {
-                // TODO: split up imm64 so that this actually works
-                self.emit_u32(
-                    0x91000000 | (rhs as u32) << 10 | (lhs as u32) << 5 | (dst_reg as u32),
-                );
+                // 4095 is 2 ^ 12 - 1, which is the maximum value that can be represented in 12
+                // bits. The add immediate instruction only supports 12 bits, so in case our rhs >
+                // 4095, we need to move it to a temporary register, then add it.
+                if rhs > 4095 {
+                    self.mov(Reg::LoadTemp, rhs);
+                    self.add(dst_reg, lhs, Reg::LoadTemp);
+                } else {
+                    self.emit_u32(
+                        0x91000000 | (rhs as u32) << 10 | (lhs as u32) << 5 | (dst_reg as u32),
+                    );
+                }
             }
             (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
                 self.mov(dst_reg, lhs.saturating_add(rhs));
@@ -165,7 +190,19 @@ impl Assembler {
 
     #[allow(dead_code)]
     pub fn eq(&mut self, lhs: impl Into<Operand>, rhs: impl Into<Operand>) {
-        let (op, rhs) = self.register_or_immediate(lhs, rhs);
+        let (op, rhs) = self.resolve(lhs, rhs);
+        // TODO: turn these into subs instructions into a destination instead of cmp.
+        //
+        // cmp is a special instruction that sets the flags register, but doesn't write to a
+        // general purpose one. Because of this, it can't actually be used as a value on the stack.
+        // i32.const 10
+        // i32.eqz
+        // i32.add 1
+        // Would just not work.
+        // Instead, we need to put it into a register, so that it's an actual value. A potential
+        // optimization would be to use cmp, but for now that's way too complicated and would be
+        // better if it was done a pass in register machine form. Performing the operation in
+        // register form would be much easier than in stack form.
         match (op, rhs) {
             (Operand::Reg(lhs), Operand::Reg(rhs)) => {
                 self.emit_u32(0xeb00001f | (rhs as u32) << 16 | (lhs as u32) << 5);
@@ -173,8 +210,9 @@ impl Assembler {
             (Operand::Reg(lhs), Operand::Imm64(rhs)) => {
                 self.emit_u32(0xf100001f | (rhs as u32) << 10 | (lhs as u32) << 5);
             }
-            (Operand::Imm64(_), Operand::Imm64(_)) => {
-                panic!("cannot compare two immediates");
+            (Operand::Imm64(a), Operand::Imm64(b)) => {
+                self.mov(Reg::LoadTemp, a);
+                self.eq(Reg::LoadTemp, b);
             }
             (op1, op2) => {
                 self.eq(op2, op1);
@@ -189,29 +227,32 @@ impl Assembler {
         rhs: impl Into<Operand>,
     ) {
         let old_dst = dst.into();
-        let dst_reg = self.dst_reg(old_dst);
-        let (lhs, rhs) = self.register_or_immediate(lhs, rhs);
+        let dst = self.resolve_dst(old_dst);
+        let (lhs, rhs) = self.resolve(lhs, rhs);
         match (lhs, rhs) {
             (Operand::Reg(lhs), Operand::Reg(rhs)) => {
-                self.emit_u32(
-                    0xcb000000 | (rhs as u32) << 16 | (lhs as u32) << 5 | (dst_reg as u32),
-                );
+                self.emit_u32(0xcb000000 | (rhs as u32) << 16 | (lhs as u32) << 5 | (dst as u32));
             }
             (Operand::Reg(lhs), Operand::Imm64(rhs)) => {
-                // TODO: split up imm64 so that this actually works
-                self.emit_u32(
-                    0xd1000000 | (rhs as u32) << 10 | (lhs as u32) << 5 | (dst_reg as u32),
-                );
+                // We do this for the same reason as in `add`. See the comment there for details.
+                if rhs > 4095 {
+                    self.mov(Reg::LoadTemp, rhs);
+                    self.sub(dst, lhs, Reg::LoadTemp);
+                } else {
+                    self.emit_u32(
+                        0xd1000000 | (rhs as u32) << 10 | (lhs as u32) << 5 | (dst as u32),
+                    );
+                }
             }
             (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
-                self.mov(dst_reg, lhs.saturating_sub(rhs));
+                self.mov(dst, lhs.saturating_sub(rhs));
             }
             (op1, op2) => {
-                self.sub(dst_reg, op2, op1);
+                self.sub(dst, op2, op1);
             }
         }
         if let Operand::Mem64(base, offset) = old_dst {
-            self.store(offset as u32, base, dst_reg);
+            self.store(offset as u32, base, dst);
         }
     }
 
@@ -260,11 +301,11 @@ impl Assembler {
     }
 
     /// Returns the register, or loads it into a temporary register if it is a memory offset.
-    /// [`Reg::LoadTemp3`] is used as a temporary register.
+    /// [`Reg::LoadTemp3`] is used as the temporary register.
     ///
     /// # Panics
     /// Panics if the operand is an immediate.
-    fn dst_reg(&mut self, op: impl Into<Operand>) -> Reg {
+    fn resolve_dst(&mut self, op: impl Into<Operand>) -> Reg {
         match op.into() {
             Operand::Reg(reg) => reg,
             Operand::Mem64(base, offset) => {
@@ -279,11 +320,7 @@ impl Assembler {
     /// Immediates are unchanged.
     ///
     /// Specifically, [`Reg::LoadTemp`] and [`Reg::LoadTemp2`] are used as temporary registers.
-    fn register_or_immediate(
-        &mut self,
-        lhs: impl Into<Operand>,
-        rhs: impl Into<Operand>,
-    ) -> (Operand, Operand) {
+    fn resolve(&mut self, lhs: impl Into<Operand>, rhs: impl Into<Operand>) -> (Operand, Operand) {
         let mut result = (lhs.into(), rhs.into());
         let mut used_load_temp = false;
         if let Operand::Mem64(base, offset) = result.0 {
@@ -358,9 +395,10 @@ mod tests {
     #[test]
     fn add() {
         let mut asm = Assembler::new();
-        asm.add(Reg::GPR0, Reg::GPR0, Reg::GPR1);
+        // Immediate < 4095
+        asm.add(Reg::GPR0, Reg::GPR0, 1);
         let code = asm.consume();
-        asm_assert_eq!(&[0x8b090108], &code);
+        asm_assert_eq!(&[0x91000508], &code);
     }
 
     #[test]
@@ -391,5 +429,40 @@ mod tests {
         asm.eq(Reg::GPR1, Reg::GPR0);
         let code = asm.consume();
         asm_assert_eq!(&[0xf103e93f, 0xeb08013f], &code);
+    }
+
+    #[test]
+    fn big_add() {
+        let mut asm = Assembler::new();
+        // Immediate > 4095
+        asm.add(Reg::GPR0, Reg::GPR0, u64::MAX);
+        let code = asm.consume();
+        // Should mov into a temporary register, then add
+        asm_assert_eq!(
+            &[0xd29ffff8, 0xf2bffff8, 0xf2dffff8, 0xf2fffff8, 0x8b180108],
+            &code
+        );
+    }
+
+    #[test]
+    fn small_sub() {
+        let mut asm = Assembler::new();
+        // Immediate < 4095
+        asm.sub(Reg::GPR0, Reg::GPR0, 1);
+        let code = asm.consume();
+        asm_assert_eq!(&[0xd1000508], &code);
+    }
+
+    #[test]
+    fn big_sub() {
+        let mut asm = Assembler::new();
+        // Immediate > 4095
+        asm.sub(Reg::GPR0, Reg::GPR0, u64::MAX);
+        let code = asm.consume();
+        // Should mov into a temporary register, then sub
+        asm_assert_eq!(
+            &[0xd29ffff8, 0xf2bffff8, 0xf2dffff8, 0xf2fffff8, 0xcb180108],
+            &code
+        );
     }
 }

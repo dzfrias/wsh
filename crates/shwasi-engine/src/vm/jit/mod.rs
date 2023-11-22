@@ -161,8 +161,10 @@ impl Compiler {
                         }
                         // Implicit return
                         Opcode::Call => {
+                            // TODO: maybe this can be removed?
                             self.used
                                 .drain(label.stack_height..self.used.len() - label.arity);
+                            // Set return vals
                             for (offset, op) in self.used.iter().enumerate() {
                                 self.asm.store(offset as u32, Reg::OutBase, *op);
                             }
