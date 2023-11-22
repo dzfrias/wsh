@@ -5,10 +5,12 @@ pub enum Reg {
     GPR0 = 8,
     GPR1 = 9,
     GPR2 = 10,
-    /// A temporary register used for loading and storing memory.
+    /// A temporary register used for moving memory around.
     LoadTemp = 24,
-    /// A temporary register used for loading and storing memory.
+    /// A temporary register used for moving memory around.
     LoadTemp2 = 25,
+    /// A temporary register used for moving memory around.
+    LoadTemp3 = 26,
 
     Sp = 31,
 
@@ -39,23 +41,6 @@ pub enum Operand {
     Mem64(Reg, u64),
 }
 
-impl Operand {
-    pub fn next_free(&mut self) {
-        match self {
-            Self::Reg(reg) => match reg {
-                Reg::GPR0 => *self = Self::Reg(Reg::GPR1),
-                Reg::GPR1 => *self = Self::Reg(Reg::GPR2),
-                // Use stack space when there are no more GPRs
-                Reg::GPR2 => *self = Self::Mem64(Reg::Sp, 0),
-                _ => panic!("invalid register"),
-            },
-            Self::Mem64(Reg::Sp, offset) => *offset += 1,
-            Self::Mem64(reg, _) => panic!("mem invalid register: {reg:?}"),
-            Self::Imm64(_) => panic!("cannot increment an immediate"),
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct Assembler {
     out: Vec<u8>,
@@ -64,6 +49,11 @@ pub struct Assembler {
 impl Assembler {
     pub fn new() -> Self {
         Self { out: Vec::new() }
+    }
+
+    /// Return the assembled code.
+    pub fn consume(self) -> Vec<u8> {
+        self.out
     }
 
     pub fn mov(&mut self, dst: impl Into<Operand>, src: impl Into<Operand>) {
@@ -76,9 +66,15 @@ impl Assembler {
                 // mov (immediate)
                 self.emit_u32(0xd2800000 | (low << 5) | reg as u32);
                 // The following are movk's that shift incrementally
-                self.emit_u32(0xf2000000 | (0b101 << 21) | (mid_low << 5) | reg as u32);
-                self.emit_u32(0xf2000000 | (0b110 << 21) | (mid_high << 5) | reg as u32);
-                self.emit_u32(0xf2000000 | (0b111 << 21) | (high << 5) | reg as u32);
+                if mid_low != 0 {
+                    self.emit_u32(0xf2000000 | (0b101 << 21) | (mid_low << 5) | reg as u32);
+                }
+                if mid_high != 0 {
+                    self.emit_u32(0xf2000000 | (0b110 << 21) | (mid_high << 5) | reg as u32);
+                }
+                if high != 0 {
+                    self.emit_u32(0xf2000000 | (0b111 << 21) | (high << 5) | reg as u32);
+                }
             }
             (Operand::Reg(dst), Operand::Reg(src)) => {
                 // mov (reg)
@@ -86,14 +82,14 @@ impl Assembler {
             }
             (Operand::Mem64(base, offset), Operand::Imm64(imm64)) => {
                 // mov into memory is equivalent to a store.
-                self.emit_store(offset as u32, base, imm64);
+                self.store(offset as u32, base, imm64);
             }
             (dst, src) => panic!("unsupported mov operands: {:?} and {:?}", dst, src),
         }
     }
 
     pub fn load_local(&mut self, dst: impl Into<Operand>, idx: u32) {
-        self.emit_load(idx, Reg::LocalsArrayBase, dst);
+        self.load(dst, idx, Reg::LocalsArrayBase);
     }
 
     pub fn nop(&mut self) {
@@ -104,97 +100,122 @@ impl Assembler {
         self.emit_u32(0xd65f03c0);
     }
 
-    /// Return the assembled code.
-    pub fn consume(self) -> Vec<u8> {
-        self.out
-    }
-
     pub fn store_local(&mut self, idx: u32, from: impl Into<Operand>) {
-        self.emit_store(idx, Reg::LocalsArrayBase, from);
+        self.store(idx, Reg::LocalsArrayBase, from);
     }
 
-    pub fn add(&mut self, dst: impl Into<Operand>, src: impl Into<Operand>) {
-        match (dst.into(), src.into()) {
-            (Operand::Reg(dst), Operand::Reg(src)) => {
-                // add dst, dst, src
-                self.emit_u32(0x8b000000 | (src as u32) << 16 | (dst as u32) << 5 | (dst as u32));
-            }
-            (Operand::Reg(dst), Operand::Imm64(imm64)) => {
-                // add dst, dst, imm64
-                // TODO: split up imm64 so that this actually works
-                self.emit_u32(0x91000000 | (imm64 as u32) << 10 | (dst as u32) << 5 | (dst as u32));
-            }
-            (Operand::Mem64(base, offset), Operand::Mem64(base2, offset2)) => {
-                self.emit_load(offset as u32, base, Reg::LoadTemp);
-                self.emit_load(offset2 as u32, base2, Reg::LoadTemp2);
-                self.add(Reg::LoadTemp, Reg::LoadTemp2);
-                self.emit_store(offset as u32, base, Reg::LoadTemp);
-            }
-            (op1, op2) => panic!("unsupported add operands: {op1:?} and {op2:?}"),
-        }
-    }
-
-    pub fn sub(&mut self, dst: impl Into<Operand>, src: impl Into<Operand>) {
-        match (dst.into(), src.into()) {
-            (Operand::Reg(dst), Operand::Reg(src)) => {
-                // sub dst, dst, src
-                self.emit_u32(0xcb000000 | (src as u32) << 16 | (dst as u32) << 5 | (dst as u32));
-            }
-            (Operand::Reg(dst), Operand::Imm64(imm64)) => {
-                // sub dst, dst, imm64
-                // TODO: split up imm64 so that this actually works
-                self.emit_u32(0xd1000000 | (imm64 as u32) << 10 | (dst as u32) << 5 | (dst as u32));
-            }
-            _ => todo!(),
-        }
-    }
-
-    pub fn stack_reserve(&mut self, patch_idx: usize, size: u64) {
-        // sub sp, sp, size
-        // TODO: size should be split up
-        self.patch(
-            patch_idx,
-            0xd1000000 | (size as u32) << 10 | (Reg::Sp as u32) << 5 | (Reg::Sp as u32),
-        );
-    }
-
-    pub fn stack_restore(&mut self, size: u64) {
-        // add sp, sp, size
-        self.add(Reg::Sp, size);
+    /// Patch a set of instructions at the given index. Anything called in the given function will
+    /// be redirected to the patch index.
+    pub fn patch<F>(&mut self, idx: u32, patch_fn: F)
+    where
+        F: FnOnce(&mut Self),
+    {
+        let mut patch = Self::new();
+        patch_fn(&mut patch);
+        let patch = patch.consume();
+        self.out[idx as usize..idx as usize + patch.len()].copy_from_slice(&patch);
     }
 
     pub fn store_return(&mut self, idx: u32, src: impl Into<Operand>) {
-        self.emit_store(idx, Reg::OutBase, src);
+        self.store(idx, Reg::OutBase, src);
     }
 
-    fn emit_store(&mut self, idx: u32, base: Reg, src: impl Into<Operand>) {
+    pub fn add(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+    ) {
+        let old_dst = dst.into();
+        let dst_reg = self.dst_reg(old_dst);
+        let (lhs, rhs) = self.register_or_immediate(lhs, rhs);
+        match (lhs, rhs) {
+            (Operand::Reg(lhs), Operand::Reg(rhs)) => {
+                self.emit_u32(
+                    0x8b000000 | (rhs as u32) << 16 | (lhs as u32) << 5 | (dst_reg as u32),
+                );
+            }
+            (Operand::Reg(lhs), Operand::Imm64(rhs)) => {
+                // TODO: split up imm64 so that this actually works
+                self.emit_u32(
+                    0x91000000 | (rhs as u32) << 10 | (lhs as u32) << 5 | (dst_reg as u32),
+                );
+            }
+            (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
+                self.mov(dst_reg, lhs.saturating_add(rhs));
+            }
+            (op1, op2) => {
+                // We switch the operands here. This really only accounts for one case (the second
+                // one in this match arm), but it's easier to just switch them here than to repeat.
+                self.add(dst_reg, op2, op1);
+            }
+        }
+        if let Operand::Mem64(base, offset) = old_dst {
+            self.store(offset as u32, base, dst_reg);
+        }
+    }
+
+    pub fn sub(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+    ) {
+        let old_dst = dst.into();
+        let dst_reg = self.dst_reg(old_dst);
+        let (lhs, rhs) = self.register_or_immediate(lhs, rhs);
+        match (lhs, rhs) {
+            (Operand::Reg(lhs), Operand::Reg(rhs)) => {
+                self.emit_u32(
+                    0xcb000000 | (rhs as u32) << 16 | (lhs as u32) << 5 | (dst_reg as u32),
+                );
+            }
+            (Operand::Reg(lhs), Operand::Imm64(rhs)) => {
+                // TODO: split up imm64 so that this actually works
+                self.emit_u32(
+                    0xd1000000 | (rhs as u32) << 10 | (lhs as u32) << 5 | (dst_reg as u32),
+                );
+            }
+            (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
+                self.mov(dst_reg, lhs.saturating_sub(rhs));
+            }
+            (op1, op2) => {
+                self.sub(dst_reg, op2, op1);
+            }
+        }
+        if let Operand::Mem64(base, offset) = old_dst {
+            self.store(offset as u32, base, dst_reg);
+        }
+    }
+
+    pub fn store(&mut self, idx: u32, base: Reg, src: impl Into<Operand>) {
         match src.into() {
             Operand::Reg(src) => {
                 // str src, [base, idx]
                 self.emit_u32(0xf9000000 | (idx << 10) | (base as u32) << 5 | src as u32);
             }
             Operand::Mem64(mem_base, offset) => {
-                self.emit_load(offset as u32, mem_base, Reg::LoadTemp);
+                self.load(Reg::LoadTemp, offset as u32, mem_base);
                 // We effectively store the memory in the new location by copying it from one area
                 // to another.
-                self.emit_store(idx, base, Reg::LoadTemp);
+                self.store(idx, base, Reg::LoadTemp);
             }
             Operand::Imm64(imm64) => {
                 self.mov(Reg::LoadTemp, imm64);
-                self.emit_store(idx, base, Reg::LoadTemp);
+                self.store(idx, base, Reg::LoadTemp);
             }
         }
     }
 
-    fn emit_load(&mut self, idx: u32, base: Reg, dst: impl Into<Operand>) {
+    pub fn load(&mut self, dst: impl Into<Operand>, idx: u32, base: Reg) {
         match dst.into() {
             Operand::Reg(dst) => {
                 // ldr dst, [base, idx]
                 self.emit_u32(0xf9400000 | (idx << 10) | (base as u32) << 5 | dst as u32);
             }
             Operand::Mem64(mem_base, offset) => {
-                self.emit_load(idx, base, Reg::LoadTemp);
-                self.emit_store(offset as u32, mem_base, Reg::LoadTemp);
+                self.load(Reg::LoadTemp, idx, base);
+                self.store(offset as u32, mem_base, Reg::LoadTemp);
             }
             Operand::Imm64(_) => panic!("cannot load into an immediate"),
         }
@@ -211,11 +232,48 @@ impl Assembler {
         self.emit(((u >> 24) & 0xff) as u8);
     }
 
-    fn patch(&mut self, patch: usize, u: u32) {
-        self.out[patch] = (u & 0xff) as u8;
-        self.out[patch + 1] = ((u >> 8) & 0xff) as u8;
-        self.out[patch + 2] = ((u >> 16) & 0xff) as u8;
-        self.out[patch + 3] = ((u >> 24) & 0xff) as u8;
+    /// Returns the register, or loads it into a temporary register if it is a memory offset.
+    /// [`Reg::LoadTemp3`] is used as a temporary register.
+    ///
+    /// # Panics
+    /// Panics if the operand is an immediate.
+    fn dst_reg(&mut self, op: impl Into<Operand>) -> Reg {
+        match op.into() {
+            Operand::Reg(reg) => reg,
+            Operand::Mem64(base, offset) => {
+                self.load(Reg::LoadTemp3, offset as u32, base);
+                Reg::LoadTemp3
+            }
+            Operand::Imm64(_) => panic!("cannot use an immediate as a register"),
+        }
+    }
+
+    /// Returns the operands as registers, or loads them into registers if they are memory offsets.
+    /// Immediates are unchanged.
+    ///
+    /// Specifically, [`Reg::LoadTemp`] and [`Reg::LoadTemp2`] are used as temporary registers.
+    fn register_or_immediate(
+        &mut self,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+    ) -> (Operand, Operand) {
+        let mut result = (lhs.into(), rhs.into());
+        let mut used_load_temp = false;
+        if let Operand::Mem64(base, offset) = result.0 {
+            self.load(Reg::LoadTemp, offset as u32, base);
+            result.0 = Reg::LoadTemp.into();
+            used_load_temp = true;
+        }
+        if let Operand::Mem64(base, offset) = result.1 {
+            let dst = if used_load_temp {
+                Reg::LoadTemp2.into()
+            } else {
+                Reg::LoadTemp.into()
+            };
+            self.load(dst, offset as u32, base);
+            result.1 = dst;
+        }
+        result
     }
 }
 
@@ -223,72 +281,88 @@ impl Assembler {
 mod tests {
     use std::fmt;
 
+    use capstone::prelude::*;
+
     use super::*;
 
     /// Wrapper around a vector of u32s that implements prints as hex.
     #[derive(PartialEq)]
-    struct Hex(Vec<u32>);
+    struct Hex<'a>(&'a [u8]);
 
-    impl fmt::Debug for Hex {
+    impl fmt::Display for Hex<'_> {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            fmt::Display::fmt(self, f)
-        }
-    }
-
-    impl fmt::Display for Hex {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            writeln!(f)?;
-            for op in &self.0 {
-                writeln!(f, "{:x}", op)?;
+            for b in to_32(self.0) {
+                write!(f, "{:x}", b)?;
             }
             Ok(())
         }
     }
 
-    #[derive(PartialEq)]
-    /// Wrapper around a vector of u32s that implements prints as binary.
-    struct Binary(Vec<u32>);
-
-    impl fmt::Debug for Binary {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            fmt::Display::fmt(self, f)
+    fn to_32(bytes: &[u8]) -> &[u32] {
+        unsafe {
+            std::slice::from_raw_parts(
+                bytes.as_ptr().cast::<u32>(),
+                bytes.len() / std::mem::size_of::<u32>(),
+            )
         }
     }
 
-    impl fmt::Display for Binary {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            writeln!(f)?;
-            for op in &self.0 {
-                writeln!(f, "{:b}", op)?;
+    fn to_8(bytes: &[u32]) -> &[u8] {
+        unsafe {
+            std::slice::from_raw_parts(bytes.as_ptr().cast::<u8>(), std::mem::size_of_val(bytes))
+        }
+    }
+
+    macro_rules! pretty_assert_eq {
+        ($left:expr, $right:expr) => {
+            if $left != to_32($right) {
+                let capstone = Capstone::new()
+                    .arm64()
+                    .mode(capstone::arch::arm64::ArchMode::Arm)
+                    .build()
+                    .unwrap();
+                let got_instrs = capstone.disasm_all($right, 0x1000).unwrap();
+                let expect_instrs = capstone.disasm_all(&to_8($left), 0x1000).unwrap();
+                panic!(
+                    "assertion failed:
+got:
+{}
+want:
+{}",
+                    got_instrs.iter().fold(String::new(), |acc, i| format!(
+                        "{acc} 0x{:x}  {}    {} {}\n",
+                        i.address(),
+                        Hex(i.bytes()),
+                        i.mnemonic().unwrap(),
+                        i.op_str().unwrap(),
+                    )),
+                    expect_instrs.iter().fold(String::new(), |acc, i| format!(
+                        "{acc} 0x{:x}  {}    {} {}\n",
+                        i.address(),
+                        Hex(i.bytes()),
+                        i.mnemonic().unwrap(),
+                        i.op_str().unwrap(),
+                    )),
+                );
             }
-            Ok(())
-        }
-    }
-
-    fn to_32(bytes: &[u8]) -> Vec<u32> {
-        bytes
-            .chunks(4)
-            .map(|w| u32::from_le_bytes(w.try_into().unwrap()))
-            .collect()
+        };
+        () => {};
     }
 
     #[test]
     fn mov_imm64() {
         let mut asm = Assembler::new();
         asm.mov(Reg::GPR0, 0xbabecafef00dface);
-        let code = to_32(&asm.consume());
-        assert_eq!(
-            Hex(code),
-            Hex(vec![0xd29f59c8, 0xf2be01a8, 0xf2d95fc8, 0xf2f757c8])
-        );
+        let code = asm.consume();
+        pretty_assert_eq!(&[0xd29f59c8, 0xf2be01a8, 0xf2d95fc8, 0xf2f757c8], &code);
     }
 
     #[test]
     fn mov_reg() {
         let mut asm = Assembler::new();
         asm.mov(Reg::GPR0, Reg::GPR0);
-        let code = to_32(&asm.consume());
-        assert_eq!(Hex(code), Hex(vec![0xaa0803e8]));
+        let code = asm.consume();
+        pretty_assert_eq!(&[0xaa0803e8], &code);
     }
 
     #[test]
@@ -297,8 +371,8 @@ mod tests {
         asm.load_local(Reg::GPR0, 0);
         asm.load_local(Reg::GPR1, 1);
         asm.load_local(Reg::GPR2, 2);
-        let code = to_32(&asm.consume());
-        assert_eq!(Hex(code), Hex(vec![0xf9400008, 0xf9400409, 0xf940080a]));
+        let code = asm.consume();
+        pretty_assert_eq!(&[0xf9400008, 0xf9400409, 0xf940080a], &code);
     }
 
     #[test]
@@ -307,8 +381,8 @@ mod tests {
         asm.store_local(0, Reg::GPR0);
         asm.store_local(1, Reg::GPR0);
         asm.store_local(2, Reg::GPR0);
-        let code = to_32(&asm.consume());
-        assert_eq!(Hex(code), Hex(vec![0xf9000008, 0xf9000408, 0xf9000808]));
+        let code = asm.consume();
+        pretty_assert_eq!(&[0xf9000008, 0xf9000408, 0xf9000808], &code);
     }
 
     #[test]
@@ -317,25 +391,36 @@ mod tests {
         asm.store_return(0, Reg::GPR0);
         asm.store_return(1, Reg::GPR0);
         asm.store_return(2, Reg::GPR0);
-        let code = to_32(&asm.consume());
-        assert_eq!(Hex(code), Hex(vec![0xf9000028, 0xf9000428, 0xf9000828]));
+        let code = asm.consume();
+        pretty_assert_eq!(&[0xf9000028, 0xf9000428, 0xf9000828], &code);
     }
 
     #[test]
     fn add() {
         let mut asm = Assembler::new();
-        asm.add(Reg::GPR0, Reg::GPR1);
-        let code = to_32(&asm.consume());
-        assert_eq!(Hex(code), Hex(vec![0x8b090108]));
+        asm.add(Reg::GPR0, Reg::GPR0, Reg::GPR1);
+        let code = asm.consume();
+        pretty_assert_eq!(&[0x8b090108], &code);
     }
 
     #[test]
-    fn stack_reserve_and_restore() {
+    fn add_mem_addrs() {
         let mut asm = Assembler::new();
-        asm.nop();
-        asm.stack_reserve(0, 0x60);
-        asm.stack_restore(0x60);
-        let code = to_32(&asm.consume());
-        assert_eq!(Hex(code), Hex(vec![0xd10183ff, 0x910183ff]));
+        asm.add(
+            Reg::GPR0,
+            Operand::Mem64(Reg::Sp, 0),
+            Operand::Mem64(Reg::Sp, 1),
+        );
+        let code = asm.consume();
+        pretty_assert_eq!(&[0xf94003f8, 0xf94007f9, 0x8b190308], &code);
+    }
+
+    #[test]
+    fn tiny_mov() {
+        let mut asm = Assembler::new();
+        asm.mov(Reg::GPR0, 0x1);
+        let code = asm.consume();
+        // Make sure `asm.mov()` doesn't emit a superfluous `movk` instructions
+        pretty_assert_eq!(&[0xd2800028], &code);
     }
 }
