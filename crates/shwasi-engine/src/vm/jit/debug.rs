@@ -1,4 +1,9 @@
+// We don't care if this is dead code, we use parts of this library ad-hoc.
+#![allow(dead_code)]
+
 use std::fmt;
+
+use capstone::prelude::*;
 
 /// Wrapper around a vector of u32s that prints as hex.
 #[derive(PartialEq)]
@@ -26,6 +31,24 @@ pub fn to_8(bytes: &[u32]) -> &[u8] {
     unsafe { std::slice::from_raw_parts(bytes.as_ptr().cast::<u8>(), std::mem::size_of_val(bytes)) }
 }
 
+pub fn asm_fmt(bytes: &[u8]) -> String {
+    let capstone = Capstone::new()
+        .arm64()
+        .mode(capstone::arch::arm64::ArchMode::Arm)
+        .build()
+        .unwrap();
+    let instrs = capstone.disasm_all(bytes, 0x1000).unwrap();
+    instrs.iter().fold(String::new(), |acc, i| {
+        format!(
+            "{acc} 0x{:x}  {}    {} {}\n",
+            i.address(),
+            Hex(i.bytes()),
+            i.mnemonic().unwrap(),
+            i.op_str().unwrap(),
+        )
+    })
+}
+
 /// Asserts that the two slices of u8s are equal, but prints them as assembly instructions.
 macro_rules! asm_assert_eq {
     ($left:expr, $right:expr) => {
@@ -33,34 +56,11 @@ macro_rules! asm_assert_eq {
 
         let left = to_8($left);
         if left != $right {
-            use ::capstone::prelude::*;
             use ::pretty_assertions::StrComparison;
 
-            let capstone = Capstone::new()
-                .arm64()
-                .mode(capstone::arch::arm64::ArchMode::Arm)
-                .build()
-                .unwrap();
-            let got_instrs = capstone.disasm_all($right, 0x1000).unwrap();
-            let expect_instrs = capstone.disasm_all(left, 0x1000).unwrap();
-            let got_pretty = got_instrs.iter().fold(String::new(), |acc, i| {
-                format!(
-                    "{acc} 0x{:x}  {}    {} {}\n",
-                    i.address(),
-                    Hex(i.bytes()),
-                    i.mnemonic().unwrap(),
-                    i.op_str().unwrap(),
-                )
-            });
-            let expect_pretty = expect_instrs.iter().fold(String::new(), |acc, i| {
-                format!(
-                    "{acc} 0x{:x}  {}    {} {}\n",
-                    i.address(),
-                    Hex(i.bytes()),
-                    i.mnemonic().unwrap(),
-                    i.op_str().unwrap(),
-                )
-            });
+            // TODO: use asm_fmt
+            let got_pretty = asm_fmt($right);
+            let expect_pretty = asm_fmt(left);
             panic!(
                 "assertion failed:\n{}",
                 StrComparison::new(&got_pretty, &expect_pretty)

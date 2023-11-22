@@ -75,18 +75,13 @@ impl StackFrame {
 
 #[derive(Debug)]
 struct Label {
-    /// The arity of the label. This is the "result" of the label. There should be `stack_height +
-    /// arity` values on the stack when the label is popped.
-    ///
-    /// For all blocks, this the arity of the end types (results) of the blocks.
-    arity: usize,
     /// The continuation arity of the label. This is the number of values that should be on the
     /// stack when the label's continuation is jumped to (the return address). This happens when a
     /// branch is taken.
     ///
-    /// For `if`, `block` and function labels, this is the same as the arity. For `loop` labels,
-    /// this is the params of the block.
-    cont_arity: usize,
+    /// For `if`, `block` and function labels, this is the same as the end types. For `loop`
+    /// labels, this is the params of the block.
+    arity: usize,
     /// Return address of the block. In the spec, this is called the continuation.
     ra: usize,
     /// The stack height when the label was pushed
@@ -182,7 +177,7 @@ impl<'s> Vm<'s> {
 
                 // For now, JIT compilation only works on aarch64 platforms
                 #[cfg(target_arch = "aarch64")]
-                match jit::Compiler::new().compile(&f.code) {
+                match jit::Compiler::new(self.frame.module.clone()).compile(f) {
                     Ok(executable) => {
                         info!("successfully JIT compiled function");
                         executable.run(self, bp, f.ty.1.len());
@@ -196,7 +191,6 @@ impl<'s> Vm<'s> {
 
                 self.labels.push(Label {
                     arity: f.ty.1.len(),
-                    cont_arity: f.ty.1.len(),
                     ra: f.code.body.len(),
                     stack_height: bp,
                 });
@@ -301,8 +295,7 @@ impl<'s> Vm<'s> {
                 I::I32DivS => binop!(divs for u32, Trap::DivideByZero),
                 I::I32DivU => binop!(divu for u32, Trap::DivideByZero),
                 I::End => {
-                    let label = self.labels.pop().unwrap();
-                    self.clear_block(label.stack_height, label.arity);
+                    self.labels.pop().unwrap();
                 }
                 I::Else => {
                     let label = self.labels.pop().unwrap();
@@ -324,8 +317,7 @@ impl<'s> Vm<'s> {
                 // Control instructions
                 I::Loop(block) => {
                     self.labels.push(Label {
-                        arity: self.return_arity(block.ty),
-                        cont_arity: self.param_arity(block.ty),
+                        arity: self.param_arity(block.ty),
                         // Return to the beginning of the block
                         ra: ip + 1,
                         stack_height: self.stack.len() - self.param_arity(block.ty),
@@ -334,7 +326,6 @@ impl<'s> Vm<'s> {
                 I::Block(block) => {
                     self.labels.push(Label {
                         arity: self.return_arity(block.ty),
-                        cont_arity: self.return_arity(block.ty),
                         ra: block.end,
                         stack_height: self.stack.len() - self.param_arity(block.ty),
                     });
@@ -349,7 +340,6 @@ impl<'s> Vm<'s> {
 
                     self.labels.push(Label {
                         arity: self.return_arity(block.ty),
-                        cont_arity: self.return_arity(block.ty),
                         ra: block.end,
                         stack_height: self.stack.len() - self.param_arity(block.ty),
                     });
@@ -368,9 +358,7 @@ impl<'s> Vm<'s> {
                     // is safe here.
                     let label = self.labels.last().unwrap();
                     ip = label.ra;
-                    // NOTE: we use cont_arity here. See the comment on the Label struct for more
-                    // details on why.
-                    self.clear_block(label.stack_height, label.cont_arity);
+                    self.clear_block(label.stack_height, label.arity);
                     continue;
                 }
                 I::BrTable(br_table) => {
@@ -384,7 +372,7 @@ impl<'s> Vm<'s> {
                     }
                     let label = self.labels.last().unwrap();
                     ip = label.ra;
-                    self.clear_block(label.stack_height, label.cont_arity);
+                    self.clear_block(label.stack_height, label.arity);
                     continue;
                 }
                 I::BrIf { depth } => {
@@ -395,7 +383,7 @@ impl<'s> Vm<'s> {
                         }
                         let label = self.labels.last().unwrap();
                         ip = label.ra;
-                        self.clear_block(label.stack_height, label.cont_arity);
+                        self.clear_block(label.stack_height, label.arity);
                         continue;
                     }
                 }
@@ -650,7 +638,7 @@ impl<'s> Vm<'s> {
                     // Because functions are never mutated it is safe to think of this as a shared
                     // reference (more or less).
                     //
-                    // Additionall details can be found in the `call` method.
+                    // Additional details can be found in the `call` method.
                     unsafe { self.call_raw(f) }?;
                 }
                 I::LocalGet { idx } => {
@@ -772,7 +760,7 @@ impl<'s> Vm<'s> {
                     // Because functions are never mutated it is safe to think of this as a shared
                     // reference (more or less).
                     //
-                    // Additionall details can be found in the `call` method.
+                    // Additional details can be found in the `call` method.
                     unsafe { self.call_raw(f) }?;
                 }
                 I::TableCopy {
@@ -982,6 +970,7 @@ mod tests {
                 I32Const(2),
                 I32Add,
                 Return,
+                End,
             ],
             [
               I32(3),
@@ -1029,6 +1018,7 @@ mod tests {
                     end: 2,
                 }),
                 I32Const(1),
+                End,
                 End,
             ],
             [

@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Reg {
     GPR0 = 8,
@@ -44,11 +42,15 @@ pub enum Operand {
 #[derive(Debug)]
 pub struct Assembler {
     out: Vec<u8>,
+    addr_offset: u64,
 }
 
 impl Assembler {
     pub fn new() -> Self {
-        Self { out: Vec::new() }
+        Self {
+            out: Vec::new(),
+            addr_offset: 0,
+        }
     }
 
     /// Return the assembled code.
@@ -104,20 +106,26 @@ impl Assembler {
         self.store(idx, Reg::LocalsArrayBase, from);
     }
 
+    pub fn addr(&self) -> u64 {
+        self.addr_offset + self.out.len() as u64
+    }
+
+    pub fn branch(&mut self, to: u64) {
+        let offset = (to - self.addr()) / 4;
+        self.emit_u32(0x14000000 | (offset as u32));
+    }
+
     /// Patch a set of instructions at the given index. Anything called in the given function will
     /// be redirected to the patch index.
-    pub fn patch<F>(&mut self, idx: u32, patch_fn: F)
+    pub fn patch<F>(&mut self, idx: usize, patch_fn: F)
     where
         F: FnOnce(&mut Self),
     {
         let mut patch = Self::new();
+        patch.addr_offset = idx as u64;
         patch_fn(&mut patch);
         let patch = patch.consume();
-        self.out[idx as usize..idx as usize + patch.len()].copy_from_slice(&patch);
-    }
-
-    pub fn store_return(&mut self, idx: u32, src: impl Into<Operand>) {
-        self.store(idx, Reg::OutBase, src);
+        self.out[idx..idx + patch.len()].copy_from_slice(&patch);
     }
 
     pub fn add(
@@ -152,6 +160,25 @@ impl Assembler {
         }
         if let Operand::Mem64(base, offset) = old_dst {
             self.store(offset as u32, base, dst_reg);
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn eq(&mut self, lhs: impl Into<Operand>, rhs: impl Into<Operand>) {
+        let (op, rhs) = self.register_or_immediate(lhs, rhs);
+        match (op, rhs) {
+            (Operand::Reg(lhs), Operand::Reg(rhs)) => {
+                self.emit_u32(0xeb00001f | (rhs as u32) << 16 | (lhs as u32) << 5);
+            }
+            (Operand::Reg(lhs), Operand::Imm64(rhs)) => {
+                self.emit_u32(0xf100001f | (rhs as u32) << 10 | (lhs as u32) << 5);
+            }
+            (Operand::Imm64(_), Operand::Imm64(_)) => {
+                panic!("cannot compare two immediates");
+            }
+            (op1, op2) => {
+                self.eq(op2, op1);
+            }
         }
     }
 
@@ -321,9 +348,9 @@ mod tests {
     #[test]
     fn store_return() {
         let mut asm = Assembler::new();
-        asm.store_return(0, Reg::GPR0);
-        asm.store_return(1, Reg::GPR0);
-        asm.store_return(2, Reg::GPR0);
+        asm.store(0, Reg::OutBase, Reg::GPR0);
+        asm.store(1, Reg::OutBase, Reg::GPR0);
+        asm.store(2, Reg::OutBase, Reg::GPR0);
         let code = asm.consume();
         asm_assert_eq!(&[0xf9000028, 0xf9000428, 0xf9000828], &code);
     }
@@ -355,5 +382,14 @@ mod tests {
         let code = asm.consume();
         // Make sure `asm.mov()` doesn't emit a superfluous `movk` instructions
         asm_assert_eq!(&[0xd2800028], &code);
+    }
+
+    #[test]
+    fn eq() {
+        let mut asm = Assembler::new();
+        asm.eq(Reg::GPR1, 0xfa);
+        asm.eq(Reg::GPR1, Reg::GPR0);
+        let code = asm.consume();
+        asm_assert_eq!(&[0xf103e93f, 0xeb08013f], &code);
     }
 }

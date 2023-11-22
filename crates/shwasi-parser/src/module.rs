@@ -92,7 +92,7 @@ pub enum ValType {
 }
 
 /// A function type.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct FuncType(
     /// The parameters of the function.
     pub Vec<ValType>,

@@ -6,8 +6,10 @@ mod executable;
 use std::{cmp::Reverse, collections::BinaryHeap};
 
 use bitflags::bitflags;
-use shwasi_parser::{Code, Instruction};
+use shwasi_parser::{BlockType, Instruction, Opcode};
 use thiserror::Error;
+
+use crate::{Instance, ModuleFunc};
 
 use self::assembler::*;
 pub use self::executable::*;
@@ -15,6 +17,10 @@ pub use self::executable::*;
 #[derive(Debug)]
 pub struct Compiler {
     asm: Assembler,
+    module: Instance,
+    used: Vec<Operand>,
+    free: FreeMem,
+    labels: Vec<Label>,
 }
 
 #[derive(Debug, Error)]
@@ -26,88 +32,210 @@ pub enum CompilationError {
     UnsupportedInstruction(Instruction),
 }
 
+#[derive(Debug)]
+struct Label {
+    arity: usize,
+    stack_height: usize,
+    opcode: Opcode,
+    to_patch: Vec<(usize, Opcode)>,
+    unreachable: bool,
+    end_loc: usize,
+}
+
 impl Compiler {
-    pub fn new() -> Self {
+    pub fn new(module: Instance) -> Self {
         Self {
             asm: Assembler::new(),
+            module,
+            used: vec![],
+            labels: vec![],
+            free: FreeMem::default(),
         }
     }
 
-    pub fn compile(mut self, code: &Code) -> Result<Executable, CompilationError> {
+    pub fn compile(
+        mut self,
+        ModuleFunc { code, ty, .. }: &ModuleFunc,
+    ) -> Result<Executable, CompilationError> {
         use Instruction as I;
 
-        // `used` holds Memory and registers that are NOT free to use
-        let mut used = Vec::new();
-        let mut free = FreeMem::default();
+        self.labels.push(Label {
+            stack_height: 0,
+            to_patch: vec![],
+            arity: ty.1.len(),
+            opcode: Opcode::Call,
+            unreachable: false,
+            end_loc: code.body.len() - 1,
+        });
         let mut total_stack_size = 0;
 
         macro_rules! binop {
             ($method:ident or $fold:ident) => {{
-                let rhs = used.pop().unwrap();
-                let lhs = used.pop().unwrap();
+                let rhs = self.used.pop().unwrap();
+                let lhs = self.used.pop().unwrap();
                 if let (Operand::Imm64(rhs), Operand::Imm64(lhs)) = (rhs, lhs) {
-                    used.push(Operand::Imm64(lhs.$fold(rhs)));
+                    self.push(Operand::Imm64(lhs.$fold(rhs)));
                 } else {
-                    free.release(rhs);
-                    free.release(lhs);
-                    self.asm.$method(free.current, lhs, rhs);
-                    used.push(free.current);
-                    free.next_free();
+                    self.free.release(rhs);
+                    self.free.release(lhs);
+                    self.asm.$method(self.free.current, lhs, rhs);
+                    self.push(self.free.current);
+                    self.free.next_free();
                 }
             }};
         }
 
         // This nop will be patched to subtract the stack size from the stack pointer later.
         self.asm.nop();
-        for instr in &code.body {
+        for (i, instr) in code.body.iter().enumerate() {
+            // Unreachable instructions should never be compiled.
+            if i != self.labels.last().unwrap().end_loc && self.labels.last().unwrap().unreachable {
+                continue;
+            }
+
             match instr {
                 I::Nop => {}
                 I::LocalGet { idx } => {
-                    self.asm.load_local(free.current, idx);
-                    used.push(free.current);
-                    free.next_free();
+                    self.asm.load_local(self.free.current, idx);
+                    self.push(self.free.current);
+                    self.free.next_free();
                 }
                 I::I32Const(val) => {
-                    used.push(Operand::Imm64(val as u64));
+                    self.push(Operand::Imm64(val as u64));
                 }
                 I::I32Add => binop!(add or saturating_add),
                 I::I32Sub => binop!(sub or saturating_sub),
+                I::Block(block) => {
+                    self.labels.push(Label {
+                        to_patch: vec![],
+                        arity: self.return_arity(block.ty),
+                        // TODO: this will cause trouble in the future. How do we account for
+                        // local and args that are already "on the stack"? Saturating sub?
+                        stack_height: self.used.len() - self.param_arity(block.ty),
+                        opcode: Opcode::Block,
+                        unreachable: false,
+                        end_loc: block.end,
+                    });
+                }
                 I::LocalSet { idx } => {
-                    let reg = used.pop().unwrap();
-                    free.release(reg);
+                    let reg = self.used.pop().unwrap();
+                    self.free.release(reg);
                     self.asm.store_local(idx, reg);
                 }
-                I::End => {
-                    for (offset, op) in used.iter().enumerate() {
-                        self.asm.store(offset as u32, Reg::OutBase, *op);
+                I::Br { depth } => {
+                    for _ in 0..depth {
+                        self.labels.pop();
                     }
-                    break;
+                    let labelty = self.labels.last().unwrap().opcode;
+                    if labelty == Opcode::Call {
+                        self.set_early_return();
+                    } else {
+                        let label = self.labels.last_mut().unwrap();
+                        label.unreachable = true;
+                        self.used
+                            .drain(label.stack_height..self.used.len() - label.arity);
+                        label.to_patch.push((self.asm.addr() as usize, Opcode::Br));
+                        // This will be patched later, at the `end` instruction.
+                        self.asm.branch(0xdeadbeef);
+                    }
+                }
+                I::Return => {
+                    self.labels.drain(1..);
+                    self.set_early_return();
+                }
+                I::End => {
+                    let label = self.labels.pop().unwrap();
+                    let current_addr = self.asm.addr();
+                    match label.opcode {
+                        Opcode::Block => {
+                            for (pos, opcode) in label.to_patch {
+                                self.asm.patch(pos, |asm| match opcode {
+                                    Opcode::Br => {
+                                        asm.branch(current_addr);
+                                    }
+                                    Opcode::BrIf => todo!(),
+                                    Opcode::BrTable => todo!(),
+                                    _ => unreachable!(),
+                                });
+                            }
+                        }
+                        // Implicit return
+                        Opcode::Call => {
+                            self.used
+                                .drain(label.stack_height..self.used.len() - label.arity);
+                            for (offset, op) in self.used.iter().enumerate() {
+                                self.asm.store(offset as u32, Reg::OutBase, *op);
+                            }
+                            let addr = self.asm.addr();
+                            // This is to patch all the early returns
+                            for to_patch in label.to_patch {
+                                self.asm.patch(to_patch.0, |asm| {
+                                    asm.branch(addr);
+                                });
+                            }
+                            if total_stack_size > 0 {
+                                // Align the stack size to 16 bytes
+                                if total_stack_size % 16 != 0 {
+                                    total_stack_size += 8;
+                                }
+                                // Patch the nop
+                                self.asm.patch(0, |asm| {
+                                    asm.sub(Reg::Sp, Reg::Sp, total_stack_size);
+                                });
+                                self.asm.add(Reg::Sp, Reg::Sp, total_stack_size);
+                            }
+                            self.asm.ret();
+                        }
+                        _ => unreachable!(),
+                    }
                 }
                 _ => return Err(CompilationError::UnsupportedInstruction(instr)),
             }
-            if let Operand::Mem64(reg, offset) = free.current {
+            if let Operand::Mem64(reg, offset) = self.free.current {
                 debug_assert!(reg == Reg::Sp);
-                total_stack_size = total_stack_size.max(offset);
+                // times 8 because each mem64 item is 8 bytes
+                total_stack_size = total_stack_size.max(offset * 8);
             }
         }
-        // times 8 because each mem64 item is 8 bytes
-        total_stack_size *= 8;
-        if total_stack_size > 0 {
-            // Align the stack size to 16 bytes
-            if total_stack_size % 16 != 0 {
-                total_stack_size += 8;
-            }
-            // Patch the nop
-            self.asm.patch(0, |asm| {
-                asm.sub(Reg::Sp, Reg::Sp, total_stack_size);
-            });
-            self.asm.add(Reg::Sp, Reg::Sp, total_stack_size);
-        }
-        self.asm.ret();
 
+        let code = self.asm.consume();
         // SAFETY: The code is valid, as long as the assembler and compiler are correct. If they
         // aren't, then that's a bug...
-        unsafe { Executable::map(&self.asm.consume()).map_err(CompilationError::ExecMapError) }
+        unsafe { Executable::map(&code).map_err(CompilationError::ExecMapError) }
+    }
+
+    fn set_early_return(&mut self) {
+        let label = self.labels.last_mut().unwrap();
+        label.unreachable = true;
+        self.used
+            .drain(label.stack_height..self.used.len() - label.arity);
+        for (offset, op) in self.used.iter().enumerate() {
+            self.asm.store(offset as u32, Reg::OutBase, *op);
+        }
+        label.to_patch.push((self.asm.addr() as usize, Opcode::Br));
+        // This will be patched to go to the end of the function.
+        self.asm.branch(0xdeadbeef);
+    }
+
+    fn push(&mut self, op: Operand) {
+        self.used.push(op);
+    }
+
+    #[inline(always)]
+    fn return_arity(&self, blockty: BlockType) -> usize {
+        match blockty {
+            BlockType::Empty => 0,
+            BlockType::Type(_) => 1,
+            BlockType::FuncType(idx) => self.module.types()[idx as usize].1.len(),
+        }
+    }
+
+    #[inline(always)]
+    fn param_arity(&self, blockty: BlockType) -> usize {
+        match blockty {
+            BlockType::Empty | BlockType::Type(_) => 0,
+            BlockType::FuncType(idx) => self.module.types()[idx as usize].0.len(),
+        }
     }
 }
 
@@ -186,7 +314,7 @@ impl FreeMem {
 
 #[cfg(test)]
 mod tests {
-    use shwasi_parser::InstrBuffer;
+    use shwasi_parser::{Block, Code, FuncType, InstrBuffer, ValType};
 
     use super::*;
     use crate::{value::ValueUntyped, Value};
@@ -203,8 +331,14 @@ mod tests {
             ]),
             locals: vec![],
         };
-        let compiler = Compiler::new();
-        let executable = compiler.compile(&code).unwrap();
+        let compiler = Compiler::new(Instance::default());
+        let executable = compiler
+            .compile(&ModuleFunc {
+                ty: FuncType(vec![ValType::I32], vec![ValType::I32]),
+                code,
+                inst: Instance::default(),
+            })
+            .unwrap();
         let mut locals = [ValueUntyped::default()];
         let mut out = [ValueUntyped::default()];
         executable.run_with(&mut locals, &mut out);
@@ -222,8 +356,14 @@ mod tests {
             ]),
             locals: vec![],
         };
-        let compiler = Compiler::new();
-        let executable = compiler.compile(&code).unwrap();
+        let compiler = Compiler::new(Instance::default());
+        let executable = compiler
+            .compile(&ModuleFunc {
+                ty: FuncType(vec![ValType::I32, ValType::I32], vec![ValType::I32]),
+                code,
+                inst: Instance::default(),
+            })
+            .unwrap();
         let mut locals = [Value::I32(10).untyped(), Value::I32(32).untyped()];
         let mut out = [ValueUntyped::default()];
         executable.run_with(&mut locals, &mut out);
@@ -242,8 +382,14 @@ mod tests {
             ]),
             locals: vec![],
         };
-        let compiler = Compiler::new();
-        let executable = compiler.compile(&code).unwrap();
+        let compiler = Compiler::new(Instance::default());
+        let executable = compiler
+            .compile(&ModuleFunc {
+                ty: FuncType(vec![], vec![ValType::I32, ValType::I32]),
+                code,
+                inst: Instance::default(),
+            })
+            .unwrap();
         let mut locals = [];
         let mut out = [ValueUntyped::default(); 2];
         executable.run_with(&mut locals, &mut out);
@@ -263,11 +409,108 @@ mod tests {
             ]),
             locals: vec![],
         };
-        let compiler = Compiler::new();
-        let executable = compiler.compile(&code).unwrap();
+        let compiler = Compiler::new(Instance::default());
+        let executable = compiler
+            .compile(&ModuleFunc {
+                ty: FuncType(vec![], vec![ValType::I32]),
+                code,
+                inst: Instance::default(),
+            })
+            .unwrap();
         asm_assert_eq!(
             &[0xd503201f, 0xd2800158, 0xf9000038, 0xd65f03c0],
             executable.as_bytes()
         );
+    }
+
+    #[test]
+    fn block_branching() {
+        let code = Code {
+            body: InstrBuffer::from_iter([
+                Instruction::Block(Block {
+                    ty: BlockType::Type(ValType::I32),
+                    end: 4,
+                }),
+                Instruction::I32Const(10),
+                Instruction::Br { depth: 0 },
+                Instruction::I32Const(20),
+                Instruction::End,
+                Instruction::LocalGet { idx: 0 },
+                Instruction::I32Add,
+                Instruction::End,
+            ]),
+            locals: vec![],
+        };
+        let compiler = Compiler::new(Instance::default());
+        let executable = compiler
+            .compile(&ModuleFunc {
+                ty: FuncType(vec![ValType::I32], vec![ValType::I32]),
+                code,
+                inst: Instance::default(),
+            })
+            .unwrap();
+        let mut locals = [Value::I32(32).untyped()];
+        let mut out = [ValueUntyped::default()];
+        executable.run_with(&mut locals, &mut out);
+        assert_eq!([Value::I32(42).untyped()], out);
+    }
+
+    #[test]
+    fn early_return() {
+        let code = Code {
+            body: InstrBuffer::from_iter([
+                Instruction::I32Const(10),
+                Instruction::I32Const(32),
+                Instruction::Br { depth: 0 },
+                Instruction::I32Const(20),
+                Instruction::End,
+            ]),
+            locals: vec![],
+        };
+        let compiler = Compiler::new(Instance::default());
+        let executable = compiler
+            .compile(&ModuleFunc {
+                ty: FuncType(vec![], vec![ValType::I32]),
+                code,
+                inst: Instance::default(),
+            })
+            .unwrap();
+        let mut locals = [];
+        let mut out = [ValueUntyped::default()];
+        executable.run_with(&mut locals, &mut out);
+        assert_eq!([Value::I32(32).untyped()], out);
+    }
+
+    #[test]
+    fn early_return_with_used_stack_space() {
+        let code = Code {
+            body: InstrBuffer::from_iter([
+                Instruction::LocalGet { idx: 0 },
+                Instruction::LocalGet { idx: 1 },
+                Instruction::LocalGet { idx: 2 },
+                Instruction::LocalGet { idx: 3 },
+                Instruction::LocalGet { idx: 4 },
+                Instruction::Br { depth: 0 },
+                Instruction::I32Const(1),
+                Instruction::I32Const(1),
+                Instruction::I32Const(1),
+                Instruction::I32Const(1),
+                Instruction::I32Const(1),
+                Instruction::End,
+            ]),
+            locals: vec![],
+        };
+        let compiler = Compiler::new(Instance::default());
+        let executable = compiler
+            .compile(&ModuleFunc {
+                ty: FuncType(vec![ValType::I32; 5], vec![ValType::I32; 5]),
+                code,
+                inst: Instance::default(),
+            })
+            .unwrap();
+        let mut locals = [Value::I32(10).untyped(); 5];
+        let mut out = [ValueUntyped::default(); 5];
+        executable.run_with(&mut locals, &mut out);
+        assert_eq!([Value::I32(10).untyped(); 5], out);
     }
 }
