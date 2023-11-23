@@ -115,8 +115,6 @@ impl Compiler {
                     self.labels.push(Label {
                         to_patch: vec![],
                         arity: self.return_arity(block.ty),
-                        // TODO: this will cause trouble in the future. How do we account for
-                        // local and args that are already "on the stack"? Saturating sub?
                         stack_height: self.used.len() - self.param_arity(block.ty),
                         opcode: Opcode::Block,
                         unreachable: false,

@@ -58,7 +58,6 @@ macro_rules! asm_assert_eq {
         if left != $right {
             use ::pretty_assertions::StrComparison;
 
-            // TODO: use asm_fmt
             let got_pretty = asm_fmt($right);
             let expect_pretty = asm_fmt(left);
             panic!(
