@@ -36,10 +36,17 @@ pub enum CompilationError {
 struct Label {
     arity: usize,
     stack_height: usize,
-    opcode: Opcode,
+    block_target: BlockTarget,
     to_patch: Vec<(usize, Opcode)>,
     unreachable: bool,
     end_loc: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum BlockTarget {
+    Block,
+    Func,
+    Loop(u64),
 }
 
 impl Compiler {
@@ -63,7 +70,7 @@ impl Compiler {
             stack_height: 0,
             to_patch: vec![],
             arity: ty.1.len(),
-            opcode: Opcode::Call,
+            block_target: BlockTarget::Func,
             unreachable: false,
             end_loc: code.body.len() - 1,
         });
@@ -116,7 +123,17 @@ impl Compiler {
                         to_patch: vec![],
                         arity: self.return_arity(block.ty),
                         stack_height: self.used.len() - self.param_arity(block.ty),
-                        opcode: Opcode::Block,
+                        block_target: BlockTarget::Block,
+                        unreachable: false,
+                        end_loc: block.end,
+                    });
+                }
+                I::Loop(block) => {
+                    self.labels.push(Label {
+                        to_patch: vec![],
+                        arity: self.param_arity(block.ty),
+                        stack_height: self.used.len() - self.param_arity(block.ty),
+                        block_target: BlockTarget::Loop(self.asm.addr()),
                         unreachable: false,
                         end_loc: block.end,
                     });
@@ -130,8 +147,8 @@ impl Compiler {
                     for _ in 0..depth {
                         self.labels.pop();
                     }
-                    let labelty = self.labels.last().unwrap().opcode;
-                    if labelty == Opcode::Call {
+                    let block_target = self.labels.last().unwrap().block_target;
+                    if block_target == BlockTarget::Func {
                         self.set_early_return();
                     } else {
                         let label = self.labels.last_mut().unwrap();
@@ -162,50 +179,52 @@ impl Compiler {
                 }
                 I::End => {
                     let label = self.labels.pop().unwrap();
-                    let current_addr = self.asm.addr();
-                    match label.opcode {
-                        Opcode::Block => {
-                            for (pos, opcode) in label.to_patch {
-                                self.asm.patch(pos, |asm| match opcode {
-                                    Opcode::Br => {
-                                        asm.branch(current_addr);
-                                    }
-                                    Opcode::BrIf => todo!(),
-                                    Opcode::BrTable => todo!(),
-                                    _ => unreachable!(),
-                                });
-                            }
+                    // We clean up and return if we are at the end of the function.
+                    if label.block_target == BlockTarget::Func {
+                        // TODO: maybe this can be removed?
+                        self.used
+                            .drain(label.stack_height..self.used.len() - label.arity);
+                        // Set return vals
+                        for (offset, op) in self.used.iter().enumerate() {
+                            self.asm.store(offset as u32, Reg::OutBase, *op);
                         }
-                        // Implicit return
-                        Opcode::Call => {
-                            // TODO: maybe this can be removed?
-                            self.used
-                                .drain(label.stack_height..self.used.len() - label.arity);
-                            // Set return vals
-                            for (offset, op) in self.used.iter().enumerate() {
-                                self.asm.store(offset as u32, Reg::OutBase, *op);
+                        let addr = self.asm.addr();
+                        // This is to patch all the early returns
+                        for to_patch in label.to_patch {
+                            self.asm.patch(to_patch.0, |asm| {
+                                asm.branch(addr);
+                            });
+                        }
+                        if total_stack_size > 0 {
+                            // Align the stack size to 16 bytes
+                            if total_stack_size % 16 != 0 {
+                                total_stack_size += 8;
                             }
-                            let addr = self.asm.addr();
-                            // This is to patch all the early returns
-                            for to_patch in label.to_patch {
-                                self.asm.patch(to_patch.0, |asm| {
+                            // Patch the nop
+                            self.asm.patch(0, |asm| {
+                                asm.sub(Reg::Sp, Reg::Sp, total_stack_size);
+                            });
+                            self.asm.add(Reg::Sp, Reg::Sp, total_stack_size);
+                        }
+                        self.asm.ret();
+                    } else {
+                        // We patch the branch instructions to go to the end of the block (or the
+                        // start, in case of a loop).
+                        let addr = match label.block_target {
+                            BlockTarget::Block => self.asm.addr(),
+                            BlockTarget::Loop(addr) => addr,
+                            BlockTarget::Func => unreachable!(),
+                        };
+                        for (pos, opcode) in label.to_patch {
+                            self.asm.patch(pos, |asm| match opcode {
+                                Opcode::Br => {
                                     asm.branch(addr);
-                                });
-                            }
-                            if total_stack_size > 0 {
-                                // Align the stack size to 16 bytes
-                                if total_stack_size % 16 != 0 {
-                                    total_stack_size += 8;
                                 }
-                                // Patch the nop
-                                self.asm.patch(0, |asm| {
-                                    asm.sub(Reg::Sp, Reg::Sp, total_stack_size);
-                                });
-                                self.asm.add(Reg::Sp, Reg::Sp, total_stack_size);
-                            }
-                            self.asm.ret();
+                                Opcode::BrIf => todo!(),
+                                Opcode::BrTable => todo!(),
+                                _ => unreachable!(),
+                            });
                         }
-                        _ => unreachable!(),
                     }
                 }
                 _ => return Err(CompilationError::UnsupportedInstruction(instr)),
