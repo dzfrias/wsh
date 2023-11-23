@@ -20,18 +20,6 @@ pub enum Reg {
     OutBase = 1,
 }
 
-impl From<Reg> for Operand {
-    fn from(value: Reg) -> Self {
-        Self::Reg(value)
-    }
-}
-
-impl From<u64> for Operand {
-    fn from(value: u64) -> Self {
-        Self::Imm64(value)
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 pub enum Operand {
     Reg(Reg),
@@ -39,26 +27,32 @@ pub enum Operand {
     Mem64(Reg, u64),
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum ConditionCode {
+    Eq = 0b0000,
+    Ne = 0b0001,
+    Hs = 0b0010,
+    Lo = 0b0011,
+    Mi = 0b0100,
+    Pl = 0b0101,
+    Vs = 0b0110,
+    Vc = 0b0111,
+    Hi = 0b1000,
+    Ls = 0b1001,
+    Ge = 0b1010,
+    Lt = 0b1011,
+    Gt = 0b1100,
+    Le = 0b1101,
+    Al = 0b1110,
+    Nv = 0b1111,
+}
+
 #[derive(Debug)]
 pub struct Assembler {
     out: Vec<u8>,
     addr_offset: u64,
-}
 
-fn split_u64<const N: usize, const A: usize>(input: u64) -> [u64; A] {
-    let mut result = [0; A];
-    let mask: u64 = !0 >> (64 - N);
-    let mut shift = 0;
-    let mut i = 0;
-
-    while i < A {
-        let part = (input >> shift) & mask;
-        result[i] = part;
-        shift += N;
-        i += 1;
-    }
-
-    result
+    dst_mem: Option<(Reg, u32)>,
 }
 
 impl Assembler {
@@ -66,6 +60,7 @@ impl Assembler {
         Self {
             out: Vec::new(),
             addr_offset: 0,
+            dst_mem: None,
         }
     }
 
@@ -152,8 +147,7 @@ impl Assembler {
         lhs: impl Into<Operand>,
         rhs: impl Into<Operand>,
     ) {
-        let old_dst = dst.into();
-        let dst_reg = self.resolve_dst(old_dst);
+        let dst_reg = self.resolve_dst(dst);
         let (lhs, rhs) = self.resolve(lhs, rhs);
         match (lhs, rhs) {
             (Operand::Reg(lhs), Operand::Reg(rhs)) => {
@@ -183,41 +177,64 @@ impl Assembler {
                 self.add(dst_reg, op2, op1);
             }
         }
-        if let Operand::Mem64(base, offset) = old_dst {
-            self.store(offset as u32, base, dst_reg);
-        }
+        self.restore_dst();
     }
 
-    #[allow(dead_code)]
-    pub fn eq(&mut self, lhs: impl Into<Operand>, rhs: impl Into<Operand>) {
-        let (op, rhs) = self.resolve(lhs, rhs);
-        // TODO: turn these into subs instructions into a destination instead of cmp.
-        //
-        // cmp is a special instruction that sets the flags register, but doesn't write to a
-        // general purpose one. Because of this, it can't actually be used as a value on the stack.
-        // i32.const 10
-        // i32.eqz
-        // i32.add 1
-        // Would just not work.
-        // Instead, we need to put it into a register, so that it's an actual value. A potential
-        // optimization would be to use cmp, but for now that's way too complicated and would be
-        // better if it was done a pass in register machine form. Performing the operation in
-        // register form would be much easier than in stack form.
-        match (op, rhs) {
+    pub fn eq(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+    ) {
+        let dst = self.resolve_dst(dst);
+        let (lhs, rhs) = self.resolve(lhs, rhs);
+        self.cmp(lhs, rhs);
+        self.cset(dst, ConditionCode::Eq);
+        self.restore_dst();
+    }
+
+    pub fn ne(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+    ) {
+        let dst = self.resolve_dst(dst);
+        let (lhs, rhs) = self.resolve(lhs, rhs);
+        self.cmp(lhs, rhs);
+        self.cset(dst, ConditionCode::Ne);
+        self.restore_dst();
+    }
+
+    pub fn cmp(&mut self, lhs: impl Into<Operand>, rhs: impl Into<Operand>) {
+        let (lhs, rhs) = self.resolve(lhs, rhs);
+        match (lhs, rhs) {
             (Operand::Reg(lhs), Operand::Reg(rhs)) => {
                 self.emit_u32(0xeb00001f | (rhs as u32) << 16 | (lhs as u32) << 5);
             }
             (Operand::Reg(lhs), Operand::Imm64(rhs)) => {
-                self.emit_u32(0xf100001f | (rhs as u32) << 10 | (lhs as u32) << 5);
+                if rhs > 4095 {
+                    self.mov(Reg::LoadTemp, rhs);
+                    self.cmp(lhs, Reg::LoadTemp);
+                } else {
+                    self.emit_u32(0xf100001f | (rhs as u32) << 10 | (lhs as u32) << 5);
+                }
             }
-            (Operand::Imm64(a), Operand::Imm64(b)) => {
-                self.mov(Reg::LoadTemp, a);
-                self.eq(Reg::LoadTemp, b);
+            (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
+                self.mov(Reg::LoadTemp, lhs);
+                self.cmp(Reg::LoadTemp, rhs);
             }
             (op1, op2) => {
-                self.eq(op2, op1);
+                self.cmp(op2, op1);
             }
         }
+    }
+
+    pub fn cset(&mut self, dst: impl Into<Operand>, cond: ConditionCode) {
+        let dst = self.resolve_dst(dst);
+        // cset condition codes have their last bit inverted
+        self.emit_u32(0x9a9f07e0 | (cond.invert() as u32) << 12 | (dst as u32));
+        self.restore_dst();
     }
 
     pub fn sub(
@@ -226,8 +243,7 @@ impl Assembler {
         lhs: impl Into<Operand>,
         rhs: impl Into<Operand>,
     ) {
-        let old_dst = dst.into();
-        let dst = self.resolve_dst(old_dst);
+        let dst = self.resolve_dst(dst);
         let (lhs, rhs) = self.resolve(lhs, rhs);
         match (lhs, rhs) {
             (Operand::Reg(lhs), Operand::Reg(rhs)) => {
@@ -251,9 +267,7 @@ impl Assembler {
                 self.sub(dst, op2, op1);
             }
         }
-        if let Operand::Mem64(base, offset) = old_dst {
-            self.store(offset as u32, base, dst);
-        }
+        self.restore_dst();
     }
 
     pub fn store(&mut self, idx: u32, base: Reg, src: impl Into<Operand>) {
@@ -310,9 +324,20 @@ impl Assembler {
             Operand::Reg(reg) => reg,
             Operand::Mem64(base, offset) => {
                 self.load(Reg::LoadTemp3, offset as u32, base);
+                self.dst_mem = Some((base, offset as u32));
                 Reg::LoadTemp3
             }
             Operand::Imm64(_) => panic!("cannot use an immediate as a register"),
+        }
+    }
+
+    /// Moves the [`Reg::LoadTemp3`] register back into memory, if it was used as a temporary in
+    /// `resolve_dst`.
+    ///
+    /// In general, any `resolve_dst` call should have a corresponding `restore_dst` call.
+    fn restore_dst(&mut self) {
+        if let Some((reg, offset)) = self.dst_mem.take() {
+            self.store(offset, reg, Reg::LoadTemp3);
         }
     }
 
@@ -338,6 +363,58 @@ impl Assembler {
             result.1 = dst;
         }
         result
+    }
+}
+
+/// Split a u64 into an array of u64s of size A, where each element is N bits.
+fn split_u64<const N: usize, const A: usize>(input: u64) -> [u64; A] {
+    let mut result = [0; A];
+    let mask: u64 = !0 >> (64 - N);
+    let mut shift = 0;
+    let mut i = 0;
+
+    while i < A {
+        let part = (input >> shift) & mask;
+        result[i] = part;
+        shift += N;
+        i += 1;
+    }
+
+    result
+}
+
+impl ConditionCode {
+    pub fn invert(self) -> Self {
+        match self {
+            Self::Eq => Self::Ne,
+            Self::Ne => Self::Eq,
+            Self::Hs => Self::Lo,
+            Self::Lo => Self::Hs,
+            Self::Mi => Self::Pl,
+            Self::Pl => Self::Mi,
+            Self::Vs => Self::Vc,
+            Self::Vc => Self::Vs,
+            Self::Hi => Self::Ls,
+            Self::Ls => Self::Hi,
+            Self::Ge => Self::Lt,
+            Self::Lt => Self::Ge,
+            Self::Gt => Self::Le,
+            Self::Le => Self::Gt,
+            Self::Al => Self::Nv,
+            Self::Nv => Self::Al,
+        }
+    }
+}
+
+impl From<Reg> for Operand {
+    fn from(value: Reg) -> Self {
+        Self::Reg(value)
+    }
+}
+
+impl From<u64> for Operand {
+    fn from(value: u64) -> Self {
+        Self::Imm64(value)
     }
 }
 
@@ -423,15 +500,6 @@ mod tests {
     }
 
     #[test]
-    fn eq() {
-        let mut asm = Assembler::new();
-        asm.eq(Reg::GPR1, 0xfa);
-        asm.eq(Reg::GPR1, Reg::GPR0);
-        let code = asm.consume();
-        asm_assert_eq!(&[0xf103e93f, 0xeb08013f], &code);
-    }
-
-    #[test]
     fn big_add() {
         let mut asm = Assembler::new();
         // Immediate > 4095
@@ -462,6 +530,38 @@ mod tests {
         // Should mov into a temporary register, then sub
         asm_assert_eq!(
             &[0xd29ffff8, 0xf2bffff8, 0xf2dffff8, 0xf2fffff8, 0xcb180108],
+            &code
+        );
+    }
+
+    #[test]
+    fn eq() {
+        let mut asm = Assembler::new();
+        // register
+        asm.eq(Reg::GPR0, Reg::GPR0, Reg::GPR1);
+        // immediate
+        asm.eq(Reg::GPR0, Reg::GPR1, 0x4);
+        // immediate > 4095
+        asm.eq(Reg::GPR0, Reg::GPR1, 4096);
+        let code = asm.consume();
+        asm_assert_eq!(
+            &[0xeb09011f, 0x9a9f17e8, 0xf100113f, 0x9a9f17e8, 0xd2820018, 0xeb18013f, 0x9a9f17e8],
+            &code
+        );
+    }
+
+    #[test]
+    fn ne() {
+        let mut asm = Assembler::new();
+        // register
+        asm.ne(Reg::GPR0, Reg::GPR0, Reg::GPR1);
+        // immediate
+        asm.ne(Reg::GPR0, Reg::GPR1, 0x4);
+        // immediate > 4095
+        asm.ne(Reg::GPR0, Reg::GPR1, 4096);
+        let code = asm.consume();
+        asm_assert_eq!(
+            &[0xeb09011f, 0x9a9f07e8, 0xf100113f, 0x9a9f07e8, 0xd2820018, 0xeb18013f, 0x9a9f07e8],
             &code
         );
     }

@@ -69,12 +69,18 @@ impl Compiler {
         });
         let mut total_stack_size = 0;
 
+        /// A macro to generate binary operations.
+        ///
+        /// The first argument is the method to call on the assembler, and the second argument is a
+        /// function that takes two u64s and returns a u64. This function is used to fold constant
+        /// immediate operands.
         macro_rules! binop {
-            ($method:ident or $fold:ident) => {{
+            ($method:ident or $fold:expr) => {{
                 let rhs = self.used.pop().unwrap();
                 let lhs = self.used.pop().unwrap();
                 if let (Operand::Imm64(rhs), Operand::Imm64(lhs)) = (rhs, lhs) {
-                    self.push(Operand::Imm64(lhs.$fold(rhs)));
+                    #[allow(clippy::redundant_closure_call)]
+                    self.push(Operand::Imm64($fold(lhs, rhs)));
                 } else {
                     self.free.release(rhs);
                     self.free.release(lhs);
@@ -103,8 +109,8 @@ impl Compiler {
                 I::I32Const(val) => {
                     self.push(Operand::Imm64(val as u64));
                 }
-                I::I32Add => binop!(add or saturating_add),
-                I::I32Sub => binop!(sub or saturating_sub),
+                I::I32Add => binop!(add or |lhs: u64, rhs| lhs.saturating_add(rhs)),
+                I::I32Sub => binop!(sub or |lhs: u64, rhs| lhs.saturating_sub(rhs)),
                 I::Block(block) => {
                     self.labels.push(Label {
                         to_patch: vec![],
@@ -137,6 +143,19 @@ impl Compiler {
                         label.to_patch.push((self.asm.addr() as usize, Opcode::Br));
                         // This will be patched later, at the `end` instruction.
                         self.asm.branch(0xdeadbeef);
+                    }
+                }
+                I::I32Eq => binop!(eq or |lhs: u64, rhs| (lhs == rhs) as u64),
+                I::I32Ne => binop!(ne or |lhs: u64, rhs| (lhs != rhs) as u64),
+                I::I32Eqz => {
+                    let op = self.used.pop().unwrap();
+                    if let Operand::Imm64(val) = op {
+                        self.push(Operand::Imm64((val == 0) as u64));
+                    } else {
+                        self.free.release(op);
+                        self.asm.eq(self.free.current, op, 0);
+                        self.push(self.free.current);
+                        self.free.next_free();
                     }
                 }
                 I::Return => {
