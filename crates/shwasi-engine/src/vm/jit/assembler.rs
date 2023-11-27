@@ -172,10 +172,8 @@ impl Assembler {
                 );
             }
             (Operand::Reg(lhs), Operand::Imm64(rhs)) => {
-                // 4095 is 2 ^ 12 - 1, which is the maximum value that can be represented in 12
-                // bits. The add immediate instruction only supports 12 bits, so in case our rhs >
-                // 4095, we need to move it to a temporary register, then add it.
-                if rhs > 4095 {
+                // The add immediate instruction only supports 12 bits
+                if rhs > (2 << 12) - 1 {
                     self.mov(Reg::LoadTemp, rhs);
                     self.add(dst_reg, lhs, Reg::LoadTemp);
                 } else {
@@ -266,8 +264,8 @@ impl Assembler {
                 self.emit_u32(0xcb000000 | (rhs as u32) << 16 | (lhs as u32) << 5 | (dst as u32));
             }
             (Operand::Reg(lhs), Operand::Imm64(rhs)) => {
-                // We do this for the same reason as in `add`. See the comment there for details.
-                if rhs > 4095 {
+                // The sub immediate instruction only supports 12 bits
+                if rhs > (2 << 12) - 1 {
                     self.mov(Reg::LoadTemp, rhs);
                     self.sub(dst, lhs, Reg::LoadTemp);
                 } else {
@@ -321,6 +319,90 @@ impl Assembler {
             }
             _ => unreachable!("should not be reachable because of `resolve`"),
         }
+        self.restore_dst();
+    }
+
+    pub fn and(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+    ) {
+        let dst = self.resolve_dst(dst);
+        let (lhs, rhs) = self.resolve(lhs, rhs);
+        match (lhs, rhs) {
+            (Operand::Reg(lhs), Operand::Reg(rhs)) => {
+                self.emit_u32(0x8a000000 | (rhs as u32) << 16 | (lhs as u32) << 5 | (dst as u32));
+            }
+            (Operand::Reg(lhs), Operand::Imm64(imm64)) => {
+                if imm64 > (2 << 13) - 1 {
+                    self.mov(Reg::LoadTemp, imm64);
+                    self.and(dst, lhs, Reg::LoadTemp);
+                } else if let Some((n, immr, imms)) = encode_logical_immediate(imm64, 64) {
+                    self.emit_u32(
+                        0x92400000
+                            | n << 22
+                            | immr << 16
+                            | imms << 10
+                            | (lhs as u32) << 5
+                            | (dst as u32),
+                    );
+                } else {
+                    self.mov(Reg::LoadTemp, imm64);
+                    self.and(dst, lhs, Reg::LoadTemp);
+                }
+            }
+            (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
+                self.mov(Reg::LoadTemp, lhs);
+                self.and(dst, Reg::LoadTemp, rhs);
+            }
+            (op1, op2) => {
+                self.and(dst, op2, op1);
+            }
+        }
+
+        self.restore_dst();
+    }
+
+    pub fn or(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+    ) {
+        let dst = self.resolve_dst(dst);
+        let (lhs, rhs) = self.resolve(lhs, rhs);
+        match (lhs, rhs) {
+            (Operand::Reg(lhs), Operand::Reg(rhs)) => {
+                self.emit_u32(0xaa000000 | (rhs as u32) << 16 | (lhs as u32) << 5 | (dst as u32));
+            }
+            (Operand::Reg(lhs), Operand::Imm64(imm64)) => {
+                if imm64 > (2 << 13) - 1 {
+                    self.mov(Reg::LoadTemp, imm64);
+                    self.or(dst, lhs, Reg::LoadTemp);
+                } else if let Some((n, immr, imms)) = encode_logical_immediate(imm64, 64) {
+                    self.emit_u32(
+                        0xb2400000
+                            | n << 22
+                            | immr << 16
+                            | imms << 10
+                            | (lhs as u32) << 5
+                            | (dst as u32),
+                    );
+                } else {
+                    self.mov(Reg::LoadTemp, imm64);
+                    self.or(dst, lhs, Reg::LoadTemp);
+                }
+            }
+            (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
+                self.mov(Reg::LoadTemp, lhs);
+                self.or(dst, Reg::LoadTemp, rhs);
+            }
+            (op1, op2) => {
+                self.or(dst, op2, op1);
+            }
+        }
+
         self.restore_dst();
     }
 
@@ -434,6 +516,79 @@ fn split_u64<const N: usize, const A: usize>(input: u64) -> [u64; A] {
     }
 
     result
+}
+
+/// Encode a logical immediate value.
+///
+/// Returns a tuple of (N, immr, imms) where N is the encoded value of the N field, immr is the
+/// encoded value of the immr field, and imms is the encoded value of the imms field.
+///
+/// Taken and modified from LLVM's AArch64 backend, at
+/// https://llvm.org/doxygen/AArch64AddressingModes_8h_source.html
+fn encode_logical_immediate(imm: u64, reg_size: u32) -> Option<(u32, u32, u32)> {
+    if imm == 0
+        || imm == !0
+        || (reg_size != 64 && (imm >> reg_size != 0 || imm == (!0 >> (64 - reg_size))))
+    {
+        return None;
+    }
+
+    // Determine the element size.
+    let mut size = reg_size;
+
+    while size > 2 {
+        size /= 2;
+        let mask = (1u64 << size) - 1;
+
+        if (imm & mask) != ((imm >> size) & mask) {
+            size *= 2;
+            break;
+        }
+    }
+
+    // Determine the rotation to make the element be: 0^m 1^n.
+    let cto;
+    let i;
+    let mask = u64::MAX >> (64 - size);
+    let mut imm = imm & mask;
+
+    if is_shifted_mask_64(imm) {
+        i = imm.trailing_zeros();
+        assert!(i < 64, "undefined behavior");
+        cto = (imm >> i).count_ones();
+    } else {
+        imm |= !mask;
+        if !is_shifted_mask_64(!imm) {
+            return None;
+        }
+
+        let clo = imm.leading_ones();
+        i = 64 - clo;
+        cto = clo + imm.count_ones() - (64 - size);
+    }
+
+    // Encode in immr the number of RORs it would take to get *from* 0^m 1^n
+    // to our target value, where I is the number of RORs to go the opposite
+    // direction.
+    assert!(size > i, "I should be smaller than element size");
+    let immr = (size - i) & (size - 1);
+
+    // If size has a 1 in the n'th bit, create a value that has zeroes in
+    // bits [0, n] and ones above that.
+    let mut n_imms = !(size - 1) << 1;
+
+    // Or the cto value into the low bits, which must be below the nth bit
+    // bit mentioned above.
+    n_imms |= cto - 1;
+
+    // Extract the seventh bit and toggle it to create the N field.
+    let n = (((n_imms >> 6) & 1) ^ 1) << 12;
+
+    Some((n, immr, n_imms & 0x3f))
+}
+
+fn is_shifted_mask_64(val: u64) -> bool {
+    val & (val + 1) == 0
 }
 
 impl ConditionCode {
@@ -648,5 +803,23 @@ mod tests {
         asm.csel(Reg::GPR0, Reg::GPR1, Reg::GPR2, ConditionCode::Eq);
         let code = asm.consume();
         asm_assert_eq!(&[0x9a8a0128], &code);
+    }
+
+    #[test]
+    fn and() {
+        let mut asm = Assembler::new();
+        asm.and(Reg::GPR0, Reg::GPR1, 1);
+        asm.and(Reg::GPR0, Reg::GPR1, Reg::GPR2);
+        let code = asm.consume();
+        asm_assert_eq!(&[0x92400128, 0x8a0a0128], &code);
+    }
+
+    #[test]
+    fn or() {
+        let mut asm = Assembler::new();
+        asm.or(Reg::GPR0, Reg::GPR1, 0b11);
+        asm.or(Reg::GPR0, Reg::GPR1, Reg::GPR2);
+        let code = asm.consume();
+        asm_assert_eq!(&[0xb2400528, 0xaa0a0128], &code);
     }
 }

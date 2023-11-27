@@ -141,6 +141,8 @@ impl Compiler {
                 }
                 I::I32Eq | I::I64Eq => binop!(eq or |lhs: u64, rhs| (lhs == rhs) as u64),
                 I::I32Ne | I::I64Ne => binop!(ne or |lhs: u64, rhs| (lhs != rhs) as u64),
+                I::I32And | I::I64And => binop!(and or |lhs: u64, rhs| lhs & rhs),
+                I::I32Or | I::I64Or => binop!(or or |lhs: u64, rhs| lhs & rhs),
                 I::I32Eqz | I::I64Eqz => {
                     let op = pop!();
                     if let Operand::Imm64(imm64) = op {
