@@ -50,6 +50,7 @@ pub fn asm_fmt(bytes: &[u8]) -> String {
 }
 
 /// Asserts that the two slices of u8s are equal, but prints them as assembly instructions.
+#[allow(unused)]
 macro_rules! asm_assert_eq {
     ($left:expr, $right:expr) => {
         use $crate::vm::jit::debug::*;
@@ -68,4 +69,5 @@ macro_rules! asm_assert_eq {
     };
 }
 
+#[allow(unused)]
 pub(crate) use asm_assert_eq;

@@ -404,7 +404,7 @@ impl<'a> InstrReader<'a> {
                         ty: block_type,
                         // The end of the loop is the beginning of the loop. `br 0`, for example,
                         // is equivalent to a continue instruction for a loop.
-                        end: buffer.len(),
+                        end: 0,
                     })
                 }
                 Opcode::BrTable => {
@@ -413,23 +413,19 @@ impl<'a> InstrReader<'a> {
                 }
 
                 Opcode::End => {
-                    match stack.pop() {
-                        Some((opcode, idx)) if opcode != Opcode::Loop => {
-                            // Because the parser is a single pass, we don't know the end of the
-                            // block until we hit the end instruction. So, we need to patch it in
-                            // the instruction buffer.
-                            buffer.patch_end(idx, buffer.len());
-                        }
-                        None => {
-                            trace!(
-                                "returned early with end instruction, got buffer of size {}",
-                                buffer.len()
-                            );
-                            buffer.shrink();
-                            buffer.push(Instruction::End);
-                            return Ok(buffer);
-                        }
-                        _ => {}
+                    if let Some((_, idx)) = stack.pop() {
+                        // Because the parser is a single pass, we don't know the end of the
+                        // block until we hit the end instruction. So, we need to patch it in
+                        // the instruction buffer.
+                        buffer.patch_end(idx, buffer.len());
+                    } else {
+                        trace!(
+                            "returned early with end instruction, got buffer of size {}",
+                            buffer.len()
+                        );
+                        buffer.shrink();
+                        buffer.push(Instruction::End);
+                        return Ok(buffer);
                     }
                     Instruction::End
                 }

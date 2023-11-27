@@ -116,7 +116,6 @@ impl Executable {
     }
 
     /// Returns a slice of the executable memory region.
-    #[cfg(test)]
     pub fn as_bytes(&self) -> &[u8] {
         // SAFETY: self.code is a function pointer to the executable memory region. It should be
         // safe to cast it to a pointer to u8, since it is a pointer to memory.

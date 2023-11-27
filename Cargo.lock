@@ -1167,8 +1167,10 @@ dependencies = [
  "pretty_assertions",
  "shwasi-parser",
  "stacker",
+ "test-log",
  "thiserror",
  "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

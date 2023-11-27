@@ -1,7 +1,7 @@
 mod instruction;
 mod opcode;
 
-use std::{fmt, iter::FusedIterator, mem, sync::Arc};
+use std::{fmt, iter::FusedIterator, mem, ops::Range, sync::Arc};
 
 use num_enum::TryFromPrimitive;
 
@@ -10,7 +10,7 @@ pub use self::opcode::{is_prefix_byte, Opcode};
 use crate::{module::ValType, RefType, F32, F64};
 
 /// A buffer containing [`Instruction`]s.
-#[derive(Debug, Clone, Default)]
+#[derive(Clone, Default)]
 pub struct InstrBuffer {
     infos: Vec<InstrInfo>,
     br_tables: Vec<BrTable>,
@@ -732,6 +732,14 @@ impl InstrBuffer {
         }
     }
 
+    pub fn slice(&self, range: Range<usize>) -> InstrBufferRef {
+        InstrBufferRef::new(self, range)
+    }
+
+    pub fn get_ref(&self) -> InstrBufferRef {
+        self.slice(0..self.len())
+    }
+
     /// Patch the `end` pointer of an instruction, by index.
     ///
     /// # Panics
@@ -780,6 +788,84 @@ impl InstrBuffer {
     }
 }
 
+#[derive(Clone)]
+pub struct InstrBufferRef<'a> {
+    buffer: &'a InstrBuffer,
+    range: Range<usize>,
+}
+
+impl<'a> InstrBufferRef<'a> {
+    fn new(buffer: &'a InstrBuffer, range: Range<usize>) -> Self {
+        Self { buffer, range }
+    }
+
+    pub fn len(&self) -> usize {
+        self.range.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub fn get(&self, idx: usize) -> Option<Instruction> {
+        self.buffer.get(self.range.start + idx)
+    }
+
+    /// Get an instruction from the buffer.
+    ///
+    /// # Safety
+    /// This function has undefined behavior when `idx >= self.len()`.
+    pub unsafe fn get_unchecked(&self, idx: usize) -> Instruction {
+        self.buffer.get_unchecked(self.range.start + idx)
+    }
+
+    pub fn inner(&self) -> &'a InstrBuffer {
+        self.buffer
+    }
+
+    pub fn start(&self) -> usize {
+        self.range.start
+    }
+
+    pub fn slice(&self, range: Range<usize>) -> InstrBufferRef {
+        let start = self.range.start + range.start;
+        let end = self.range.start + range.end;
+        InstrBufferRef::new(self.buffer, start..end)
+    }
+
+    pub fn first(&self) -> Option<Instruction> {
+        self.get(0)
+    }
+
+    pub fn last(&self) -> Option<Instruction> {
+        self.get(self.len() - 1)
+    }
+
+    pub fn iter(&self) -> InstrsIter<'a> {
+        InstrsIter {
+            buffer: self.buffer,
+            cap: self.range.end,
+            current: self.range.start,
+        }
+    }
+}
+
+impl fmt::Debug for InstrBuffer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_list()
+            .entries((0..self.len()).map(|i| self.get(i).unwrap()))
+            .finish()
+    }
+}
+
+impl fmt::Debug for InstrBufferRef<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_list()
+            .entries((0..self.len()).map(|i| self.get(i).unwrap()))
+            .finish()
+    }
+}
+
 impl<'a> Iterator for InstrsIter<'a> {
     type Item = Instruction;
 
@@ -819,6 +905,15 @@ impl DoubleEndedIterator for InstrsIter<'_> {
         // cap can never exceed it either (since we know the length is unchanged since the creation
         // of this struct).
         Some(unsafe { self.buffer.get_unchecked(self.cap) })
+    }
+}
+
+impl<'a> IntoIterator for &'a InstrBufferRef<'a> {
+    type Item = Instruction;
+    type IntoIter = InstrsIter<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 

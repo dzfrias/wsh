@@ -924,6 +924,7 @@ pub fn eval_const_expr(
 mod tests {
     use crate::Store;
     use shwasi_parser::{Code, FuncType, Function, Module, ValType};
+    use test_log::test;
     use Instruction::*;
     use Value::*;
 
@@ -984,9 +985,10 @@ mod tests {
             [] => [
                 Loop(shwasi_parser::Block {
                     ty: BlockType::Empty,
-                    end: 0,
+                    end: 2,
                 }),
                 Br { depth: 1 },
+                End,
                 End,
             ],
             []
@@ -999,10 +1001,11 @@ mod tests {
             [] => [
                 Loop(shwasi_parser::Block {
                     ty: BlockType::Empty,
-                    end: 0,
+                    end: 3,
                 }),
                 I32Const(1),
                 BrIf { depth: 1 },
+                End,
                 End,
             ],
             []
@@ -1042,6 +1045,7 @@ mod tests {
                 I32Const(1),
                 Else,
                 I32Const(2),
+                End,
                 End,
             ],
             [

@@ -20,14 +20,15 @@ pub enum Reg {
     OutBase = 1,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Operand {
     Reg(Reg),
     Imm64(u64),
     Mem64(Reg, u64),
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum ConditionCode {
     Eq = 0b0000,
     Ne = 0b0001,
@@ -47,10 +48,10 @@ pub enum ConditionCode {
     Nv = 0b1111,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default, Clone)]
 pub struct Assembler {
     out: Vec<u8>,
-    addr_offset: u64,
+    addr_offset: usize,
 
     dst_mem: Option<(Reg, u32)>,
 }
@@ -99,6 +100,10 @@ impl Assembler {
                 // mov into memory is equivalent to a store.
                 self.store(offset as u32, base, imm64);
             }
+            (Operand::Mem64(base, offset), Operand::Mem64(base2, offset2)) => {
+                self.load(Reg::LoadTemp, offset2 as u32, base2);
+                self.store(offset as u32, base, Reg::LoadTemp);
+            }
             (dst, src) => panic!("unsupported mov operands: {:?} and {:?}", dst, src),
         }
     }
@@ -119,13 +124,24 @@ impl Assembler {
         self.store(idx, Reg::LocalsArrayBase, from);
     }
 
-    pub fn addr(&self) -> u64 {
-        self.addr_offset + self.out.len() as u64
+    pub fn addr(&self) -> usize {
+        self.addr_offset + self.out.len()
     }
 
     pub fn branch(&mut self, to: u64) {
-        let offset = (to - self.addr()) / 4;
+        let offset = to.wrapping_sub(self.addr() as u64);
+        // We only have 26 bits to encode the offset
+        let truncated_offset = offset & 0b1111111111111111111111111111;
+        let offset = truncated_offset / 4;
         self.emit_u32(0x14000000 | (offset as u32));
+    }
+
+    pub fn branch_if(&mut self, to: u64, cond: ConditionCode) {
+        let offset = to.wrapping_sub(self.addr() as u64);
+        // We only have 19 bits to encode the offset
+        let truncated_offset = offset & 0b111111111111111111111;
+        let offset = truncated_offset / 4;
+        self.emit_u32(0x54000000 | (offset as u32) << 5 | cond as u32);
     }
 
     /// Patch a set of instructions at the given index. Anything called in the given function will
@@ -135,7 +151,7 @@ impl Assembler {
         F: FnOnce(&mut Self),
     {
         let mut patch = Self::new();
-        patch.addr_offset = idx as u64;
+        patch.addr_offset = idx;
         patch_fn(&mut patch);
         let patch = patch.consume();
         self.out[idx..idx + patch.len()].copy_from_slice(&patch);
@@ -180,6 +196,7 @@ impl Assembler {
         self.restore_dst();
     }
 
+    #[allow(dead_code)]
     pub fn eq(
         &mut self,
         dst: impl Into<Operand>,
@@ -193,6 +210,7 @@ impl Assembler {
         self.restore_dst();
     }
 
+    #[allow(dead_code)]
     pub fn ne(
         &mut self,
         dst: impl Into<Operand>,
@@ -562,6 +580,29 @@ mod tests {
         let code = asm.consume();
         asm_assert_eq!(
             &[0xeb09011f, 0x9a9f07e8, 0xf100113f, 0x9a9f07e8, 0xd2820018, 0xeb18013f, 0x9a9f07e8],
+            &code
+        );
+    }
+
+    #[test]
+    fn branch_if() {
+        let mut asm = Assembler::new();
+        asm.branch_if(0x30, ConditionCode::Eq);
+        let code = asm.consume();
+        asm_assert_eq!(&[0x54000180], &code);
+    }
+
+    #[test]
+    fn backwards_branch() {
+        let mut asm = Assembler::new();
+        asm.nop();
+        asm.nop();
+        asm.nop();
+        asm.nop();
+        asm.branch(0);
+        let code = asm.consume();
+        asm_assert_eq!(
+            &[0xd503201f, 0xd503201f, 0xd503201f, 0xd503201f, 0x17fffffc],
             &code
         );
     }
