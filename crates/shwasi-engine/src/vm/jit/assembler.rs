@@ -196,7 +196,6 @@ impl Assembler {
         self.restore_dst();
     }
 
-    #[allow(dead_code)]
     pub fn eq(
         &mut self,
         dst: impl Into<Operand>,
@@ -210,7 +209,6 @@ impl Assembler {
         self.restore_dst();
     }
 
-    #[allow(dead_code)]
     pub fn ne(
         &mut self,
         dst: impl Into<Operand>,
@@ -288,6 +286,44 @@ impl Assembler {
         self.restore_dst();
     }
 
+    pub fn csel(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        cond: ConditionCode,
+    ) {
+        let dst = self.resolve_dst(dst);
+        let (lhs, rhs) = self.resolve(lhs, rhs);
+        match (lhs, rhs) {
+            (Operand::Reg(lhs), Operand::Reg(rhs)) => {
+                self.emit_u32(
+                    0x9a800000
+                        | (rhs as u32) << 16
+                        | (cond as u32) << 12
+                        | (lhs as u32) << 5
+                        | (dst as u32),
+                );
+            }
+            (Operand::Reg(lhs), Operand::Imm64(imm64)) => {
+                self.mov(Reg::LoadTemp, imm64);
+                self.csel(dst, lhs, Reg::LoadTemp, cond);
+            }
+            (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
+                self.mov(Reg::LoadTemp, lhs);
+                self.mov(Reg::LoadTemp2, rhs);
+                self.csel(dst, Reg::LoadTemp, Reg::LoadTemp2, cond);
+            }
+            (Operand::Imm64(imm64), Operand::Reg(rhs)) => {
+                self.mov(Reg::LoadTemp, imm64);
+                // Select is not commutative, so we can't just call with the operands switched
+                self.csel(dst, Reg::LoadTemp, rhs, cond);
+            }
+            _ => unreachable!("should not be reachable because of `resolve`"),
+        }
+        self.restore_dst();
+    }
+
     pub fn store(&mut self, idx: u32, base: Reg, src: impl Into<Operand>) {
         match src.into() {
             Operand::Reg(src) => {
@@ -341,7 +377,6 @@ impl Assembler {
         match op.into() {
             Operand::Reg(reg) => reg,
             Operand::Mem64(base, offset) => {
-                self.load(Reg::LoadTemp3, offset as u32, base);
                 self.dst_mem = Some((base, offset as u32));
                 Reg::LoadTemp3
             }
@@ -605,5 +640,13 @@ mod tests {
             &[0xd503201f, 0xd503201f, 0xd503201f, 0xd503201f, 0x17fffffc],
             &code
         );
+    }
+
+    #[test]
+    fn csel() {
+        let mut asm = Assembler::new();
+        asm.csel(Reg::GPR0, Reg::GPR1, Reg::GPR2, ConditionCode::Eq);
+        let code = asm.consume();
+        asm_assert_eq!(&[0x9a8a0128], &code);
     }
 }

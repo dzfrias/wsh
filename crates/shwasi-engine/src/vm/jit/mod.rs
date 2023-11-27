@@ -126,9 +126,10 @@ impl Compiler {
             match instr {
                 I::Nop => {}
                 I::I32Const(val) => stack.push(Operand::Imm64(val as u64)),
+                I::I64Const(val) => stack.push(Operand::Imm64(val)),
                 I::Drop => drop(stack.pop()),
-                I::I32Add => binop!(add or |lhs: u64, rhs| lhs.saturating_add(rhs)),
-                I::I32Sub => binop!(sub or |lhs: u64, rhs| lhs.wrapping_sub(rhs)),
+                I::I32Add | I::I64Add => binop!(add or |lhs: u64, rhs| lhs.saturating_add(rhs)),
+                I::I32Sub | I::I64Sub => binop!(sub or |lhs: u64, rhs| lhs.wrapping_sub(rhs)),
                 I::LocalGet { idx } => {
                     self.asm.load_local(self.free.current, idx);
                     stack.push(self.free.current);
@@ -138,9 +139,43 @@ impl Compiler {
                     let op = pop!();
                     self.asm.store_local(idx, op);
                 }
+                I::I32Eq | I::I64Eq => binop!(eq or |lhs: u64, rhs| (lhs == rhs) as u64),
+                I::I32Ne | I::I64Ne => binop!(ne or |lhs: u64, rhs| (lhs != rhs) as u64),
+                I::I32Eqz | I::I64Eqz => {
+                    let op = pop!();
+                    if let Operand::Imm64(imm64) = op {
+                        stack.push(Operand::Imm64((imm64 == 0) as u64));
+                    } else {
+                        self.asm.cmp(op, 0);
+                        self.asm.cset(self.free.current, ConditionCode::Eq);
+                        stack.push(self.free.current);
+                        self.free.next_free();
+                    }
+                }
+                I::Select | I::SelectT(_) => {
+                    let cond = pop!();
+                    let rhs = pop!();
+                    let lhs = pop!();
+                    if let (Operand::Imm64(cond), Operand::Imm64(lhs), Operand::Imm64(rhs)) =
+                        (cond, lhs, rhs)
+                    {
+                        stack.push(Operand::Imm64(if cond != 0 { lhs } else { rhs }));
+                    } else {
+                        self.asm.cmp(cond, 0);
+                        self.asm
+                            .csel(self.free.current, lhs, rhs, ConditionCode::Ne);
+                        stack.push(self.free.current);
+                        self.free.next_free();
+                    }
+                }
 
-                I::Br { depth } => {
-                    let label = &self.labels[self.labels.len() - depth as usize - 1];
+                I::Br { .. } | I::Return => {
+                    let depth = match instr {
+                        I::Br { depth } => depth,
+                        I::Return => self.labels.len() as u32 - 1,
+                        _ => unreachable!(),
+                    };
+                    let label = self.get_label(depth);
                     let expect_arity = self.labels.last().unwrap().result_arity;
                     let expect_height = self.labels.last().unwrap().init_height;
                     let end = label.end;
@@ -151,16 +186,15 @@ impl Compiler {
                     self.pad_movs(&branch_stack[label.init_height..]);
                     let patch_addr = self.asm.addr();
                     self.asm.branch(0xdeadbeef);
-
                     self.set_to_patch(end, PatchTarget::unconditional(patch_addr));
-                    self.set_to_unify(
+                    self.make_branch(
                         end,
                         UnifyTarget {
                             addr: unify_addr,
                             stack: branch_stack,
                         },
                     );
-                    if stack.len() - expect_height > expect_arity {
+                    if stack.len() >= expect_height && stack.len() - expect_height > expect_arity {
                         stack.truncate(expect_height - expect_arity);
                     }
 
@@ -170,9 +204,8 @@ impl Compiler {
                     let op = stack.pop().unwrap();
                     self.free.release(op);
                     self.asm.cmp(op, 0);
-
                     let mut branch_stack = stack.clone();
-                    let label = &self.labels[self.labels.len() - depth as usize - 1];
+                    let label = self.get_label(depth);
                     let end = label.end;
                     branch_stack.drain(label.init_height..branch_stack.len() - label.arity);
                     debug_assert!(branch_stack.len() - label.init_height == label.arity);
@@ -180,9 +213,8 @@ impl Compiler {
                     self.pad_movs(&branch_stack[label.init_height..]);
                     let patch_addr = self.asm.addr();
                     self.asm.branch(0xdeadbeef);
-
                     self.set_to_patch(end, PatchTarget::conditional(patch_addr, ConditionCode::Ne));
-                    self.set_to_unify(
+                    self.make_branch(
                         end,
                         UnifyTarget {
                             addr: unify_addr,
@@ -213,55 +245,6 @@ impl Compiler {
                     });
                     self.labels.pop().unwrap();
                     i += len + 1;
-                }
-                I::If {
-                    block,
-                    else_: Some(else_),
-                } => {
-                    let op = pop!();
-                    self.asm.cmp(op, 0);
-                    let cond_branch_addr = self.asm.addr();
-                    self.asm.branch(0xdeadbeef);
-                    let init_height = stack.len() - self.param_arity(block.ty);
-                    self.labels.push(Label {
-                        init_height,
-                        arity: self.return_arity(block.ty),
-                        result_arity: self.return_arity(block.ty),
-                        end: block.end,
-                    });
-
-                    let if_buf = buf.inner().slice(buf.start() + i + 1..else_);
-                    let else_buf = buf.inner().slice(else_ + 1..block.end);
-                    let total_len = if_buf.len() + else_buf.len() + 1;
-
-                    let mut branch1 = stack.clone();
-                    self.compile_buf(&mut branch1, if_buf)?;
-                    let if_unify_addr = self.asm.addr();
-                    self.pad_movs(&branch1[init_height..]);
-                    self.set_to_unify(
-                        block.end,
-                        UnifyTarget {
-                            addr: if_unify_addr,
-                            stack: branch1,
-                        },
-                    );
-                    let if_jump_addr = self.asm.addr();
-                    self.asm.branch(0xdeadbeef);
-                    let to = self.asm.addr();
-                    self.asm.patch(cond_branch_addr, |asm| {
-                        asm.branch_if(to as u64, ConditionCode::Eq);
-                    });
-                    self.compile_buf(stack, else_buf)?;
-
-                    self.unify(stack, block.end);
-                    self.patch(block.end, self.asm.addr());
-
-                    let to = self.asm.addr();
-                    self.asm.patch(if_jump_addr, |asm| {
-                        asm.branch(to as u64);
-                    });
-                    self.labels.pop().unwrap();
-                    i += total_len + 1;
                 }
                 I::Loop(block) | I::Block(block) => {
                     let is_block = matches!(instr, I::Block(_));
@@ -301,28 +284,66 @@ impl Compiler {
                     self.labels.pop().unwrap();
                     i += len + 1;
                 }
-                I::End => unreachable!("should never reach end instruction!"),
-                I::I32Eq => {
-                    let rhs = pop!();
-                    let lhs = pop!();
-                    self.asm.cmp(lhs, rhs);
-                    self.asm.cset(self.free.current, ConditionCode::Eq);
-                    stack.push(self.free.current);
-                    self.free.next_free();
-                }
-                I::I32Eqz => {
+                I::If {
+                    block,
+                    else_: Some(else_),
+                } => {
                     let op = pop!();
                     self.asm.cmp(op, 0);
-                    self.asm.cset(self.free.current, ConditionCode::Eq);
-                    stack.push(self.free.current);
-                    self.free.next_free();
+                    let cond_branch_addr = self.asm.addr();
+                    self.asm.branch(0xdeadbeef);
+                    let init_height = stack.len() - self.param_arity(block.ty);
+                    self.labels.push(Label {
+                        init_height,
+                        arity: self.return_arity(block.ty),
+                        result_arity: self.return_arity(block.ty),
+                        end: block.end,
+                    });
+
+                    let if_buf = buf.inner().slice(buf.start() + i + 1..else_);
+                    let else_buf = buf.inner().slice(else_ + 1..block.end);
+                    let total_len = if_buf.len() + else_buf.len() + 1;
+
+                    let mut branch1 = stack.clone();
+                    self.compile_buf(&mut branch1, if_buf)?;
+                    let if_unify_addr = self.asm.addr();
+                    self.pad_movs(&branch1[init_height..]);
+                    self.make_branch(
+                        block.end,
+                        UnifyTarget {
+                            addr: if_unify_addr,
+                            stack: branch1,
+                        },
+                    );
+                    let if_jump_addr = self.asm.addr();
+                    self.asm.branch(0xdeadbeef);
+                    let to = self.asm.addr();
+                    self.asm.patch(cond_branch_addr, |asm| {
+                        asm.branch_if(to as u64, ConditionCode::Eq);
+                    });
+                    self.compile_buf(stack, else_buf)?;
+
+                    self.unify(stack, block.end);
+                    self.patch(block.end, self.asm.addr());
+
+                    let to = self.asm.addr();
+                    self.asm.patch(if_jump_addr, |asm| {
+                        asm.branch(to as u64);
+                    });
+                    self.labels.pop().unwrap();
+                    i += total_len + 1;
                 }
+                I::End => unreachable!("should never reach end instruction!"),
                 _ => return Err(CompilationError::UnsupportedInstruction(instr)),
             }
             i += 1;
         }
 
         Ok(())
+    }
+
+    fn get_label(&self, depth: u32) -> &Label {
+        &self.labels[self.labels.len() - depth as usize - 1]
     }
 
     fn patch(&mut self, end_idx: usize, to: usize) {
@@ -343,7 +364,7 @@ impl Compiler {
         self.to_patch.entry(end).or_default().push(target);
     }
 
-    fn set_to_unify(&mut self, end: usize, target: UnifyTarget) {
+    fn make_branch(&mut self, end: usize, target: UnifyTarget) {
         self.to_unify.entry(end).or_default().push(target);
     }
 
