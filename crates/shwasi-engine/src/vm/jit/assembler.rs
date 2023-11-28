@@ -157,43 +157,6 @@ impl Assembler {
         self.out[idx..idx + patch.len()].copy_from_slice(&patch);
     }
 
-    pub fn add(
-        &mut self,
-        dst: impl Into<Operand>,
-        lhs: impl Into<Operand>,
-        rhs: impl Into<Operand>,
-    ) {
-        let dst_reg = self.resolve_dst(dst);
-        let (lhs, rhs) = self.resolve(lhs, rhs);
-        match (lhs, rhs) {
-            (Operand::Reg(lhs), Operand::Reg(rhs)) => {
-                self.emit_u32(
-                    0x8b000000 | (rhs as u32) << 16 | (lhs as u32) << 5 | (dst_reg as u32),
-                );
-            }
-            (Operand::Reg(lhs), Operand::Imm64(rhs)) => {
-                // The add immediate instruction only supports 12 bits
-                if rhs > (2 << 12) - 1 {
-                    self.mov(Reg::LoadTemp, rhs);
-                    self.add(dst_reg, lhs, Reg::LoadTemp);
-                } else {
-                    self.emit_u32(
-                        0x91000000 | (rhs as u32) << 10 | (lhs as u32) << 5 | (dst_reg as u32),
-                    );
-                }
-            }
-            (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
-                self.mov(dst_reg, lhs.saturating_add(rhs));
-            }
-            (op1, op2) => {
-                // We switch the operands here. This really only accounts for one case (the second
-                // one in this match arm), but it's easier to just switch them here than to repeat.
-                self.add(dst_reg, op2, op1);
-            }
-        }
-        self.restore_dst();
-    }
-
     pub fn eq(
         &mut self,
         dst: impl Into<Operand>,
@@ -251,37 +214,22 @@ impl Assembler {
         self.restore_dst();
     }
 
+    pub fn add(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+    ) {
+        self.add_sub_op(dst, lhs, rhs, 0x8b000000, 0x91000000);
+    }
+
     pub fn sub(
         &mut self,
         dst: impl Into<Operand>,
         lhs: impl Into<Operand>,
         rhs: impl Into<Operand>,
     ) {
-        let dst = self.resolve_dst(dst);
-        let (lhs, rhs) = self.resolve(lhs, rhs);
-        match (lhs, rhs) {
-            (Operand::Reg(lhs), Operand::Reg(rhs)) => {
-                self.emit_u32(0xcb000000 | (rhs as u32) << 16 | (lhs as u32) << 5 | (dst as u32));
-            }
-            (Operand::Reg(lhs), Operand::Imm64(rhs)) => {
-                // The sub immediate instruction only supports 12 bits
-                if rhs > (2 << 12) - 1 {
-                    self.mov(Reg::LoadTemp, rhs);
-                    self.sub(dst, lhs, Reg::LoadTemp);
-                } else {
-                    self.emit_u32(
-                        0xd1000000 | (rhs as u32) << 10 | (lhs as u32) << 5 | (dst as u32),
-                    );
-                }
-            }
-            (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
-                self.mov(dst, lhs.saturating_sub(rhs));
-            }
-            (op1, op2) => {
-                self.sub(dst, op2, op1);
-            }
-        }
-        self.restore_dst();
+        self.add_sub_op(dst, lhs, rhs, 0xcb000000, 0xd1000000);
     }
 
     pub fn csel(
@@ -328,40 +276,16 @@ impl Assembler {
         lhs: impl Into<Operand>,
         rhs: impl Into<Operand>,
     ) {
-        let dst = self.resolve_dst(dst);
-        let (lhs, rhs) = self.resolve(lhs, rhs);
-        match (lhs, rhs) {
-            (Operand::Reg(lhs), Operand::Reg(rhs)) => {
-                self.emit_u32(0x8a000000 | (rhs as u32) << 16 | (lhs as u32) << 5 | (dst as u32));
-            }
-            (Operand::Reg(lhs), Operand::Imm64(imm64)) => {
-                if imm64 > (2 << 13) - 1 {
-                    self.mov(Reg::LoadTemp, imm64);
-                    self.and(dst, lhs, Reg::LoadTemp);
-                } else if let Some((n, immr, imms)) = encode_logical_immediate(imm64, 64) {
-                    self.emit_u32(
-                        0x92400000
-                            | n << 22
-                            | immr << 16
-                            | imms << 10
-                            | (lhs as u32) << 5
-                            | (dst as u32),
-                    );
-                } else {
-                    self.mov(Reg::LoadTemp, imm64);
-                    self.and(dst, lhs, Reg::LoadTemp);
-                }
-            }
-            (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
-                self.mov(Reg::LoadTemp, lhs);
-                self.and(dst, Reg::LoadTemp, rhs);
-            }
-            (op1, op2) => {
-                self.and(dst, op2, op1);
-            }
-        }
+        self.logical_op(dst, lhs, rhs, 0x8a000000, 0x92400000);
+    }
 
-        self.restore_dst();
+    pub fn eor(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+    ) {
+        self.logical_op(dst, lhs, rhs, 0xca000000, 0xd2400000);
     }
 
     pub fn or(
@@ -370,40 +294,7 @@ impl Assembler {
         lhs: impl Into<Operand>,
         rhs: impl Into<Operand>,
     ) {
-        let dst = self.resolve_dst(dst);
-        let (lhs, rhs) = self.resolve(lhs, rhs);
-        match (lhs, rhs) {
-            (Operand::Reg(lhs), Operand::Reg(rhs)) => {
-                self.emit_u32(0xaa000000 | (rhs as u32) << 16 | (lhs as u32) << 5 | (dst as u32));
-            }
-            (Operand::Reg(lhs), Operand::Imm64(imm64)) => {
-                if imm64 > (2 << 13) - 1 {
-                    self.mov(Reg::LoadTemp, imm64);
-                    self.or(dst, lhs, Reg::LoadTemp);
-                } else if let Some((n, immr, imms)) = encode_logical_immediate(imm64, 64) {
-                    self.emit_u32(
-                        0xb2400000
-                            | n << 22
-                            | immr << 16
-                            | imms << 10
-                            | (lhs as u32) << 5
-                            | (dst as u32),
-                    );
-                } else {
-                    self.mov(Reg::LoadTemp, imm64);
-                    self.or(dst, lhs, Reg::LoadTemp);
-                }
-            }
-            (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
-                self.mov(Reg::LoadTemp, lhs);
-                self.or(dst, Reg::LoadTemp, rhs);
-            }
-            (op1, op2) => {
-                self.or(dst, op2, op1);
-            }
-        }
-
-        self.restore_dst();
+        self.logical_op(dst, lhs, rhs, 0xaa000000, 0xb2400000);
     }
 
     pub fn store(&mut self, idx: u32, base: Reg, src: impl Into<Operand>) {
@@ -437,6 +328,84 @@ impl Assembler {
             }
             Operand::Imm64(_) => panic!("cannot load into an immediate"),
         }
+    }
+
+    fn add_sub_op(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        reg_base: u32,
+        imm_base: u32,
+    ) {
+        let dst = self.resolve_dst(dst);
+        let (lhs, rhs) = self.resolve(lhs, rhs);
+        match (lhs, rhs) {
+            (Operand::Reg(lhs), Operand::Reg(rhs)) => {
+                self.emit_u32(reg_base | (rhs as u32) << 16 | (lhs as u32) << 5 | (dst as u32));
+            }
+            (Operand::Reg(lhs), Operand::Imm64(rhs)) => {
+                // The add/sub immediate instruction only supports 12 bits
+                if rhs > (2 << 12) - 1 {
+                    self.mov(Reg::LoadTemp, rhs);
+                    self.add_sub_op(dst, lhs, Reg::LoadTemp, reg_base, imm_base);
+                } else {
+                    self.emit_u32(imm_base | (rhs as u32) << 10 | (lhs as u32) << 5 | (dst as u32));
+                }
+            }
+            (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
+                self.mov(Reg::LoadTemp, lhs);
+                self.add_sub_op(dst, Reg::LoadTemp, rhs, reg_base, imm_base);
+            }
+            (op1, op2) => {
+                self.add_sub_op(dst, op2, op1, reg_base, imm_base);
+            }
+        }
+        self.restore_dst();
+    }
+
+    fn logical_op(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        reg_base: u32,
+        imm_base: u32,
+    ) {
+        let dst = self.resolve_dst(dst);
+        let (lhs, rhs) = self.resolve(lhs, rhs);
+        match (lhs, rhs) {
+            (Operand::Reg(lhs), Operand::Reg(rhs)) => {
+                self.emit_u32(reg_base | (rhs as u32) << 16 | (lhs as u32) << 5 | (dst as u32));
+            }
+            (Operand::Reg(lhs), Operand::Imm64(imm64)) => {
+                if imm64 > (2 << 13) - 1 {
+                    self.mov(Reg::LoadTemp, imm64);
+                    self.logical_op(dst, lhs, Reg::LoadTemp, reg_base, imm_base);
+                } else if let Some((n, immr, imms)) = encode_logical_immediate(imm64, 64) {
+                    self.emit_u32(
+                        imm_base
+                            | n << 22
+                            | immr << 16
+                            | imms << 10
+                            | (lhs as u32) << 5
+                            | (dst as u32),
+                    );
+                } else {
+                    self.mov(Reg::LoadTemp, imm64);
+                    self.logical_op(dst, lhs, Reg::LoadTemp, reg_base, imm_base);
+                }
+            }
+            (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
+                self.mov(Reg::LoadTemp, lhs);
+                self.logical_op(dst, Reg::LoadTemp, rhs, reg_base, imm_base);
+            }
+            (op1, op2) => {
+                self.logical_op(dst, op2, op1, reg_base, imm_base);
+            }
+        }
+
+        self.restore_dst();
     }
 
     fn emit(&mut self, b: u8) {
@@ -821,5 +790,14 @@ mod tests {
         asm.or(Reg::GPR0, Reg::GPR1, Reg::GPR2);
         let code = asm.consume();
         asm_assert_eq!(&[0xb2400528, 0xaa0a0128], &code);
+    }
+
+    #[test]
+    fn eor() {
+        let mut asm = Assembler::new();
+        asm.eor(Reg::GPR0, Reg::GPR1, 0b11);
+        asm.eor(Reg::GPR0, Reg::GPR1, Reg::GPR2);
+        let code = asm.consume();
+        asm_assert_eq!(&[0xd2400528, 0xca0a0128], &code);
     }
 }
