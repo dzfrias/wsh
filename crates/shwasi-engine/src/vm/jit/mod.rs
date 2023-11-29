@@ -125,8 +125,8 @@ impl Compiler {
             let instr = buf.get(i).unwrap();
             match instr {
                 I::Nop => {}
-                I::I32Const(val) => stack.push(Operand::Imm64(val as u64)),
-                I::I64Const(val) => stack.push(Operand::Imm64(val)),
+                I::I32Const(val) => stack.push(Operand::Imm64(val as i32 as u64)),
+                I::I64Const(val) => stack.push(Operand::Imm64(val as i64 as u64)),
                 I::Drop => drop(stack.pop()),
                 I::I32Add | I::I64Add => binop!(add or |lhs: u64, rhs| lhs.saturating_add(rhs)),
                 I::I32Sub | I::I64Sub => binop!(sub or |lhs: u64, rhs| lhs.wrapping_sub(rhs)),
@@ -144,6 +144,7 @@ impl Compiler {
                 I::I32And | I::I64And => binop!(and or |lhs: u64, rhs| lhs & rhs),
                 I::I32Or | I::I64Or => binop!(or or |lhs: u64, rhs| lhs & rhs),
                 I::I32Xor | I::I64Xor => binop!(eor or |lhs: u64, rhs| lhs ^ rhs),
+                I::I32Mul | I::I64Mul => binop!(mul or |lhs: u64, rhs| lhs.wrapping_mul(rhs)),
                 I::I32Eqz | I::I64Eqz => {
                     let op = pop!();
                     if let Operand::Imm64(imm64) = op {
@@ -374,6 +375,9 @@ impl Compiler {
     fn pad_movs(&mut self, ops: &[Operand]) {
         for op in ops {
             match op {
+                Operand::Imm64(imm) if ((-(1 << 16) + 1)..0).contains(&(*imm as i64)) => {
+                    self.asm.nop();
+                }
                 Operand::Imm64(imm) if *imm > (u32::MAX as u64 + u16::MAX as u64) => {
                     self.asm.nop();
                     self.asm.nop();

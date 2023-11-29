@@ -73,23 +73,27 @@ impl Assembler {
     pub fn mov(&mut self, dst: impl Into<Operand>, src: impl Into<Operand>) {
         match (dst.into(), src.into()) {
             (Operand::Reg(reg), Operand::Imm64(imm64)) => {
+                if ((-(1 << 16) + 1)..0).contains(&(imm64 as i64)) {
+                    // Mov and negate instruction (movn)
+                    self.emit_u32(
+                        0x92800000 | (((imm64 as i32).abs() - 1) as u32) << 5 | reg as u32,
+                    );
+                    return;
+                }
+
                 let [low, mid_low, mid_high, high] = split_u64::<16, 4>(imm64);
                 // mov (immediate)
                 self.emit_u32(0xd2800000 | ((low as u32) << 5) | reg as u32);
                 // The following are movk's that shift incrementally. We don't want to compile them
                 // if the immediate's bits are representable by just the least significant 16.
                 if mid_low != 0 {
-                    self.emit_u32(
-                        0xf2000000 | (0b101 << 21) | ((mid_low as u32) << 5) | reg as u32,
-                    );
+                    self.emit_u32(0xf2000000 | 0b101 << 21 | ((mid_low as u32) << 5) | reg as u32);
                 }
                 if mid_high != 0 {
-                    self.emit_u32(
-                        0xf2000000 | (0b110 << 21) | ((mid_high as u32) << 5) | reg as u32,
-                    );
+                    self.emit_u32(0xf2000000 | 0b110 << 21 | (mid_high as u32) << 5 | reg as u32);
                 }
                 if high != 0 {
-                    self.emit_u32(0xf2000000 | (0b111 << 21) | ((high as u32) << 5) | reg as u32);
+                    self.emit_u32(0xf2000000 | 0b111 << 21 | (high as u32) << 5 | reg as u32);
                 }
             }
             (Operand::Reg(dst), Operand::Reg(src)) => {
@@ -295,6 +299,35 @@ impl Assembler {
         rhs: impl Into<Operand>,
     ) {
         self.logical_op(dst, lhs, rhs, 0xaa000000, 0xb2400000);
+    }
+
+    pub fn mul(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+    ) {
+        let dst = self.resolve_dst(dst);
+        let (lhs, rhs) = self.resolve(lhs, rhs);
+
+        match (lhs, rhs) {
+            (Operand::Reg(lhs), Operand::Reg(rhs)) => {
+                self.emit_u32(0x9b007c00 | (rhs as u32) << 16 | (lhs as u32) << 5 | (dst as u32));
+            }
+            (Operand::Reg(lhs), Operand::Imm64(imm64)) => {
+                self.mov(Reg::LoadTemp, imm64);
+                self.mul(dst, lhs, Reg::LoadTemp);
+            }
+            (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
+                self.mov(Reg::LoadTemp, lhs);
+                self.mul(dst, Reg::LoadTemp, rhs);
+            }
+            (op1, op2) => {
+                self.mul(dst, op2, op1);
+            }
+        }
+
+        self.restore_dst();
     }
 
     pub fn store(&mut self, idx: u32, base: Reg, src: impl Into<Operand>) {
@@ -683,10 +716,7 @@ mod tests {
         asm.add(Reg::GPR0, Reg::GPR0, u64::MAX);
         let code = asm.consume();
         // Should mov into a temporary register, then add
-        asm_assert_eq!(
-            &[0xd29ffff8, 0xf2bffff8, 0xf2dffff8, 0xf2fffff8, 0x8b180108],
-            &code
-        );
+        asm_assert_eq!(&[0x92800018, 0x8b180108], &code);
     }
 
     #[test]
@@ -705,10 +735,7 @@ mod tests {
         asm.sub(Reg::GPR0, Reg::GPR0, u64::MAX);
         let code = asm.consume();
         // Should mov into a temporary register, then sub
-        asm_assert_eq!(
-            &[0xd29ffff8, 0xf2bffff8, 0xf2dffff8, 0xf2fffff8, 0xcb180108],
-            &code
-        );
+        asm_assert_eq!(&[0x92800018, 0xcb180108], &code);
     }
 
     #[test]
@@ -799,5 +826,23 @@ mod tests {
         asm.eor(Reg::GPR0, Reg::GPR1, Reg::GPR2);
         let code = asm.consume();
         asm_assert_eq!(&[0xd2400528, 0xca0a0128], &code);
+    }
+
+    #[test]
+    fn mul() {
+        let mut asm = Assembler::new();
+        asm.mul(Reg::GPR0, Reg::GPR1, Reg::GPR2);
+        let code = asm.consume();
+        asm_assert_eq!(&[0x9b0a7d28], &code);
+    }
+
+    #[test]
+    fn mov_negative() {
+        let mut asm = Assembler::new();
+        asm.mov(Reg::GPR0, -14i64 as u64);
+        asm.mov(Reg::GPR0, -55i64 as u64);
+        asm.mov(Reg::GPR0, -1024i64 as u64);
+        let code = asm.consume();
+        asm_assert_eq!(&[0x928001a8, 0x928006c8, 0x92807fe8], &code);
     }
 }
