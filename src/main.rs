@@ -37,7 +37,7 @@ fn main() -> Result<()> {
     let module = parser.read_module()?;
     let mut store = Store::default();
     let instance = Instance::instantiate(&mut store, module)?;
-    let fib = instance.get_func::<u32, u32>(&store, "fib")?;
+    let fib = instance.get_func::<i32, i32>(&store, "fib")?;
     let result = fib.call(&mut store, 39)?;
     dbg!(result);
 
