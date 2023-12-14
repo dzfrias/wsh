@@ -19,8 +19,8 @@ anyhow.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 bitflags.workspace = true
-num_enum.workspace = true
 byteorder = "1.5.0"
+num_enum = "0.7.0"
 wasm-leb128 = { path = "../wasm-leb128" }
 itertools = "0.11.0"
 rayon = "1.8.0"

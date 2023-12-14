@@ -177,7 +177,7 @@ impl<'s> Vm<'s> {
 
                 // For now, JIT compilation only works on aarch64 platforms
                 #[cfg(target_arch = "aarch64")]
-                match jit::Compiler::new(self.frame.module.clone(), self.store).compile(f) {
+                match jit::Compiler::new(self.frame.module.clone()).compile(f) {
                     Ok(executable) => {
                         info!("successfully JIT compiled function");
                         executable.run(self, bp, f.ty.1.len());
@@ -198,7 +198,7 @@ impl<'s> Vm<'s> {
                     .frame
                     .push(f.inst.clone(), bp)
                     .ok_or(Trap::StackOverflow)?;
-                // Keep track of the old frame to replace later. This is what emulates a call stack
+                // Keep track of the old frame to replace later. This is what emulate a call stack
                 let old_frame = mem::replace(&mut self.frame, new_frame);
                 if cfg!(debug_assertions) {
                     // See https://github.com/rust-lang/rust/issues/34283.

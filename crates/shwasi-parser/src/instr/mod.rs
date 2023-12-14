@@ -63,7 +63,7 @@ pub struct Block {
 }
 
 /// Internally used in order to encode instructions efficiently in the buffer.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 struct InstrInfo {
     opcode: Opcode,
     /// The payload of the instruction. This is used to encode the immediates of an instruction.
@@ -966,11 +966,5 @@ impl fmt::Display for InstrBuffer {
         }
 
         Ok(())
-    }
-}
-
-impl PartialEq for InstrBuffer {
-    fn eq(&self, other: &Self) -> bool {
-        self.infos == other.infos
     }
 }

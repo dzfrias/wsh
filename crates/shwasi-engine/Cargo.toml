@@ -9,12 +9,10 @@ thiserror.workspace = true
 tracing.workspace = true
 paste.workspace = true
 bitflags.workspace = true
-num_enum.workspace = true
 shwasi-parser = { path = "../shwasi-parser" }
 stacker = "0.1.15"
 libc = "0.2.150"
 capstone = "0.11.0"
-petgraph = { version = "0.6.4", default-features = false }
 
 [dev-dependencies]
 test-log.workspace = true
