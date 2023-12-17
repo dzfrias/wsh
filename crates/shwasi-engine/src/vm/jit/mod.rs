@@ -321,14 +321,34 @@ impl<'s> Compiler<'s> {
                         result_arity: self.return_arity(block.ty),
                         end: block.end,
                     });
+                    let init_height = stack.len() - self.param_arity(block.ty);
+
                     let buf = buf.inner().slice(buf.start() + i + 1..block.end);
                     let len = buf.len();
-                    self.compile_buf(stack, buf)?;
-                    self.unify(stack, block.end);
-                    self.patch(block.end, self.asm.addr());
+
+                    let mut branch = stack.clone();
+                    self.compile_buf(&mut branch, buf)?;
+                    let if_unify_addr = self.asm.addr();
+                    self.pad_movs(&branch[init_height..]);
+                    self.make_branch(
+                        block.end,
+                        UnifyTarget {
+                            addr: if_unify_addr,
+                            stack: branch,
+                        },
+                    );
+                    let jump_end_addr = self.asm.addr();
+                    self.asm.nop();
+
                     let to = self.asm.addr();
                     self.asm.patch(branch_addr, |asm| {
                         asm.branch_if(to as u64, ConditionCode::Eq);
+                    });
+                    self.unify(stack, block.end);
+                    self.patch(block.end, self.asm.addr());
+                    let to = self.asm.addr();
+                    self.asm.patch(jump_end_addr, |asm| {
+                        asm.branch(to as u64);
                     });
                     self.labels.pop().unwrap();
                     i += len + 1;
@@ -804,7 +824,10 @@ mod tests {
             })
             .unwrap();
         asm_assert_eq!(
-            &[0xd503201f, 0xa9007bfd, 0xd2800158, 0xf9000038, 0xd2800000, 0xd65f03c0],
+            &[
+                0xd10043ff, 0xa9007bfd, 0xd2800158, 0xf9000038, 0xd2800000, 0xa9407bfd, 0x910043ff,
+                0xd65f03c0
+            ],
             executable.as_bytes()
         );
     }
