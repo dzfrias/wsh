@@ -10,7 +10,7 @@ use shwasi_parser::{BlockType, InstrBufferRef, Instruction};
 use thiserror::Error;
 use tracing::debug;
 
-use crate::{vm::jit::debug::asm_fmt, Instance, ModuleFunc, Store};
+use crate::{vm::jit::debug::asm_fmt, Instance, ModuleFunc, Store, Trap};
 
 use self::assembler::*;
 pub use self::executable::*;
@@ -26,7 +26,7 @@ pub struct Compiler<'s> {
     labels: Vec<Label>,
     to_patch: HashMap<usize, Vec<PatchTarget>>,
     to_unify: HashMap<usize, Vec<UnifyTarget>>,
-    to_end: Vec<usize>,
+    to_end: Vec<(usize, Option<ConditionCode>)>,
 }
 
 #[derive(Debug, Error)]
@@ -73,14 +73,18 @@ impl<'s> Compiler<'s> {
         self.patch(f.code.body.len() - 1, self.asm.addr());
         self.labels.pop();
 
-        for (offset, op) in stack.iter().enumerate() {
+        for (offset, op) in stack.iter().filter(|op| !op.is_unreachable()).enumerate() {
             self.asm.store(offset as u32, Reg::Arg1, *op);
         }
         self.asm.mov(Reg::Arg0, 0);
-        for addr in self.to_end {
+        for (addr, cond) in self.to_end {
             let to = self.asm.addr() as u64;
             self.asm.patch(addr, |asm| {
-                asm.branch_if(to, ConditionCode::Ne);
+                if let Some(cond) = cond {
+                    asm.branch_if(to, cond);
+                } else {
+                    asm.branch(to);
+                }
             });
         }
         if self.free.total_stack_size > 0 {
@@ -151,6 +155,16 @@ impl<'s> Compiler<'s> {
                 I::LocalSet { idx } => {
                     let op = pop!();
                     self.asm.store(idx, Reg::Arg0, op);
+                }
+                I::Unreachable => {
+                    self.asm.mov(Reg::Arg0, Trap::Unreachable as u64);
+                    self.to_end.push((self.asm.addr(), None));
+                    self.asm.nop();
+                    let label = self.labels.last().unwrap();
+                    for _ in 0..label.arity {
+                        stack.push(Operand::Unreachable);
+                    }
+                    return Ok(());
                 }
                 I::I32Eq | I::I64Eq => binop!(eq or |lhs: u64, rhs| (lhs == rhs) as u64),
                 I::I32Ne | I::I64Ne => binop!(ne or |lhs: u64, rhs| (lhs != rhs) as u64),
@@ -239,8 +253,9 @@ impl<'s> Compiler<'s> {
                         stack.push(op);
                         self.free.next_free();
                     }
+                    // Success trap code
                     self.asm.cmp(Reg::Arg0, 0);
-                    self.to_end.push(self.asm.addr());
+                    self.to_end.push((self.asm.addr(), Some(ConditionCode::Ne)));
                     // Will be patched to branch to end
                     self.asm.nop();
 
@@ -503,6 +518,10 @@ impl<'s> Compiler<'s> {
         }
     }
 
+    /// Unifies the stack at a given end index.
+    ///
+    /// `stack` will be the "main" branch, and other branches (found in `self.to_unify`) will be
+    /// merged. This is akin to a phi instruction in SSA form.
     fn unify(&mut self, stack: &mut Vec<Operand>, end_idx: usize) {
         let Some(unify_list) = self.to_unify.get(&end_idx) else {
             return;
@@ -526,7 +545,15 @@ impl<'s> Compiler<'s> {
                         to_mov.push((self.free.current, i));
                         self.free.next_free();
                     }
-                    asm.mov(*main, *branch);
+                    // If it is unreachable, then we can use any operand to merge with, and it'll
+                    // be correct.
+                    if main.is_unreachable() {
+                        *main = self.free.current;
+                        self.free.next_free();
+                    }
+                    if !branch.is_unreachable() {
+                        asm.mov(*main, *branch);
+                    }
                 }
             });
         }
@@ -709,7 +736,7 @@ impl FreeMem {
             Operand::Mem64(_, offset) => {
                 self.free_stack.set(offset as usize, false);
             }
-            Operand::Imm64(_) => {}
+            Operand::Imm64(_) | Operand::Unreachable => {}
         }
     }
 }

@@ -31,6 +31,7 @@ pub enum Operand {
     Reg(Reg),
     Imm64(u64),
     Mem64(Reg, u64),
+    Unreachable,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -368,6 +369,7 @@ impl Assembler {
                 self.mov(Reg::LoadTemp, imm64);
                 self.store(idx, base, Reg::LoadTemp);
             }
+            Operand::Unreachable => unreachable!("cannot store an unreachable value"),
         }
     }
 
@@ -382,6 +384,7 @@ impl Assembler {
                 self.store(offset as u32, mem_base, Reg::LoadTemp);
             }
             Operand::Imm64(_) => panic!("cannot load into an immediate"),
+            Operand::Unreachable => unreachable!("cannot store an unreachable value"),
         }
     }
 
@@ -490,6 +493,7 @@ impl Assembler {
                 Reg::LoadTemp3
             }
             Operand::Imm64(_) => panic!("cannot use an immediate as a register"),
+            Operand::Unreachable => unreachable!("cannot store an unreachable value"),
         }
     }
 
@@ -644,6 +648,12 @@ impl ConditionCode {
 impl From<Reg> for Operand {
     fn from(value: Reg) -> Self {
         Self::Reg(value)
+    }
+}
+
+impl Operand {
+    pub fn is_unreachable(&self) -> bool {
+        matches!(self, Self::Unreachable)
     }
 }
 

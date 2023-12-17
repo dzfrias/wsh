@@ -12,7 +12,6 @@ type CallFn = fn(*const Vm, Addr<Func>, *const ValueUntyped, usize) -> (u8, *con
 pub struct Executable {
     /// Function pointer to the executable code. The first arg is a pointer to the locals, and the
     /// second arg is a pointer to the outputs.
-    #[allow(clippy::type_complexity)]
     code: extern "C" fn(*const ValueUntyped, *const ValueUntyped, *const CallFn, *const Vm) -> u8,
     /// The size of the executable memory region.
     size: usize,
