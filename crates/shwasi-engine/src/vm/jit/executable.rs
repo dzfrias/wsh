@@ -5,17 +5,14 @@ use thiserror::Error;
 
 use crate::{value::ValueUntyped, vm::Vm, Addr, Func, Trap, Value};
 
+type CallFn = fn(*const Vm, Addr<Func>, *const ValueUntyped, usize) -> (*const ValueUntyped, u8);
+
 #[derive(Debug)]
 pub struct Executable {
     /// Function pointer to the executable code. The first arg is a pointer to the locals, and the
     /// second arg is a pointer to the outputs.
     #[allow(clippy::type_complexity)]
-    code: extern "C" fn(
-        *const ValueUntyped,
-        *const ValueUntyped,
-        *const fn(*const Vm, Addr<Func>, *const ValueUntyped, usize) -> (*const ValueUntyped, u8),
-        *const Vm,
-    ) -> u8,
+    code: extern "C" fn(*const ValueUntyped, *const ValueUntyped, *const CallFn, *const Vm) -> u8,
     /// The size of the executable memory region.
     size: usize,
 }
@@ -113,39 +110,20 @@ impl Executable {
         let out = vec![ValueUntyped::from(Value::I32(0)); num_results];
         let locals_ptr = vm.stack[bp..].as_ptr();
         let out_ptr = out.as_ptr();
-        fn call(
-            vm: *mut Vm,
-            addr: Addr<Func>,
-            args_ptr: *const ValueUntyped,
-            args_len: usize,
-        ) -> (*const ValueUntyped, u8) {
-            unsafe {
-                let args = slice::from_raw_parts(args_ptr, args_len);
-                for arg in args {
-                    (*vm).push(*arg);
-                }
-                let f = &(*vm).store.functions[addr];
-                let trap_code = if let Err(trap) = (*vm).call_raw(addr) {
-                    trap as u8
-                } else {
-                    0
-                };
-                (
-                    (*vm).stack.as_ptr().add((*vm).stack.len() - f.ty().1.len()),
-                    trap_code,
-                )
-            }
-        }
-        let call_ptr = call as *const fn(
-            *const Vm,
-            Addr<Func>,
-            *const ValueUntyped,
-            usize,
-        ) -> (*const ValueUntyped, u8);
+        let call_ptr = call as *const CallFn;
         // We pass in the locals and the output arrays as pointers to the executable function.
         // These are pointers to the same stack, in different positions. This will allow the
         // executable to use the locals on the stack and write to the outputs on the stack.
         let result = (self.code)(locals_ptr, out_ptr, call_ptr, vm);
+        // Please do not remove this line. I have no idea why, but if you remove this line, a ton
+        // of release-mode related problems happen. I have no idea why this fixes it, but it does.
+        // I believe there's some compiler optimization that's being applied that breaks the code
+        // in release mode. Something to do with the vm stack. This is a bug in my program, but for
+        // now it's way too hard to track down.
+        //
+        // Funny story, I spent hours tracking this down, and it got fixed as soon as I put a
+        // dbg!() on the vm stack.
+        let _ = std::hint::black_box(&vm.stack);
         vm.stack.extend(out);
 
         match result {
@@ -170,6 +148,31 @@ impl Executable {
         // executable to use the locals on the stack and write to the outputs on the stack.
         // TODO: fill these in
         (self.code)(locals_ptr, out_ptr, std::ptr::null(), std::ptr::null());
+    }
+}
+
+#[inline(never)]
+fn call(
+    vm: *mut Vm,
+    addr: Addr<Func>,
+    args_ptr: *const ValueUntyped,
+    args_len: usize,
+) -> (*const ValueUntyped, u8) {
+    unsafe {
+        let args = slice::from_raw_parts(args_ptr, args_len);
+        for arg in args {
+            (*vm).push(*arg);
+        }
+        let f = &(*vm).store.functions[addr];
+        let trap_code = if let Err(trap) = (*vm).call_raw(addr) {
+            trap as u8
+        } else {
+            0
+        };
+        (
+            (*vm).stack.as_ptr().add((*vm).stack.len() - f.ty().1.len()),
+            trap_code,
+        )
     }
 }
 

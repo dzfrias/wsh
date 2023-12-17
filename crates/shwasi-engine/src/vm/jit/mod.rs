@@ -664,6 +664,7 @@ impl FreeMem {
                 ops.push(Operand::Mem64(Reg::Sp, self.free_stack.len() as u64));
                 self.free_stack.push(true);
             }
+            self.total_stack_size = self.total_stack_size.max(self.free_stack.len() as u64 * 8);
             ops
         }
     }
