@@ -6,7 +6,7 @@ use thiserror::Error;
 
 use crate::{value::ValueUntyped, vm::Vm, Addr, Func, Trap, Value};
 
-type CallFn = fn(*const Vm, Addr<Func>, *const ValueUntyped, usize) -> (*const ValueUntyped, u8);
+type CallFn = fn(*const Vm, Addr<Func>, *const ValueUntyped, usize) -> (u8, *const ValueUntyped);
 
 #[derive(Debug)]
 pub struct Executable {
@@ -156,7 +156,7 @@ fn call(
     addr: Addr<Func>,
     args_ptr: *const ValueUntyped,
     args_len: usize,
-) -> (*const ValueUntyped, u8) {
+) -> (u8, *const ValueUntyped) {
     unsafe {
         let args = slice::from_raw_parts(args_ptr, args_len);
         for arg in args {
@@ -169,8 +169,8 @@ fn call(
             0
         };
         (
-            (*vm).stack.as_ptr().add((*vm).stack.len() - f.ty().1.len()),
             trap_code,
+            (*vm).stack.as_ptr().add((*vm).stack.len() - f.ty().1.len()),
         )
     }
 }

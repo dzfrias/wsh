@@ -80,7 +80,7 @@ impl<'s> Compiler<'s> {
         for addr in self.to_end {
             let to = self.asm.addr() as u64;
             self.asm.patch(addr, |asm| {
-                asm.branch(to);
+                asm.branch_if(to, ConditionCode::Ne);
             });
         }
         if self.free.total_stack_size > 0 {
@@ -186,15 +186,13 @@ impl<'s> Compiler<'s> {
                     }
                 }
                 I::Call { func_idx } => {
-                    // TODO: stp and ldp here
-                    let locals_ptr = self.free.save();
-                    self.asm.mov(locals_ptr, Reg::Arg0);
-                    let out_ptr = self.free.save();
-                    self.asm.mov(out_ptr, Reg::Arg1);
-                    let call_ptr = self.free.save();
-                    self.asm.mov(call_ptr, Reg::Arg2);
-                    let vm_ptr = self.free.save();
-                    self.asm.mov(vm_ptr, Reg::Arg3);
+                    let request = self.free.request(4);
+                    let Operand::Mem64(_, offset) = request[0] else {
+                        panic!();
+                    };
+                    self.asm.stp(Reg::Arg0, Reg::Arg1, Reg::Sp, offset as u32);
+                    self.asm
+                        .stp(Reg::Arg2, Reg::Arg3, Reg::Sp, offset as u32 + 2);
 
                     let f_addr = self.module.func_addrs()[func_idx as usize];
                     let f = &self.store.functions[f_addr];
@@ -232,18 +230,16 @@ impl<'s> Compiler<'s> {
                         self.free.release(save);
                     }
 
-                    self.asm.mov(Reg::LoadTemp, call_ptr);
+                    self.asm
+                        .mov(Reg::LoadTemp, Operand::Mem64(Reg::Sp, offset + 2));
                     self.asm.branch_link_register(Reg::LoadTemp);
                     for i in 0..f.ty().1.len() {
                         let op = self.free.current;
-                        self.asm.load(op, i as u32, Reg::Arg0);
+                        self.asm.load(op, i as u32, Reg::Arg1);
                         stack.push(op);
                         self.free.next_free();
                     }
-                    self.asm.cmp(Reg::Arg1, 0);
-                    self.asm
-                        .branch_if(self.asm.addr() as u64 + 12, ConditionCode::Eq);
-                    self.asm.mov(Reg::Arg0, Reg::Arg1);
+                    self.asm.cmp(Reg::Arg0, 0);
                     self.to_end.push(self.asm.addr());
                     // Will be patched to branch to end
                     self.asm.nop();
@@ -253,14 +249,12 @@ impl<'s> Compiler<'s> {
                         self.asm.mov(gpr, save);
                     }
 
-                    self.asm.mov(Reg::Arg0, locals_ptr);
-                    self.free.release(locals_ptr);
-                    self.asm.mov(Reg::Arg1, out_ptr);
-                    self.free.release(out_ptr);
-                    self.asm.mov(Reg::Arg2, call_ptr);
-                    self.free.release(call_ptr);
-                    self.asm.mov(Reg::Arg3, vm_ptr);
-                    self.free.release(vm_ptr);
+                    self.asm
+                        .ldp(Reg::Arg2, Reg::Arg3, Reg::Sp, offset as u32 + 2);
+                    self.asm.ldp(Reg::Arg0, Reg::Arg1, Reg::Sp, offset as u32);
+                    for op in request {
+                        self.free.release(op);
+                    }
                 }
 
                 I::Br { .. } | I::Return => {
