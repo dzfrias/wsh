@@ -14,7 +14,6 @@ shwasi-parser = { path = "../shwasi-parser" }
 stacker = "0.1.15"
 libc = "0.2.150"
 capstone = "0.11.0"
-petgraph = { version = "0.6.4", default-features = false }
 bitvec = "1.0.1"
 smallvec = "1.11.2"
 rustc-hash = "1.1.0"
