@@ -1,14 +1,21 @@
-use std::{iter, mem, slice};
+use std::{mem, slice};
 
+use num_enum::TryFromPrimitive;
 use thiserror::Error;
 
-use crate::{value::ValueUntyped, vm::Vm, Value};
+use crate::{value::ValueUntyped, vm::Vm, Addr, Func, Trap, Value};
 
 #[derive(Debug)]
 pub struct Executable {
     /// Function pointer to the executable code. The first arg is a pointer to the locals, and the
     /// second arg is a pointer to the outputs.
-    code: extern "C" fn(*const ValueUntyped, *const ValueUntyped),
+    #[allow(clippy::type_complexity)]
+    code: extern "C" fn(
+        *const ValueUntyped,
+        *const ValueUntyped,
+        *const fn(*const Vm, Addr<Func>, *const ValueUntyped, usize) -> (*const ValueUntyped, u8),
+        *const Vm,
+    ) -> u8,
     /// The size of the executable memory region.
     size: usize,
 }
@@ -102,17 +109,49 @@ impl Executable {
 
     /// Runs the executable code using the vm. It requires the base pointer to the stack frame and
     /// the number of results that the executable should write to the stack.
-    pub fn run(&self, vm: &mut Vm, bp: usize, num_results: usize) {
-        vm.stack
-            .extend(iter::repeat(ValueUntyped::from(Value::I32(0))).take(num_results));
-        // It is important that we take these pointers AFTER we extend the stack, since the stack
-        // might've been reallocated.
+    pub fn run(&self, vm: &mut Vm, bp: usize, num_results: usize) -> Result<(), Trap> {
+        let out = vec![ValueUntyped::from(Value::I32(0)); num_results];
         let locals_ptr = vm.stack[bp..].as_ptr();
-        let out_ptr = vm.stack[vm.stack.len() - num_results..].as_ptr();
+        let out_ptr = out.as_ptr();
+        fn call(
+            vm: *mut Vm,
+            addr: Addr<Func>,
+            args_ptr: *const ValueUntyped,
+            args_len: usize,
+        ) -> (*const ValueUntyped, u8) {
+            unsafe {
+                let args = slice::from_raw_parts(args_ptr, args_len);
+                for arg in args {
+                    (*vm).push(*arg);
+                }
+                let f = &(*vm).store.functions[addr];
+                let trap_code = if let Err(trap) = (*vm).call_raw(addr) {
+                    trap as u8
+                } else {
+                    0
+                };
+                (
+                    (*vm).stack.as_ptr().add((*vm).stack.len() - f.ty().1.len()),
+                    trap_code,
+                )
+            }
+        }
+        let call_ptr = call as *const fn(
+            *const Vm,
+            Addr<Func>,
+            *const ValueUntyped,
+            usize,
+        ) -> (*const ValueUntyped, u8);
         // We pass in the locals and the output arrays as pointers to the executable function.
         // These are pointers to the same stack, in different positions. This will allow the
         // executable to use the locals on the stack and write to the outputs on the stack.
-        (self.code)(locals_ptr, out_ptr);
+        let result = (self.code)(locals_ptr, out_ptr, call_ptr, vm);
+        vm.stack.extend(out);
+
+        match result {
+            0 => Ok(()),
+            code => Err(Trap::try_from_primitive(code).expect("BUG: should be a valid trap code")),
+        }
     }
 
     /// Returns a slice of the executable memory region.
@@ -129,7 +168,8 @@ impl Executable {
         // We pass in the locals and the output arrays as pointers to the executable function.
         // These are pointers to the same stack, in different positions. This will allow the
         // executable to use the locals on the stack and write to the outputs on the stack.
-        (self.code)(locals_ptr, out_ptr);
+        // TODO: fill these in
+        (self.code)(locals_ptr, out_ptr, std::ptr::null(), std::ptr::null());
     }
 }
 

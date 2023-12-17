@@ -4,7 +4,8 @@ mod ops;
 
 use std::mem;
 
-use shwasi_parser::{BlockType, FuncType, InitExpr, InstrBuffer, Instruction, MemArg, NumLocals};
+use num_enum::TryFromPrimitive;
+use shwasi_parser::{BlockType, InitExpr, InstrBuffer, Instruction, MemArg, NumLocals};
 use thiserror::Error;
 #[cfg(debug_assertions)]
 use tracing::trace;
@@ -88,33 +89,36 @@ struct Label {
     stack_height: usize,
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, TryFromPrimitive)]
+#[repr(u8)]
 pub enum Trap {
     #[error("stack overflow")]
-    StackOverflow,
+    StackOverflow = 1,
     #[error("unreachable encountered")]
     Unreachable,
     #[error("division by zero")]
     DivideByZero,
     #[error("bad float truncation")]
     BadTruncate,
-    #[error("table get out of bounds: {index} >= {table_size}")]
-    TableGetOutOfBounds { index: u32, table_size: u32 },
-    #[error("call indirect type mismatch: expected {expected}, got {got}")]
-    CallIndirectTypeMismatch { expected: FuncType, got: FuncType },
+    #[error("table get out of bounds")]
+    TableGetOutOfBounds,
+    #[error("call indirect type mismatch")]
+    CallIndirectTypeMismatch,
     #[error("attempted to call a null reference")]
     CallNullRef,
-    #[error("out of bounds memory access: {offset} >= {mem_size}")]
-    MemoryAccessOutOfBounds { offset: u32, mem_size: u32 },
+    #[error("out of bounds memory access")]
+    MemoryAccessOutOfBounds,
 }
 
-pub(crate) type Result<T> = std::result::Result<T, Trap>;
+pub type Result<T> = std::result::Result<T, Trap>;
 
 impl<'s> Vm<'s> {
     #[allow(private_interfaces)]
     pub fn new(store: &'s mut Store, module: Instance) -> Self {
         Self {
-            stack: vec![],
+            // TODO: remove this. This is necessary so the vector doesn't resize between JIT calls,
+            // which would invalidate the pointers.
+            stack: Vec::with_capacity(1024),
             frame: StackFrame::new(module),
             labels: vec![],
             store,
@@ -130,10 +134,9 @@ impl<'s> Vm<'s> {
             self.push(arg);
         }
 
-        let f = &self.store.functions[f_addr];
         // SAFETY: As long as the function is never mutated, we should be fine here. This is also a
         // non-null pointer.
-        unsafe { self.call_raw(f) }?;
+        unsafe { self.call_raw(f_addr) }?;
         // We can just take the stack because we know that call_inner will clear any values that
         // are not results.
         let res = std::mem::take(&mut self.stack);
@@ -157,7 +160,8 @@ impl<'s> Vm<'s> {
     /// field of the store is **never**, **ever** mutated. This is an invariant that must be
     /// upheld diligently throughout the **entire** virtual machine. In WebAssembly, there's no
     /// reason why a function should ever be mutated.
-    unsafe fn call_raw(&mut self, f: *const Func) -> Result<()> {
+    unsafe fn call_raw(&mut self, f_addr: Addr<Func>) -> Result<()> {
+        let f = (&self.store.functions[f_addr]) as *const Func;
         // This dereference is the only unsafe part of this function. We cast it to a shared
         // reference out of convenience.
         match &unsafe { &*f } {
@@ -174,14 +178,21 @@ impl<'s> Vm<'s> {
 
                 // Base pointer, used to get locals and arguments
                 let bp = self.stack.len() - f.ty.0.len() - pushed_locals;
+                let new_frame = self
+                    .frame
+                    .push(f.inst.clone(), bp)
+                    .ok_or(Trap::StackOverflow)?;
+                // Keep track of the old frame to replace later. This is what emulates a call stack
+                let old_frame = mem::replace(&mut self.frame, new_frame);
 
                 // For now, JIT compilation only works on aarch64 platforms
                 #[cfg(target_arch = "aarch64")]
-                match jit::Compiler::new(self.frame.module.clone()).compile(f) {
+                match jit::Compiler::new(self.frame.module.clone(), self.store).compile(f) {
                     Ok(executable) => {
                         info!("successfully JIT compiled function");
-                        executable.run(self, bp, f.ty.1.len());
+                        executable.run(self, bp, f.ty.1.len())?;
                         self.clear_block(bp, f.ty.1.len());
+                        self.frame = old_frame;
                         return Ok(());
                     }
                     Err(e) => {
@@ -194,12 +205,6 @@ impl<'s> Vm<'s> {
                     ra: f.code.body.len(),
                     stack_height: bp,
                 });
-                let new_frame = self
-                    .frame
-                    .push(f.inst.clone(), bp)
-                    .ok_or(Trap::StackOverflow)?;
-                // Keep track of the old frame to replace later. This is what emulate a call stack
-                let old_frame = mem::replace(&mut self.frame, new_frame);
                 if cfg!(debug_assertions) {
                     // See https://github.com/rust-lang/rust/issues/34283.
                     // This is a workaround for some annyoing rustc behavior. In debug mode, match
@@ -534,18 +539,12 @@ impl<'s> Vm<'s> {
                 I::MemoryCopy => {
                     let (dst, src, len) = self.pop3::<u32, u32, u32>();
                     let mem = &mut self.store.memories[self.frame.module.mem_addrs()[0]];
-                    if src.saturating_add(len) > mem.len() as u32 {
-                        return Err(Trap::MemoryAccessOutOfBounds {
-                            offset: src.saturating_add(len),
-                            mem_size: mem.len() as u32,
-                        });
+                    if src.saturating_add(len) > mem.len() as u32
+                        || dst.saturating_add(len) > mem.len() as u32
+                    {
+                        return Err(Trap::MemoryAccessOutOfBounds);
                     }
-                    if dst.saturating_add(len) > mem.len() as u32 {
-                        return Err(Trap::MemoryAccessOutOfBounds {
-                            offset: dst.saturating_add(len),
-                            mem_size: mem.len() as u32,
-                        });
-                    }
+
                     mem.data
                         .copy_within(src as usize..(src + len) as usize, dst as usize);
                 }
@@ -553,10 +552,7 @@ impl<'s> Vm<'s> {
                     let (dst, val, len) = self.pop3::<u32, u8, u32>();
                     let mem = &mut self.store.memories[self.frame.module.mem_addrs()[0]];
                     if dst.saturating_add(len) > mem.len() as u32 {
-                        return Err(Trap::MemoryAccessOutOfBounds {
-                            offset: dst.saturating_add(len),
-                            mem_size: mem.len() as u32,
-                        });
+                        return Err(Trap::MemoryAccessOutOfBounds);
                     }
                     mem.data[dst as usize..(dst + len) as usize].fill(val);
                 }
@@ -633,13 +629,12 @@ impl<'s> Vm<'s> {
                 I::I64Store32(MemArg { offset, align: _ }) => store!(u32, offset),
                 I::Call { func_idx } => {
                     let f_addr = &self.frame.module.func_addrs()[func_idx as usize];
-                    let f = &self.store.functions[*f_addr];
                     // SAFETY: the pointer is not null because we just coerced it from a reference.
                     // Because functions are never mutated it is safe to think of this as a shared
                     // reference (more or less).
                     //
                     // Additional details can be found in the `call` method.
-                    unsafe { self.call_raw(f) }?;
+                    unsafe { self.call_raw(*f_addr) }?;
                 }
                 I::LocalGet { idx } => {
                     let val = self.stack[self.frame.bp + idx as usize];
@@ -676,17 +671,10 @@ impl<'s> Vm<'s> {
                     let mem_addr = self.frame.module.mem_addrs()[0];
                     let (dst, src, n) = self.pop3::<u32, u32, u32>();
 
-                    if src.saturating_add(n) > self.store.datas[data_addr].0.len() as u32 {
-                        return Err(Trap::MemoryAccessOutOfBounds {
-                            offset: src.saturating_add(n),
-                            mem_size: self.store.datas[data_addr].0.len() as u32,
-                        });
-                    }
-                    if dst.saturating_add(n) > self.store.memories[mem_addr].len() as u32 {
-                        return Err(Trap::MemoryAccessOutOfBounds {
-                            offset: dst.saturating_add(n),
-                            mem_size: self.store.memories[mem_addr].len() as u32,
-                        });
+                    if src.saturating_add(n) > self.store.datas[data_addr].0.len() as u32
+                        || dst.saturating_add(n) > self.store.memories[mem_addr].len() as u32
+                    {
+                        return Err(Trap::MemoryAccessOutOfBounds);
                     }
 
                     let data = &self.store.datas[data_addr].0[src as usize..(src + n) as usize];
@@ -746,14 +734,12 @@ impl<'s> Vm<'s> {
                     let expect_ty = &self.frame.module.types()[type_idx as usize];
 
                     let ref_ = table.get(tbl_idx)?.ok_or(Trap::CallNullRef)?;
+                    let f_addr = Addr::new(ref_ as usize);
                     let f = &self.store.functions[Addr::new(ref_ as usize)];
                     let actual_ty = f.ty();
 
                     if expect_ty != actual_ty {
-                        return Err(Trap::CallIndirectTypeMismatch {
-                            expected: expect_ty.clone(),
-                            got: actual_ty.clone(),
-                        });
+                        return Err(Trap::CallIndirectTypeMismatch);
                     }
 
                     // SAFETY: the pointer is not null because we just coerced it from a reference.
@@ -761,7 +747,7 @@ impl<'s> Vm<'s> {
                     // reference (more or less).
                     //
                     // Additional details can be found in the `call` method.
-                    unsafe { self.call_raw(f) }?;
+                    unsafe { self.call_raw(f_addr) }?;
                 }
                 I::TableCopy {
                     src_table,
@@ -873,10 +859,7 @@ impl<'s> Vm<'s> {
     fn load<const N: usize>(&self, offset: u32) -> Result<[u8; N]> {
         let mem = &self.store.memories[self.frame.module.mem_addrs()[0]];
         if offset.saturating_add(N as u32) > mem.len() as u32 {
-            return Err(Trap::MemoryAccessOutOfBounds {
-                mem_size: mem.len() as u32,
-                offset: offset.saturating_add(N as u32),
-            });
+            return Err(Trap::MemoryAccessOutOfBounds);
         }
         let val: [u8; N] = mem.data[offset as usize..offset as usize + N]
             .try_into()
@@ -889,10 +872,7 @@ impl<'s> Vm<'s> {
     fn store<const N: usize>(&mut self, offset: u32, val: [u8; N]) -> Result<()> {
         let mem = &mut self.store.memories[self.frame.module.mem_addrs()[0]];
         if offset as usize + N > mem.len() {
-            return Err(Trap::MemoryAccessOutOfBounds {
-                mem_size: mem.len() as u32,
-                offset,
-            });
+            return Err(Trap::MemoryAccessOutOfBounds);
         }
         mem.data[offset as usize..(offset + N as u32) as usize].copy_from_slice(&val);
         Ok(())

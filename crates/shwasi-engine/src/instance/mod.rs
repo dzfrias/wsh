@@ -215,10 +215,7 @@ impl Instance {
                     let len = store.tables[inst.table_addrs()[tbl_idx as usize]].size();
                     let new_offset = offset.saturating_add(elem_inst.elems.len() as u32);
                     if new_offset > len {
-                        return Err(Error::Trap(Trap::TableGetOutOfBounds {
-                            index: new_offset,
-                            table_size: len,
-                        }));
+                        return Err(Error::Trap(Trap::TableGetOutOfBounds));
                     }
                     for (i, func_idx) in elem_inst.elems.iter().enumerate() {
                         let tbl = &mut store.tables[inst.table_addrs()[tbl_idx as usize]];
@@ -242,10 +239,7 @@ impl Instance {
             .as_u32() as usize;
             let mem = &mut store.memories[inst.mem_addrs()[0]];
             if offset + data.data.len() > mem.data.len() {
-                return Err(Error::Trap(Trap::MemoryAccessOutOfBounds {
-                    offset: (offset + data.data.len()) as u32,
-                    mem_size: mem.data.len() as u32,
-                }));
+                return Err(Error::Trap(Trap::MemoryAccessOutOfBounds));
             }
             mem.data[offset..offset + data.data.len()].copy_from_slice(data.data);
         }

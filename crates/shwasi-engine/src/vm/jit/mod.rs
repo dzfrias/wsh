@@ -2,29 +2,31 @@ mod assembler;
 mod debug;
 mod executable;
 
-use std::{
-    cmp::Reverse,
-    collections::{BinaryHeap, HashMap},
-};
+use std::collections::HashMap;
 
 use bitflags::bitflags;
+use bitvec::vec::BitVec;
 use shwasi_parser::{BlockType, InstrBufferRef, Instruction};
 use thiserror::Error;
 use tracing::debug;
 
-use crate::{vm::jit::debug::asm_fmt, Instance, ModuleFunc};
+use crate::{vm::jit::debug::asm_fmt, Instance, ModuleFunc, Store};
 
 use self::assembler::*;
 pub use self::executable::*;
 
 #[derive(Debug)]
-pub struct Compiler {
-    asm: Assembler,
+pub struct Compiler<'s> {
     module: Instance,
+    store: &'s Store,
+
+    // Function-specific state
+    asm: Assembler,
     free: FreeMem,
     labels: Vec<Label>,
     to_patch: HashMap<usize, Vec<PatchTarget>>,
     to_unify: HashMap<usize, Vec<UnifyTarget>>,
+    to_end: Vec<usize>,
 }
 
 #[derive(Debug, Error)]
@@ -36,15 +38,18 @@ pub enum CompilationError {
     UnsupportedInstruction(Instruction),
 }
 
-impl Compiler {
-    pub fn new(module: Instance) -> Self {
+impl<'s> Compiler<'s> {
+    pub fn new(module: Instance, store: &'s Store) -> Self {
         Self {
-            asm: Assembler::new(),
             module,
+            store,
+
+            asm: Assembler::new(),
             labels: vec![],
             free: FreeMem::default(),
             to_patch: HashMap::new(),
             to_unify: HashMap::new(),
+            to_end: vec![],
         }
     }
 
@@ -58,6 +63,8 @@ impl Compiler {
             end: f.code.body.len() - 1,
         });
         self.asm.nop();
+        self.free.request(2);
+        self.asm.stp(Reg::Fp, Reg::Lr, Reg::Sp, 0);
 
         let mut stack: Vec<Operand> = vec![];
         let buf = f.code.body.slice(0..f.code.body.len() - 1);
@@ -67,17 +74,23 @@ impl Compiler {
         self.labels.pop();
 
         for (offset, op) in stack.iter().enumerate() {
-            self.asm.store(offset as u32, Reg::OutBase, *op);
+            self.asm.store(offset as u32, Reg::Arg1, *op);
+        }
+        self.asm.mov(Reg::Arg0, 0);
+        for addr in self.to_end {
+            let to = self.asm.addr() as u64;
+            self.asm.patch(addr, |asm| {
+                asm.branch(to);
+            });
         }
         if self.free.total_stack_size > 0 {
             // Align the stack size to 16 bytes
-            if self.free.total_stack_size % 16 != 0 {
-                self.free.total_stack_size = 8;
-            }
+            self.free.total_stack_size += self.free.total_stack_size % 16;
             // Patch the nop
             self.asm.patch(0, |asm| {
                 asm.sub(Reg::Sp, Reg::Sp, self.free.total_stack_size);
             });
+            self.asm.ldp(Reg::Fp, Reg::Lr, Reg::Sp, 0);
             self.asm.add(Reg::Sp, Reg::Sp, self.free.total_stack_size);
         }
         self.asm.ret();
@@ -131,18 +144,18 @@ impl Compiler {
                 I::I32Add | I::I64Add => binop!(add or |lhs: u64, rhs| lhs.saturating_add(rhs)),
                 I::I32Sub | I::I64Sub => binop!(sub or |lhs: u64, rhs| lhs.wrapping_sub(rhs)),
                 I::LocalGet { idx } => {
-                    self.asm.load_local(self.free.current, idx);
+                    self.asm.load(self.free.current, idx, Reg::Arg0);
                     stack.push(self.free.current);
                     self.free.next_free();
                 }
                 I::LocalSet { idx } => {
                     let op = pop!();
-                    self.asm.store_local(idx, op);
+                    self.asm.store(idx, Reg::Arg0, op);
                 }
                 I::I32Eq | I::I64Eq => binop!(eq or |lhs: u64, rhs| (lhs == rhs) as u64),
                 I::I32Ne | I::I64Ne => binop!(ne or |lhs: u64, rhs| (lhs != rhs) as u64),
                 I::I32And | I::I64And => binop!(and or |lhs: u64, rhs| lhs & rhs),
-                I::I32Or | I::I64Or => binop!(or or |lhs: u64, rhs| lhs & rhs),
+                I::I32Or | I::I64Or => binop!(or or |lhs: u64, rhs| lhs | rhs),
                 I::I32Xor | I::I64Xor => binop!(eor or |lhs: u64, rhs| lhs ^ rhs),
                 I::I32Mul | I::I64Mul => binop!(mul or |lhs: u64, rhs| lhs.wrapping_mul(rhs)),
                 I::I32Eqz | I::I64Eqz => {
@@ -171,6 +184,83 @@ impl Compiler {
                         stack.push(self.free.current);
                         self.free.next_free();
                     }
+                }
+                I::Call { func_idx } => {
+                    // TODO: stp and ldp here
+                    let locals_ptr = self.free.save();
+                    self.asm.mov(locals_ptr, Reg::Arg0);
+                    let out_ptr = self.free.save();
+                    self.asm.mov(out_ptr, Reg::Arg1);
+                    let call_ptr = self.free.save();
+                    self.asm.mov(call_ptr, Reg::Arg2);
+                    let vm_ptr = self.free.save();
+                    self.asm.mov(vm_ptr, Reg::Arg3);
+
+                    let f_addr = self.module.func_addrs()[func_idx as usize];
+                    let f = &self.store.functions[f_addr];
+                    // Virtual machine pointer
+                    self.asm.mov(Reg::Arg0, Reg::Arg3);
+                    // Function address
+                    self.asm.mov(Reg::Arg1, f_addr.as_usize() as u64);
+                    // Args pointer
+                    let space = if !f.ty().0.is_empty() {
+                        let space = self.free.request(f.ty().0.len());
+                        let Operand::Mem64(_, offset) = space[0] else {
+                            panic!();
+                        };
+                        self.asm.add(Reg::Arg2, Reg::Sp, offset * 8);
+                        for i in (0..space.len()).rev() {
+                            let op = pop!();
+                            self.asm.store(i as u32, Reg::Arg2, op);
+                        }
+                        space
+                    } else {
+                        vec![]
+                    };
+                    // Args length
+                    self.asm.mov(Reg::Arg3, f.ty().0.len() as u64);
+                    let mut saved = vec![];
+                    for gpr in stack
+                        .iter_mut()
+                        .filter(|op| matches!(op, Operand::Reg(Reg::GPR0 | Reg::GPR1 | Reg::GPR2)))
+                    {
+                        let save = self.free.save();
+                        saved.push((save, *gpr));
+                        self.asm.mov(save, *gpr);
+                    }
+                    for save in space {
+                        self.free.release(save);
+                    }
+
+                    self.asm.mov(Reg::LoadTemp, call_ptr);
+                    self.asm.branch_link_register(Reg::LoadTemp);
+                    for i in 0..f.ty().1.len() {
+                        let op = self.free.current;
+                        self.asm.load(op, i as u32, Reg::Arg0);
+                        stack.push(op);
+                        self.free.next_free();
+                    }
+                    self.asm.cmp(Reg::Arg1, 0);
+                    self.asm
+                        .branch_if(self.asm.addr() as u64 + 12, ConditionCode::Eq);
+                    self.asm.mov(Reg::Arg0, Reg::Arg1);
+                    self.to_end.push(self.asm.addr());
+                    // Will be patched to branch to end
+                    self.asm.nop();
+
+                    for (save, gpr) in saved {
+                        self.free.release(save);
+                        self.asm.mov(gpr, save);
+                    }
+
+                    self.asm.mov(Reg::Arg0, locals_ptr);
+                    self.free.release(locals_ptr);
+                    self.asm.mov(Reg::Arg1, out_ptr);
+                    self.free.release(out_ptr);
+                    self.asm.mov(Reg::Arg2, call_ptr);
+                    self.free.release(call_ptr);
+                    self.asm.mov(Reg::Arg3, vm_ptr);
+                    self.free.release(vm_ptr);
                 }
 
                 I::Br { .. } | I::Return => {
@@ -205,8 +295,7 @@ impl Compiler {
                     return Ok(());
                 }
                 I::BrIf { depth } => {
-                    let op = stack.pop().unwrap();
-                    self.free.release(op);
+                    let op = pop!();
                     self.asm.cmp(op, 0);
                     let mut branch_stack = stack.clone();
                     let label = self.get_label(depth);
@@ -505,7 +594,7 @@ struct FreeMem {
     reg: FreeReg,
     /// A min-heap of free memory offsets. The offsets are in bytes. This is used to get the
     /// smallest offset into the stack.
-    free_heap: BinaryHeap<Reverse<u64>>,
+    free_stack: BitVec,
     total_stack_size: u64,
 }
 
@@ -514,7 +603,7 @@ impl Default for FreeMem {
         let mut s = Self {
             current: Operand::Reg(Reg::GPR0),
             reg: FreeReg::all(),
-            free_heap: BinaryHeap::new(),
+            free_stack: BitVec::new(),
             total_stack_size: 0,
         };
         s.next_free();
@@ -541,17 +630,54 @@ impl FreeMem {
                 FreeReg::GPR2 => Operand::Reg(Reg::GPR2),
                 _ => unreachable!(),
             }
-        } else if let Some(offset) = self.free_heap.pop() {
-            self.free_heap.push(Reverse(offset.0 + 8));
-            Operand::Mem64(Reg::Sp, offset.0)
+        } else if let Some(offset) = self.free_stack.iter().position(|b| !b) {
+            self.free_stack.set(offset, true);
+            Operand::Mem64(Reg::Sp, offset as u64)
         } else {
-            self.free_heap.push(Reverse(8));
-            Operand::Mem64(Reg::Sp, 0)
+            let len = self.free_stack.len();
+            self.free_stack.push(true);
+            Operand::Mem64(Reg::Sp, len as u64)
         };
         self.current = next;
         if let Operand::Mem64(_, offset) = self.current {
             // times 8 because each mem64 item is 8 bytes
             self.total_stack_size = self.total_stack_size.max(offset * 8);
+        }
+    }
+
+    fn request(&mut self, n: usize) -> Vec<Operand> {
+        if let Some((offset, _)) = self
+            .free_stack
+            .windows(n)
+            .enumerate()
+            .find(|(_, w)| w.iter_zeros().count() == n)
+        {
+            let mut ops = vec![];
+            for i in offset..offset + n {
+                self.free_stack.set(i, true);
+                ops.push(Operand::Mem64(Reg::Sp, i as u64));
+            }
+            ops
+        } else {
+            let mut ops = vec![];
+            for _ in 0..n {
+                ops.push(Operand::Mem64(Reg::Sp, self.free_stack.len() as u64));
+                self.free_stack.push(true);
+            }
+            ops
+        }
+    }
+
+    fn save(&mut self) -> Operand {
+        if let Some(offset) = self.free_stack.iter().position(|b| !b) {
+            self.free_stack.set(offset, true);
+            self.total_stack_size = self.total_stack_size.max(offset as u64 * 8);
+            Operand::Mem64(Reg::Sp, offset as u64)
+        } else {
+            let len = self.free_stack.len() as u64;
+            self.free_stack.push(true);
+            self.total_stack_size = self.total_stack_size.max(len * 8);
+            Operand::Mem64(Reg::Sp, len)
         }
     }
 
@@ -566,7 +692,7 @@ impl FreeMem {
                 });
             }
             Operand::Mem64(_, offset) => {
-                self.free_heap.push(Reverse(offset));
+                self.free_stack.set(offset as usize, false);
             }
             Operand::Imm64(_) => {}
         }
@@ -592,7 +718,8 @@ mod tests {
             ]),
             locals: vec![],
         };
-        let compiler = Compiler::new(Instance::default());
+        let store = Store::default();
+        let compiler = Compiler::new(Instance::default(), &store);
         let executable = compiler
             .compile(&ModuleFunc {
                 ty: FuncType(vec![ValType::I32], vec![ValType::I32]),
@@ -617,7 +744,8 @@ mod tests {
             ]),
             locals: vec![],
         };
-        let compiler = Compiler::new(Instance::default());
+        let store = Store::default();
+        let compiler = Compiler::new(Instance::default(), &store);
         let executable = compiler
             .compile(&ModuleFunc {
                 ty: FuncType(vec![ValType::I32, ValType::I32], vec![ValType::I32]),
@@ -643,7 +771,8 @@ mod tests {
             ]),
             locals: vec![],
         };
-        let compiler = Compiler::new(Instance::default());
+        let store = Store::default();
+        let compiler = Compiler::new(Instance::default(), &store);
         let executable = compiler
             .compile(&ModuleFunc {
                 ty: FuncType(vec![], vec![ValType::I32, ValType::I32]),
@@ -670,7 +799,8 @@ mod tests {
             ]),
             locals: vec![],
         };
-        let compiler = Compiler::new(Instance::default());
+        let store = Store::default();
+        let compiler = Compiler::new(Instance::default(), &store);
         let executable = compiler
             .compile(&ModuleFunc {
                 ty: FuncType(vec![], vec![ValType::I32]),
@@ -679,7 +809,7 @@ mod tests {
             })
             .unwrap();
         asm_assert_eq!(
-            &[0xd503201f, 0xd2800158, 0xf9000038, 0xd65f03c0],
+            &[0xd503201f, 0xa9007bfd, 0xd2800158, 0xf9000038, 0xd2800000, 0xd65f03c0],
             executable.as_bytes()
         );
     }
@@ -702,7 +832,8 @@ mod tests {
             ]),
             locals: vec![],
         };
-        let compiler = Compiler::new(Instance::default());
+        let store = Store::default();
+        let compiler = Compiler::new(Instance::default(), &store);
         let executable = compiler
             .compile(&ModuleFunc {
                 ty: FuncType(vec![ValType::I32], vec![ValType::I32]),
@@ -734,7 +865,8 @@ mod tests {
             ]),
             locals: vec![],
         };
-        let compiler = Compiler::new(Instance::default());
+        let store = Store::default();
+        let compiler = Compiler::new(Instance::default(), &store);
         let executable = compiler
             .compile(&ModuleFunc {
                 ty: FuncType(vec![], vec![ValType::I32]),
@@ -759,7 +891,8 @@ mod tests {
             ]),
             locals: vec![],
         };
-        let compiler = Compiler::new(Instance::default());
+        let store = Store::default();
+        let compiler = Compiler::new(Instance::default(), &store);
         let executable = compiler
             .compile(&ModuleFunc {
                 ty: FuncType(vec![], vec![ValType::I32]),
@@ -792,7 +925,8 @@ mod tests {
             ]),
             locals: vec![],
         };
-        let compiler = Compiler::new(Instance::default());
+        let store = Store::default();
+        let compiler = Compiler::new(Instance::default(), &store);
         let executable = compiler
             .compile(&ModuleFunc {
                 ty: FuncType(vec![ValType::I32; 5], vec![ValType::I32; 5]),

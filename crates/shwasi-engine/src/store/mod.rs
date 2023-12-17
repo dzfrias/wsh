@@ -147,45 +147,27 @@ impl Table {
         self.elements
             .get(idx as usize)
             .copied()
-            .ok_or(Trap::TableGetOutOfBounds {
-                table_size: self.size(),
-                index: idx,
-            })
+            .ok_or(Trap::TableGetOutOfBounds)
     }
 
     pub fn set(&mut self, idx: u32, val: Ref) -> Result<(), Trap> {
         self.elements
             .get_mut(idx as usize)
             .map(|e| *e = val)
-            .ok_or(Trap::TableGetOutOfBounds {
-                table_size: self.size(),
-                index: idx,
-            })
+            .ok_or(Trap::TableGetOutOfBounds)
     }
 
     pub fn fill(&mut self, start: u32, len: u32, val: Ref) -> Result<(), Trap> {
         if start.saturating_add(len) > self.size() {
-            return Err(Trap::TableGetOutOfBounds {
-                table_size: self.size(),
-                index: start.saturating_add(len),
-            });
+            return Err(Trap::TableGetOutOfBounds);
         }
         self.elements[start as usize..(start + len) as usize].fill(val);
         Ok(())
     }
 
     pub fn copy(&mut self, other: &Table, dst: u32, src: u32, len: u32) -> Result<(), Trap> {
-        if src.saturating_add(len) > other.size() {
-            return Err(Trap::TableGetOutOfBounds {
-                index: src.saturating_add(len),
-                table_size: other.size(),
-            });
-        }
-        if dst.saturating_add(len) > self.size() {
-            return Err(Trap::TableGetOutOfBounds {
-                index: dst.saturating_add(len),
-                table_size: self.size(),
-            });
+        if src.saturating_add(len) > other.size() || dst.saturating_add(len) > self.size() {
+            return Err(Trap::TableGetOutOfBounds);
         }
 
         self.elements[dst as usize..(dst + len) as usize]
@@ -195,17 +177,8 @@ impl Table {
     }
 
     pub fn copy_within(&mut self, dst: u32, src: u32, len: u32) -> Result<(), Trap> {
-        if src.saturating_add(len) > self.size() {
-            return Err(Trap::TableGetOutOfBounds {
-                index: src.saturating_add(len),
-                table_size: self.size(),
-            });
-        }
-        if dst.saturating_add(len) > self.size() {
-            return Err(Trap::TableGetOutOfBounds {
-                index: dst.saturating_add(len),
-                table_size: self.size(),
-            });
+        if src.saturating_add(len) > self.size() || dst.saturating_add(len) > self.size() {
+            return Err(Trap::TableGetOutOfBounds);
         }
 
         self.elements
@@ -215,17 +188,10 @@ impl Table {
     }
 
     pub fn init(&mut self, elem: &Element, dst: u32, src: u32, len: u32) -> Result<(), Trap> {
-        if src.saturating_add(len) > elem.elems.len() as u32 {
-            return Err(Trap::TableGetOutOfBounds {
-                index: src.saturating_add(len),
-                table_size: elem.elems.len() as u32,
-            });
-        }
-        if dst.saturating_add(len) > self.size() {
-            return Err(Trap::TableGetOutOfBounds {
-                index: dst.saturating_add(len),
-                table_size: self.size(),
-            });
+        if src.saturating_add(len) > elem.elems.len() as u32
+            || dst.saturating_add(len) > self.size()
+        {
+            return Err(Trap::TableGetOutOfBounds);
         }
 
         self.elements[dst as usize..(dst + len) as usize]

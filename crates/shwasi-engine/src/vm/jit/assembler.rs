@@ -1,3 +1,5 @@
+// TODO: make LoadTemp4. Prevent LoadTemp conflicts.
+// Also move them to temporary registers.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Reg {
     GPR0 = 8,
@@ -10,14 +12,18 @@ pub enum Reg {
     /// A temporary register used for moving memory around.
     LoadTemp3 = 26,
 
+    Fp = 29,
+    Lr = 30,
     Sp = 31,
 
     /// The register that holds the base address of the locals array. This should be the first
     /// argument to the JIT-compiled memory.
-    LocalsArrayBase = 0,
+    Arg0 = 0,
     /// The register that holds the base address of the output array. This should be the second
     /// argument to the JIT-compiled memory.
-    OutBase = 1,
+    Arg1 = 1,
+    Arg2 = 2,
+    Arg3 = 3,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -108,12 +114,14 @@ impl Assembler {
                 self.load(Reg::LoadTemp, offset2 as u32, base2);
                 self.store(offset as u32, base, Reg::LoadTemp);
             }
+            (Operand::Mem64(base, offset), Operand::Reg(reg)) => {
+                self.store(offset as u32, base, reg);
+            }
+            (Operand::Reg(reg), Operand::Mem64(base, offset)) => {
+                self.load(reg, offset as u32, base);
+            }
             (dst, src) => panic!("unsupported mov operands: {:?} and {:?}", dst, src),
         }
-    }
-
-    pub fn load_local(&mut self, dst: impl Into<Operand>, idx: u32) {
-        self.load(dst, idx, Reg::LocalsArrayBase);
     }
 
     pub fn nop(&mut self) {
@@ -122,10 +130,6 @@ impl Assembler {
 
     pub fn ret(&mut self) {
         self.emit_u32(0xd65f03c0);
-    }
-
-    pub fn store_local(&mut self, idx: u32, from: impl Into<Operand>) {
-        self.store(idx, Reg::LocalsArrayBase, from);
     }
 
     pub fn addr(&self) -> usize {
@@ -138,6 +142,10 @@ impl Assembler {
         let truncated_offset = offset & 0b1111111111111111111111111111;
         let offset = truncated_offset / 4;
         self.emit_u32(0x14000000 | (offset as u32));
+    }
+
+    pub fn branch_link_register(&mut self, reg: Reg) {
+        self.emit_u32(0xd63f0000 | (reg as u32) << 5);
     }
 
     pub fn branch_if(&mut self, to: u64, cond: ConditionCode) {
@@ -234,6 +242,20 @@ impl Assembler {
         rhs: impl Into<Operand>,
     ) {
         self.add_sub_op(dst, lhs, rhs, 0xcb000000, 0xd1000000);
+    }
+
+    pub fn stp(&mut self, r1: Reg, r2: Reg, base: Reg, offset: u32) {
+        // TOOD: make sure offset is within i7 bounds
+        self.emit_u32(
+            0xa9000000 | (offset) << 15 | (r2 as u32) << 10 | (base as u32) << 5 | r1 as u32,
+        );
+    }
+
+    pub fn ldp(&mut self, r1: Reg, r2: Reg, base: Reg, offset: u32) {
+        // TOOD: make sure offset is within i7 bounds
+        self.emit_u32(
+            0xa9400000 | (offset) << 15 | (r2 as u32) << 10 | (base as u32) << 5 | r1 as u32,
+        );
     }
 
     pub fn csel(
@@ -386,13 +408,15 @@ impl Assembler {
                     self.emit_u32(imm_base | (rhs as u32) << 10 | (lhs as u32) << 5 | (dst as u32));
                 }
             }
+            (Operand::Imm64(lhs), Operand::Reg(rhs)) => {
+                self.mov(Reg::LoadTemp, lhs);
+                self.add_sub_op(dst, Reg::LoadTemp, rhs, reg_base, imm_base);
+            }
             (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
                 self.mov(Reg::LoadTemp, lhs);
                 self.add_sub_op(dst, Reg::LoadTemp, rhs, reg_base, imm_base);
             }
-            (op1, op2) => {
-                self.add_sub_op(dst, op2, op1, reg_base, imm_base);
-            }
+            _ => unreachable!(),
         }
         self.restore_dst();
     }
@@ -650,31 +674,11 @@ mod tests {
     }
 
     #[test]
-    fn load_local() {
-        let mut asm = Assembler::new();
-        asm.load_local(Reg::GPR0, 0);
-        asm.load_local(Reg::GPR1, 1);
-        asm.load_local(Reg::GPR2, 2);
-        let code = asm.consume();
-        asm_assert_eq!(&[0xf9400008, 0xf9400409, 0xf940080a], &code);
-    }
-
-    #[test]
-    fn store_local() {
-        let mut asm = Assembler::new();
-        asm.store_local(0, Reg::GPR0);
-        asm.store_local(1, Reg::GPR0);
-        asm.store_local(2, Reg::GPR0);
-        let code = asm.consume();
-        asm_assert_eq!(&[0xf9000008, 0xf9000408, 0xf9000808], &code);
-    }
-
-    #[test]
     fn store_return() {
         let mut asm = Assembler::new();
-        asm.store(0, Reg::OutBase, Reg::GPR0);
-        asm.store(1, Reg::OutBase, Reg::GPR0);
-        asm.store(2, Reg::OutBase, Reg::GPR0);
+        asm.store(0, Reg::Arg1, Reg::GPR0);
+        asm.store(1, Reg::Arg1, Reg::GPR0);
+        asm.store(2, Reg::Arg1, Reg::GPR0);
         let code = asm.consume();
         asm_assert_eq!(&[0xf9000028, 0xf9000428, 0xf9000828], &code);
     }
