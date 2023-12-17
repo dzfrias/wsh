@@ -5,6 +5,7 @@ mod ops;
 use std::mem;
 
 use num_enum::TryFromPrimitive;
+#[cfg(target_arch = "aarch64")]
 use rustc_hash::FxHashMap;
 use shwasi_parser::{BlockType, InitExpr, InstrBuffer, Instruction, MemArg, NumLocals};
 use thiserror::Error;
@@ -40,6 +41,7 @@ pub struct Vm<'s> {
     /// This is used to cache JIT compiled functions. We use FxHashMap here because it's much
     /// faster for integer keys. This is important so we can call `call_raw` with as little
     /// overhead as possible.
+    #[cfg(target_arch = "aarch64")]
     compiled: FxHashMap<Addr<Func>, jit::Executable>,
 }
 
