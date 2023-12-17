@@ -825,7 +825,7 @@ mod tests {
             .unwrap();
         asm_assert_eq!(
             &[
-                0xd10043ff, 0xa9007bfd, 0xd2800158, 0xf9000038, 0xd2800000, 0xa9407bfd, 0x910043ff,
+                0xd10043ff, 0xa9007bfd, 0xd280014b, 0xf900002b, 0xd2800000, 0xa9407bfd, 0x910043ff,
                 0xd65f03c0
             ],
             executable.as_bytes()

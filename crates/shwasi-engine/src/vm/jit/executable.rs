@@ -117,15 +117,6 @@ impl Executable {
         // We also pass a pointer to the call function, which the machine code can use to call VM
         // functions.
         let result = (self.code)(locals_ptr, out_ptr, call_ptr, vm);
-        // I have no idea why, but if you remove this line, a ton of release-mode related problems
-        // happen. I have no idea why this fixes it, but it does. I believe there's some compiler
-        // optimization that's being applied that breaks the code in release mode. Something to do
-        // with the vm stack. This is a bug in the program, but for now it's way too hard to track
-        // down.
-        //
-        // Funny story, I spent hours tracking this down, and it got fixed as soon as I put a
-        // dbg!() on the vm stack.
-        let _ = std::hint::black_box(&vm.stack);
         vm.stack.extend_from_slice(&out);
 
         match result {

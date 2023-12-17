@@ -6,11 +6,11 @@ pub enum Reg {
     GPR1 = 9,
     GPR2 = 10,
     /// A temporary register used for moving memory around.
-    LoadTemp = 24,
+    LoadTemp = 11,
     /// A temporary register used for moving memory around.
-    LoadTemp2 = 25,
+    LoadTemp2 = 12,
     /// A temporary register used for moving memory around.
-    LoadTemp3 = 26,
+    LoadTemp3 = 13,
 
     Fp = 29,
     Lr = 30,
@@ -702,7 +702,7 @@ mod tests {
             Operand::Mem64(Reg::Sp, 1),
         );
         let code = asm.consume();
-        asm_assert_eq!(&[0xf94003f8, 0xf94007f9, 0x8b190308], &code);
+        asm_assert_eq!(&[0xf94003eb, 0xf94007ec, 0x8b0c0168], &code);
     }
 
     #[test]
@@ -721,7 +721,7 @@ mod tests {
         asm.add(Reg::GPR0, Reg::GPR0, u64::MAX);
         let code = asm.consume();
         // Should mov into a temporary register, then add
-        asm_assert_eq!(&[0x92800018, 0x8b180108], &code);
+        asm_assert_eq!(&[0x9280000b, 0x8b0b0108], &code);
     }
 
     #[test]
@@ -740,7 +740,7 @@ mod tests {
         asm.sub(Reg::GPR0, Reg::GPR0, u64::MAX);
         let code = asm.consume();
         // Should mov into a temporary register, then sub
-        asm_assert_eq!(&[0x92800018, 0xcb180108], &code);
+        asm_assert_eq!(&[0x9280000b, 0xcb0b0108], &code);
     }
 
     #[test]
@@ -754,7 +754,7 @@ mod tests {
         asm.eq(Reg::GPR0, Reg::GPR1, 4096);
         let code = asm.consume();
         asm_assert_eq!(
-            &[0xeb09011f, 0x9a9f17e8, 0xf100113f, 0x9a9f17e8, 0xd2820018, 0xeb18013f, 0x9a9f17e8],
+            &[0xeb09011f, 0x9a9f17e8, 0xf100113f, 0x9a9f17e8, 0xd282000b, 0xeb0b013f, 0x9a9f17e8],
             &code
         );
     }
@@ -770,7 +770,7 @@ mod tests {
         asm.ne(Reg::GPR0, Reg::GPR1, 4096);
         let code = asm.consume();
         asm_assert_eq!(
-            &[0xeb09011f, 0x9a9f07e8, 0xf100113f, 0x9a9f07e8, 0xd2820018, 0xeb18013f, 0x9a9f07e8],
+            &[0xeb09011f, 0x9a9f07e8, 0xf100113f, 0x9a9f07e8, 0xd282000b, 0xeb0b013f, 0x9a9f07e8],
             &code
         );
     }
