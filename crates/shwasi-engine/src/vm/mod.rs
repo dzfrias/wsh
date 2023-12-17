@@ -5,6 +5,7 @@ mod ops;
 use std::mem;
 
 use num_enum::TryFromPrimitive;
+use rustc_hash::FxHashMap;
 use shwasi_parser::{BlockType, InitExpr, InstrBuffer, Instruction, MemArg, NumLocals};
 use thiserror::Error;
 #[cfg(debug_assertions)]
@@ -34,6 +35,12 @@ pub struct Vm<'s> {
     /// Stack of labels.
     labels: Vec<Label>,
     store: &'s mut Store,
+    /// A map of compiled functions.
+    ///
+    /// This is used to cache JIT compiled functions. We use FxHashMap here because it's much
+    /// faster for integer keys. This is important so we can call `call_raw` with as little
+    /// overhead as possible.
+    compiled: FxHashMap<Addr<Func>, jit::Executable>,
 }
 
 /// The maximum number of nested levels we can have on the frame stack.
@@ -116,12 +123,13 @@ impl<'s> Vm<'s> {
     #[allow(private_interfaces)]
     pub fn new(store: &'s mut Store, module: Instance) -> Self {
         Self {
+            store,
             // TODO: remove this. This is necessary so the vector doesn't resize between JIT calls,
             // which would invalidate the pointers.
             stack: Vec::with_capacity(1024),
             frame: StackFrame::new(module),
             labels: vec![],
-            store,
+            compiled: FxHashMap::default(),
         }
     }
 
@@ -140,7 +148,6 @@ impl<'s> Vm<'s> {
         // We can just take the stack because we know that call_inner will clear any values that
         // are not results.
         let res = std::mem::take(&mut self.stack);
-        // Renew the borrow
         let f = &self.store.functions[f_addr];
         Ok(res
             .into_iter()
@@ -185,18 +192,29 @@ impl<'s> Vm<'s> {
                 // Keep track of the old frame to replace later. This is what emulates a call stack
                 let old_frame = mem::replace(&mut self.frame, new_frame);
 
-                // For now, JIT compilation only works on aarch64 platforms
                 #[cfg(target_arch = "aarch64")]
-                match jit::Compiler::new(self.frame.module.clone(), self.store).compile(f) {
-                    Ok(executable) => {
-                        info!("successfully JIT compiled function");
-                        executable.run(self, bp, f.ty.1.len())?;
-                        self.clear_block(bp, f.ty.1.len());
-                        self.frame = old_frame;
-                        return Ok(());
-                    }
-                    Err(e) => {
-                        warn!("failed to JIT compile function: {e}");
+                if let Some(executable) = self.compiled.get(&f_addr) {
+                    let executable = executable as *const jit::Executable;
+                    (*executable).run(self, bp, f.ty.1.len())?;
+                    self.clear_block(bp, f.ty.1.len());
+                    self.frame = old_frame;
+                    return Ok(());
+                } else {
+                    // For now, JIT compilation only works on aarch64 platforms
+                    match jit::Compiler::new(self.frame.module.clone(), self.store).compile(f) {
+                        Ok(executable) => {
+                            info!("successfully JIT compiled function");
+                            self.compiled.insert(f_addr, executable);
+                            let executable =
+                                self.compiled.get(&f_addr).unwrap() as *const jit::Executable;
+                            (*executable).run(self, bp, f.ty.1.len())?;
+                            self.clear_block(bp, f.ty.1.len());
+                            self.frame = old_frame;
+                            return Ok(());
+                        }
+                        Err(e) => {
+                            warn!("failed to JIT compile function: {e}");
+                        }
                     }
                 }
 

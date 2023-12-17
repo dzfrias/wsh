@@ -1,6 +1,7 @@
 use std::{mem, slice};
 
 use num_enum::TryFromPrimitive;
+use smallvec::{smallvec, SmallVec};
 use thiserror::Error;
 
 use crate::{value::ValueUntyped, vm::Vm, Addr, Func, Trap, Value};
@@ -106,25 +107,26 @@ impl Executable {
 
     /// Runs the executable code using the vm. It requires the base pointer to the stack frame and
     /// the number of results that the executable should write to the stack.
-    pub fn run(&self, vm: &mut Vm, bp: usize, num_results: usize) -> Result<(), Trap> {
-        let out = vec![ValueUntyped::from(Value::I32(0)); num_results];
+    pub unsafe fn run(&self, vm: &mut Vm, bp: usize, num_results: usize) -> Result<(), Trap> {
+        let out: SmallVec<[ValueUntyped; 3]> = smallvec![Value::I32(0).untyped(); num_results];
         let locals_ptr = vm.stack[bp..].as_ptr();
         let out_ptr = out.as_ptr();
         let call_ptr = call as *const CallFn;
         // We pass in the locals and the output arrays as pointers to the executable function.
-        // These are pointers to the same stack, in different positions. This will allow the
-        // executable to use the locals on the stack and write to the outputs on the stack.
+        // This will allow the machine code to interact with out VM.
+        // We also pass a pointer to the call function, which the machine code can use to call VM
+        // functions.
         let result = (self.code)(locals_ptr, out_ptr, call_ptr, vm);
-        // Please do not remove this line. I have no idea why, but if you remove this line, a ton
-        // of release-mode related problems happen. I have no idea why this fixes it, but it does.
-        // I believe there's some compiler optimization that's being applied that breaks the code
-        // in release mode. Something to do with the vm stack. This is a bug in my program, but for
-        // now it's way too hard to track down.
+        // I have no idea why, but if you remove this line, a ton of release-mode related problems
+        // happen. I have no idea why this fixes it, but it does. I believe there's some compiler
+        // optimization that's being applied that breaks the code in release mode. Something to do
+        // with the vm stack. This is a bug in the program, but for now it's way too hard to track
+        // down.
         //
         // Funny story, I spent hours tracking this down, and it got fixed as soon as I put a
         // dbg!() on the vm stack.
         let _ = std::hint::black_box(&vm.stack);
-        vm.stack.extend(out);
+        vm.stack.extend_from_slice(&out);
 
         match result {
             0 => Ok(()),
@@ -143,9 +145,6 @@ impl Executable {
     pub(crate) fn run_with(&self, locals: &mut [ValueUntyped], out: &mut [ValueUntyped]) {
         let locals_ptr = locals.as_ptr();
         let out_ptr = out.as_ptr();
-        // We pass in the locals and the output arrays as pointers to the executable function.
-        // These are pointers to the same stack, in different positions. This will allow the
-        // executable to use the locals on the stack and write to the outputs on the stack.
         // TODO: fill these in
         (self.code)(locals_ptr, out_ptr, std::ptr::null(), std::ptr::null());
     }

@@ -470,6 +470,7 @@ impl Assembler {
     }
 
     fn emit_u32(&mut self, u: u32) {
+        self.out.reserve(4);
         self.emit((u & 0xff) as u8);
         self.emit(((u >> 8) & 0xff) as u8);
         self.emit(((u >> 16) & 0xff) as u8);
