@@ -131,6 +131,7 @@ impl<'s> Vm<'s> {
             stack: Vec::with_capacity(1024),
             frame: StackFrame::new(module),
             labels: vec![],
+            #[cfg(target_arch = "aarch64")]
             compiled: FxHashMap::default(),
         }
     }
