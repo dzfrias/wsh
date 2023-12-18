@@ -221,7 +221,7 @@ impl<'s> Vm<'s> {
 
                 self.labels.push(Label {
                     arity: f.ty.1.len(),
-                    ra: f.code.body.len(),
+                    ra: f.code.body.len() - 1,
                     stack_height: bp,
                 });
                 if cfg!(debug_assertions) {
@@ -302,7 +302,7 @@ impl<'s> Vm<'s> {
         // We extract into a variable so to not recompute the length every time. This is a sizeable
         // performance improvement.
         let len = body.len();
-        while ip < len {
+        loop {
             // SAFETY: We know that the instruction pointer is always in bounds because we checked
             // above.
             let instr = unsafe { body.get_unchecked(ip) };
@@ -320,6 +320,9 @@ impl<'s> Vm<'s> {
                 I::I32DivU => binop!(divu for u32, Trap::DivideByZero),
                 I::End => {
                     self.labels.pop().unwrap();
+                    if ip == len - 1 {
+                        return Ok(());
+                    }
                 }
                 I::Else => {
                     let label = self.labels.pop().unwrap();
@@ -807,8 +810,6 @@ impl<'s> Vm<'s> {
 
             ip += 1;
         }
-
-        Ok(())
     }
 
     /// Clears any extra stuff on the stack, leaving only the block's result.
