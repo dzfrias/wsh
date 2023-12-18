@@ -126,9 +126,7 @@ impl<'s> Vm<'s> {
     pub fn new(store: &'s mut Store, module: Instance) -> Self {
         Self {
             store,
-            // TODO: remove this. This is necessary so the vector doesn't resize between JIT calls,
-            // which would invalidate the pointers.
-            stack: Vec::with_capacity(1024),
+            stack: vec![],
             frame: StackFrame::new(module),
             labels: vec![],
             #[cfg(target_arch = "aarch64")]
@@ -198,7 +196,7 @@ impl<'s> Vm<'s> {
                 #[cfg(target_arch = "aarch64")]
                 if let Some(executable) = self.compiled.get(&f_addr) {
                     let executable = executable as *const jit::Executable;
-                    (*executable).run(self, bp, f.ty.1.len())?;
+                    (*executable).run(self)?;
                     self.clear_block(bp, f.ty.1.len());
                     self.frame = old_frame;
                     return Ok(());
@@ -210,7 +208,7 @@ impl<'s> Vm<'s> {
                             self.compiled.insert(f_addr, executable);
                             let executable =
                                 self.compiled.get(&f_addr).unwrap() as *const jit::Executable;
-                            (*executable).run(self, bp, f.ty.1.len())?;
+                            (*executable).run(self)?;
                             self.clear_block(bp, f.ty.1.len());
                             self.frame = old_frame;
                             return Ok(());

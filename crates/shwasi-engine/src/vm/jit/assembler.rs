@@ -24,6 +24,7 @@ pub enum Reg {
     Arg1 = 1,
     Arg2 = 2,
     Arg3 = 3,
+    Arg4 = 4,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

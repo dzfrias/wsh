@@ -102,7 +102,9 @@ impl<'s> Compiler<'s> {
         let code = self.asm.consume();
         // SAFETY: The code is valid, as long as the assembler and compiler are correct. If they
         // aren't, then that's a bug...
-        let exec = unsafe { Executable::map(&code).map_err(CompilationError::ExecMapError) }?;
+        let exec = unsafe {
+            Executable::map(&code, f.ty.1.len()).map_err(CompilationError::ExecMapError)
+        }?;
 
         debug!("compiled into \n{}", asm_fmt(exec.as_bytes()));
         Ok(exec)
@@ -231,6 +233,12 @@ impl<'s> Compiler<'s> {
                     };
                     // Args length
                     self.asm.mov(Reg::Arg3, f.ty().0.len() as u64);
+                    // This arg is a pointer to the pointer to the locals array. Since only x0 and
+                    // x1 can be used for return values, this is our hypothetical "third" return
+                    // (which should be written to by the function being called). There is a
+                    // calling convention for returning more than 2 values, but it's not worth the
+                    // trouble either side of the FFI boundary.
+                    self.asm.add(Reg::Arg4, Reg::Sp, offset * 8);
                     let mut saved = vec![];
                     for gpr in stack
                         .iter_mut()
@@ -244,8 +252,7 @@ impl<'s> Compiler<'s> {
                         self.free.release(save);
                     }
 
-                    self.asm
-                        .mov(Reg::LoadTemp, Operand::Mem64(Reg::Sp, offset + 2));
+                    self.asm.load(Reg::LoadTemp, offset as u32 + 2, Reg::Sp);
                     self.asm.branch_link_register(Reg::LoadTemp);
                     for i in 0..f.ty().1.len() {
                         let op = self.free.current;
@@ -258,15 +265,16 @@ impl<'s> Compiler<'s> {
                     self.to_end.push((self.asm.addr(), Some(ConditionCode::Ne)));
                     // Will be patched to branch to end
                     self.asm.nop();
+                    // self.asm.store(offset as u32, Reg::Sp, Reg::Arg2);
 
                     for (save, gpr) in saved {
                         self.free.release(save);
                         self.asm.mov(gpr, save);
                     }
 
+                    self.asm.ldp(Reg::Arg0, Reg::Arg1, Reg::Sp, offset as u32);
                     self.asm
                         .ldp(Reg::Arg2, Reg::Arg3, Reg::Sp, offset as u32 + 2);
-                    self.asm.ldp(Reg::Arg0, Reg::Arg1, Reg::Sp, offset as u32);
                     for op in request {
                         self.free.release(op);
                     }

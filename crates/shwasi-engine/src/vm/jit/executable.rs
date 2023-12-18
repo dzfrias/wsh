@@ -6,7 +6,13 @@ use thiserror::Error;
 
 use crate::{value::ValueUntyped, vm::Vm, Addr, Func, Trap, Value};
 
-type CallFn = fn(*const Vm, Addr<Func>, *const ValueUntyped, usize) -> (u8, *const ValueUntyped);
+type CallFn = fn(
+    *const Vm,
+    Addr<Func>,
+    *const ValueUntyped,
+    usize,
+    *mut *const ValueUntyped,
+) -> (u8, *const ValueUntyped);
 
 #[derive(Debug)]
 pub struct Executable {
@@ -15,6 +21,7 @@ pub struct Executable {
     code: extern "C" fn(*const ValueUntyped, *const ValueUntyped, *const CallFn, *const Vm) -> u8,
     /// The size of the executable memory region.
     size: usize,
+    num_results: usize,
 }
 
 #[derive(Debug, Error)]
@@ -37,7 +44,7 @@ impl Executable {
     /// `code` must be valid executable code for the targetted system. It can to pretty much
     /// anything when called, so it is very important that it does not cause any undefined behavior
     /// or do malicious stuff.
-    pub unsafe fn map(code: &[u8]) -> Result<Self, ExecMapError> {
+    pub unsafe fn map(code: &[u8], num_results: usize) -> Result<Self, ExecMapError> {
         let size = code.len();
         // mmap will fail with EINVAL when size == 0
         if size == 0 {
@@ -101,13 +108,15 @@ impl Executable {
         Ok(Self {
             code: executable_function,
             size,
+            num_results,
         })
     }
 
     /// Runs the executable code using the vm. It requires the base pointer to the stack frame and
     /// the number of results that the executable should write to the stack.
-    pub unsafe fn run(&self, vm: &mut Vm, bp: usize, num_results: usize) -> Result<(), Trap> {
-        let out: SmallVec<[ValueUntyped; 3]> = smallvec![Value::I32(0).untyped(); num_results];
+    pub unsafe fn run(&self, vm: &mut Vm) -> Result<(), Trap> {
+        let out: SmallVec<[ValueUntyped; 3]> = smallvec![Value::I32(0).untyped(); self.num_results];
+        let bp = vm.frame.bp;
         let locals_ptr = vm.stack[bp..].as_ptr();
         let out_ptr = out.as_ptr();
         let call_ptr = call as *const CallFn;
@@ -146,6 +155,7 @@ fn call(
     addr: Addr<Func>,
     args_ptr: *const ValueUntyped,
     args_len: usize,
+    out_bp: *mut *const ValueUntyped,
 ) -> (u8, *const ValueUntyped) {
     unsafe {
         let args = slice::from_raw_parts(args_ptr, args_len);
@@ -153,11 +163,15 @@ fn call(
             (*vm).push(*arg);
         }
         let f = &(*vm).store.functions[addr];
+        let bp = (*vm).frame.bp;
         let trap_code = if let Err(trap) = (*vm).call_raw(addr) {
             trap as u8
         } else {
             0
         };
+        // Update the out_bp pointer to the stack. The stack has a chance of being reallocated
+        // after the call, so we need to update the pointer.
+        std::ptr::write(out_bp, (*vm).stack.as_ptr().add(bp));
         (
             trap_code,
             (*vm).stack.as_ptr().add((*vm).stack.len() - f.ty().1.len()),
