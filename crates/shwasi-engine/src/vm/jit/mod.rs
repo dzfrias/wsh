@@ -172,7 +172,11 @@ impl<'s> Compiler<'s> {
                 I::Nop => {}
                 I::I32Const(val) => stack.push(Operand::Imm64(val as u64)),
                 I::I64Const(val) => stack.push(Operand::Imm64(val)),
-                I::Drop => drop(stack.pop()),
+                I::Drop => {
+                    if let Some(op) = stack.pop() {
+                        self.free.release(op);
+                    }
+                }
                 I::I32Add => binop!(add U32 or wrapping_add),
                 I::I64Add => binop!(add U64 or wrapping_add),
                 I::I32Sub => binop!(sub U32 or wrapping_sub),
