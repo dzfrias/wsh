@@ -2,7 +2,10 @@ mod assembler;
 mod debug;
 mod executable;
 
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    ops::{BitAnd, BitOr, BitXor},
+};
 
 use bitflags::bitflags;
 use bitvec::vec::BitVec;
@@ -10,7 +13,10 @@ use shwasi_parser::{BlockType, InstrBufferRef, Instruction};
 use thiserror::Error;
 use tracing::debug;
 
-use crate::{vm::jit::debug::asm_fmt, Instance, ModuleFunc, Store, Trap};
+use crate::{
+    vm::{jit::debug::asm_fmt, ops::IntOp},
+    Instance, ModuleFunc, Store, Trap,
+};
 
 use self::assembler::*;
 pub use self::executable::*;
@@ -92,10 +98,11 @@ impl<'s> Compiler<'s> {
             self.free.total_stack_size += self.free.total_stack_size % 16;
             // Patch the nop
             self.asm.patch(0, |asm| {
-                asm.sub(Reg::Sp, Reg::Sp, self.free.total_stack_size);
+                asm.sub(Reg::Sp, Reg::Sp, self.free.total_stack_size, Width::U64);
             });
             self.asm.ldp(Reg::Fp, Reg::Lr, Reg::Sp, 0);
-            self.asm.add(Reg::Sp, Reg::Sp, self.free.total_stack_size);
+            self.asm
+                .add(Reg::Sp, Reg::Sp, self.free.total_stack_size, Width::U64);
         }
         self.asm.ret();
 
@@ -125,14 +132,33 @@ impl<'s> Compiler<'s> {
             }};
         }
         macro_rules! binop {
-            ($method:ident or $fold:expr) => {{
+            ($method:ident $width:ident or $fold:ident) => {{
                 let rhs = pop!();
                 let lhs = pop!();
                 if let (Operand::Imm64(rhs), Operand::Imm64(lhs)) = (rhs, lhs) {
-                    #[allow(clippy::redundant_closure_call)]
-                    stack.push(Operand::Imm64($fold(lhs, rhs)));
+                    if Width::$width == Width::U32 {
+                        stack.push(Operand::Imm64((lhs as u32).$fold(rhs as u32) as u64));
+                    } else {
+                        stack.push(Operand::Imm64(lhs.$fold(rhs) as u64));
+                    }
                 } else {
-                    self.asm.$method(self.free.current, lhs, rhs);
+                    self.asm.$method(self.free.current, lhs, rhs, Width::$width);
+                    stack.push(self.free.current);
+                    self.free.next_free();
+                }
+            }};
+        }
+        macro_rules! unop {
+            ($method:ident $width:ident or $fold:ident) => {{
+                let op = pop!();
+                if let Operand::Imm64(imm64) = op {
+                    if Width::$width == Width::U32 {
+                        stack.push(Operand::Imm64((imm64 as u32).$fold() as u64));
+                    } else {
+                        stack.push(Operand::Imm64(imm64.$fold() as u64));
+                    }
+                } else {
+                    self.asm.$method(self.free.current, op, Width::$width);
                     stack.push(self.free.current);
                     self.free.next_free();
                 }
@@ -144,11 +170,13 @@ impl<'s> Compiler<'s> {
             let instr = buf.get(i).unwrap();
             match instr {
                 I::Nop => {}
-                I::I32Const(val) => stack.push(Operand::Imm64(val as i32 as u64)),
-                I::I64Const(val) => stack.push(Operand::Imm64(val as i64 as u64)),
+                I::I32Const(val) => stack.push(Operand::Imm64(val as u64)),
+                I::I64Const(val) => stack.push(Operand::Imm64(val)),
                 I::Drop => drop(stack.pop()),
-                I::I32Add | I::I64Add => binop!(add or |lhs: u64, rhs| lhs.saturating_add(rhs)),
-                I::I32Sub | I::I64Sub => binop!(sub or |lhs: u64, rhs| lhs.wrapping_sub(rhs)),
+                I::I32Add => binop!(add U32 or wrapping_add),
+                I::I64Add => binop!(add U64 or wrapping_add),
+                I::I32Sub => binop!(sub U32 or wrapping_sub),
+                I::I64Sub => binop!(sub U64 or wrapping_sub),
                 I::LocalGet { idx } => {
                     self.asm.load(self.free.current, idx, Reg::Arg0);
                     stack.push(self.free.current);
@@ -168,23 +196,20 @@ impl<'s> Compiler<'s> {
                     }
                     return Ok(());
                 }
-                I::I32Eq | I::I64Eq => binop!(eq or |lhs: u64, rhs| (lhs == rhs) as u64),
-                I::I32Ne | I::I64Ne => binop!(ne or |lhs: u64, rhs| (lhs != rhs) as u64),
-                I::I32And | I::I64And => binop!(and or |lhs: u64, rhs| lhs & rhs),
-                I::I32Or | I::I64Or => binop!(or or |lhs: u64, rhs| lhs | rhs),
-                I::I32Xor | I::I64Xor => binop!(eor or |lhs: u64, rhs| lhs ^ rhs),
-                I::I32Mul | I::I64Mul => binop!(mul or |lhs: u64, rhs| lhs.wrapping_mul(rhs)),
-                I::I32Eqz | I::I64Eqz => {
-                    let op = pop!();
-                    if let Operand::Imm64(imm64) = op {
-                        stack.push(Operand::Imm64((imm64 == 0) as u64));
-                    } else {
-                        self.asm.cmp(op, 0);
-                        self.asm.cset(self.free.current, ConditionCode::Eq);
-                        stack.push(self.free.current);
-                        self.free.next_free();
-                    }
-                }
+                I::I32Eq => binop!(eq U32 or eq),
+                I::I64Eq => binop!(eq U64 or eq),
+                I::I32Ne => binop!(ne U32 or ne),
+                I::I64Ne => binop!(ne U64 or ne),
+                I::I32And => binop!(and U32 or bitand),
+                I::I64And => binop!(and U64 or bitand),
+                I::I32Or => binop!(or U32 or bitor),
+                I::I64Or => binop!(or U64 or bitor),
+                I::I32Xor => binop!(eor U32 or bitxor),
+                I::I64Xor => binop!(eor U64 or bitxor),
+                I::I32Mul => binop!(mul U32 or wrapping_mul),
+                I::I64Mul => binop!(mul U64 or wrapping_mul),
+                I::I32Eqz => unop!(eqz U32 or eqz),
+                I::I64Eqz => unop!(eqz U64 or eqz),
                 I::Select | I::SelectT(_) => {
                     let cond = pop!();
                     let rhs = pop!();
@@ -194,7 +219,7 @@ impl<'s> Compiler<'s> {
                     {
                         stack.push(Operand::Imm64(if cond != 0 { lhs } else { rhs }));
                     } else {
-                        self.asm.cmp(cond, 0);
+                        self.asm.cmp(cond, 0, Width::U32);
                         self.asm
                             .csel(self.free.current, lhs, rhs, ConditionCode::Ne);
                         stack.push(self.free.current);
@@ -222,7 +247,7 @@ impl<'s> Compiler<'s> {
                         let Operand::Mem64(_, offset) = space[0] else {
                             panic!();
                         };
-                        self.asm.add(Reg::Arg2, Reg::Sp, offset * 8);
+                        self.asm.add(Reg::Arg2, Reg::Sp, offset * 8, Width::U64);
                         for i in (0..space.len()).rev() {
                             let op = pop!();
                             self.asm.store(i as u32, Reg::Arg2, op);
@@ -238,7 +263,7 @@ impl<'s> Compiler<'s> {
                     // (which should be written to by the function being called). There is a
                     // calling convention for returning more than 2 values, but it's not worth the
                     // trouble either side of the FFI boundary.
-                    self.asm.add(Reg::Arg4, Reg::Sp, offset * 8);
+                    self.asm.add(Reg::Arg4, Reg::Sp, offset * 8, Width::U64);
                     let mut saved = vec![];
                     for gpr in stack
                         .iter_mut()
@@ -261,11 +286,10 @@ impl<'s> Compiler<'s> {
                         self.free.next_free();
                     }
                     // Success trap code
-                    self.asm.cmp(Reg::Arg0, 0);
+                    self.asm.cmp(Reg::Arg0, 0, Width::U32);
                     self.to_end.push((self.asm.addr(), Some(ConditionCode::Ne)));
                     // Will be patched to branch to end
                     self.asm.nop();
-                    // self.asm.store(offset as u32, Reg::Sp, Reg::Arg2);
 
                     for (save, gpr) in saved {
                         self.free.release(save);
@@ -313,7 +337,7 @@ impl<'s> Compiler<'s> {
                 }
                 I::BrIf { depth } => {
                     let op = pop!();
-                    self.asm.cmp(op, 0);
+                    self.asm.cmp(op, 0, Width::U32);
                     let mut branch_stack = stack.clone();
                     let label = self.get_label(depth);
                     let end = label.end;
@@ -335,7 +359,7 @@ impl<'s> Compiler<'s> {
                 I::If { block, else_: None } => {
                     debug_assert!(self.param_arity(block.ty) == self.return_arity(block.ty));
                     let op = pop!();
-                    self.asm.cmp(op, 0);
+                    self.asm.cmp(op, 0, Width::U32);
                     let branch_addr = self.asm.addr();
                     self.asm.branch(0xdeadbeef);
                     self.labels.push(Label {
@@ -419,7 +443,7 @@ impl<'s> Compiler<'s> {
                     else_: Some(else_),
                 } => {
                     let op = pop!();
-                    self.asm.cmp(op, 0);
+                    self.asm.cmp(op, 0, Width::U32);
                     let cond_branch_addr = self.asm.addr();
                     self.asm.branch(0xdeadbeef);
                     let init_height = stack.len() - self.param_arity(block.ty);
