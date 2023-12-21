@@ -49,6 +49,10 @@ impl Width {
         instr & 0x7fffffff | (*self as u32) << 31
     }
 
+    pub fn apply2(&self, instr: u32, pos: u8) -> u32 {
+        self.apply(instr) & (0xffffffff ^ (1 << pos)) | (*self as u32) << pos
+    }
+
     pub fn size(&self) -> u32 {
         match self {
             Self::U32 => 32,
@@ -354,6 +358,115 @@ impl Assembler {
         self.cset(dst, ConditionCode::Eq);
     }
 
+    pub fn clz(&mut self, dst: impl Into<Operand>, src: impl Into<Operand>, width: Width) {
+        let dst = self.resolve_dst(dst);
+        let src = self.resolve1(src);
+
+        match src {
+            Operand::Reg(src) => {
+                self.emit_u32(width.apply(0xdac01000) | (src as u32) << 5 | (dst as u32));
+            }
+            Operand::Imm64(imm64) => {
+                self.mov(Reg::LoadTemp, imm64);
+                self.clz(dst, Reg::LoadTemp, width);
+            }
+            _ => unreachable!(),
+        }
+
+        self.restore_dst();
+    }
+
+    pub fn ctz(&mut self, dst: impl Into<Operand>, src: impl Into<Operand>, width: Width) {
+        let dst = self.resolve_dst(dst);
+        let src = self.resolve1(src);
+
+        self.rbit(dst, src, width);
+        self.clz(dst, dst, width);
+
+        self.restore_dst();
+    }
+
+    pub fn rbit(&mut self, dst: impl Into<Operand>, src: impl Into<Operand>, width: Width) {
+        let dst = self.resolve_dst(dst);
+        let src = self.resolve1(src);
+
+        match src {
+            Operand::Reg(src) => {
+                self.emit_u32(width.apply(0xdac00000) | (src as u32) << 5 | (dst as u32));
+            }
+            Operand::Imm64(imm64) => self.mov(dst, imm64.reverse_bits()),
+            _ => unreachable!(),
+        }
+
+        self.restore_dst();
+    }
+
+    pub fn rotr(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        width: Width,
+    ) {
+        let dst = self.resolve_dst(dst);
+        let (lhs, rhs) = self.resolve(lhs, rhs);
+
+        match (lhs, rhs) {
+            (Operand::Reg(lhs), Operand::Reg(rhs)) => {
+                self.emit_u32(
+                    width.apply(0x9ac02c00) | (rhs as u32) << 16 | (lhs as u32) << 5 | (dst as u32),
+                );
+            }
+            (Operand::Reg(lhs), Operand::Imm64(mut imm64)) => {
+                imm64 %= width.size() as u64;
+                self.emit_u32(
+                    width.apply2(0x93c00000, 22)
+                        | (lhs as u32) << 16
+                        | (lhs as u32) << 5
+                        | (imm64 as u32) << 10
+                        | (dst as u32),
+                );
+            }
+            (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
+                self.mov(Reg::LoadTemp, lhs);
+                self.rotr(dst, Reg::LoadTemp, rhs, width);
+            }
+            _ => unreachable!(),
+        }
+
+        self.restore_dst();
+    }
+
+    pub fn rotl(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        width: Width,
+    ) {
+        let dst = self.resolve_dst(dst);
+        let (lhs, rhs) = self.resolve(lhs, rhs);
+
+        match (lhs, rhs) {
+            (Operand::Reg(lhs), Operand::Reg(rhs)) => {
+                // TODO: modulo rhs by width.size()
+                self.sub(rhs, width.size() as u64, rhs, width);
+                self.rotr(dst, lhs, rhs, width);
+            }
+            (Operand::Reg(lhs), Operand::Imm64(imm64)) => {
+                let size = width.size() as u64;
+                self.rotr(dst, lhs, size - (imm64 % size), width);
+            }
+            (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
+                self.mov(Reg::LoadTemp, lhs);
+                self.rotl(dst, Reg::LoadTemp, rhs, width);
+            }
+            _ => unreachable!(),
+        }
+
+        self.restore_dst();
+    }
+
     pub fn mul(
         &mut self,
         dst: impl Into<Operand>,
@@ -574,6 +687,16 @@ impl Assembler {
             result.1 = dst;
         }
         result
+    }
+
+    fn resolve1(&mut self, op: impl Into<Operand>) -> Operand {
+        let op = op.into();
+        if let Operand::Mem64(base, offset) = op {
+            self.load(Reg::LoadTemp, offset as u32, base);
+            Reg::LoadTemp.into()
+        } else {
+            op
+        }
     }
 }
 
@@ -907,5 +1030,36 @@ mod tests {
         asm.mov(Reg::GPR0, -1024i64 as u64);
         let code = asm.consume();
         asm_assert_eq!(&[0x928001a8, 0x928006c8, 0x92807fe8], &code);
+    }
+
+    #[test]
+    fn ctz() {
+        let mut asm = Assembler::new();
+        asm.ctz(Reg::GPR0, Reg::GPR1, Width::U64);
+        let code = asm.consume();
+        asm_assert_eq!(&[0xdac00128, 0xdac01108], &code);
+    }
+
+    #[test]
+    fn rotr() {
+        let mut asm = Assembler::new();
+        asm.rotr(Reg::GPR0, Reg::GPR1, Reg::GPR2, Width::U64);
+        asm.rotr(Reg::GPR0, Reg::GPR1, 30, Width::U64);
+        asm.rotr(Reg::GPR0, Reg::GPR1, 30, Width::U32);
+        let code = asm.consume();
+        asm_assert_eq!(&[0x9aca2d28, 0x93c97928, 0x13897928], &code);
+    }
+
+    #[test]
+    fn rotl() {
+        let mut asm = Assembler::new();
+        asm.rotl(Reg::GPR0, Reg::GPR1, 32, Width::U64);
+        asm.rotl(Reg::GPR0, Reg::GPR1, 30, Width::U32);
+        asm.rotl(Reg::GPR0, Reg::GPR1, Reg::GPR2, Width::U64);
+        let code = asm.consume();
+        asm_assert_eq!(
+            &[0x93c98128, 0x13890928, 0xd280080b, 0xcb0a016a, 0x9aca2d28],
+            &code
+        );
     }
 }

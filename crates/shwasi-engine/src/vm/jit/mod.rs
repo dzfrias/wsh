@@ -190,6 +190,9 @@ impl<'s> Compiler<'s> {
                     let op = pop!();
                     self.asm.store(idx, Reg::Arg0, op);
                 }
+                I::LocalTee { idx } => {
+                    self.asm.store(idx, Reg::Arg0, *stack.last().unwrap());
+                }
                 I::Unreachable => {
                     self.asm.mov(Reg::Arg0, Trap::Unreachable as u64);
                     self.to_end.push((self.asm.addr(), None));
@@ -212,8 +215,16 @@ impl<'s> Compiler<'s> {
                 I::I64Xor => binop!(eor U64 or bitxor),
                 I::I32Mul => binop!(mul U32 or wrapping_mul),
                 I::I64Mul => binop!(mul U64 or wrapping_mul),
+                I::I32Rotr => binop!(rotr U32 or rotr),
+                I::I64Rotr => binop!(rotr U64 or rotr),
+                I::I32Rotl => binop!(rotl U32 or rotl),
+                I::I64Rotl => binop!(rotl U64 or rotl),
                 I::I32Eqz => unop!(eqz U32 or eqz),
                 I::I64Eqz => unop!(eqz U64 or eqz),
+                I::I32Clz => unop!(clz U32 or leading_zeros),
+                I::I64Clz => unop!(clz U64 or leading_zeros),
+                I::I32Ctz => unop!(ctz U32 or trailing_zeros),
+                I::I64Ctz => unop!(ctz U64 or trailing_zeros),
                 I::Select | I::SelectT(_) => {
                     let cond = pop!();
                     let rhs = pop!();
