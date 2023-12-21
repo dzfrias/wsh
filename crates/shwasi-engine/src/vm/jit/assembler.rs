@@ -1,5 +1,3 @@
-// TODO: make LoadTemp4. Prevent LoadTemp conflicts.
-// Also move them to temporary registers.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Reg {
     GPR0 = 8,
@@ -377,6 +375,16 @@ impl Assembler {
         self.logical_op(dst, lhs, rhs, 0x8a000000, 0x92000000, width);
     }
 
+    pub fn ands(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        width: Width,
+    ) {
+        self.logical_op(dst, lhs, rhs, 0xea000000, 0xf2000000, width);
+    }
+
     pub fn eor(
         &mut self,
         dst: impl Into<Operand>,
@@ -497,7 +505,6 @@ impl Assembler {
 
         match (lhs, rhs) {
             (Operand::Reg(lhs), Operand::Reg(rhs)) => {
-                // TODO: modulo rhs by width.size()
                 self.sub(rhs, width.size() as u64, rhs, width);
                 self.rotr(dst, lhs, rhs, width);
             }
@@ -551,16 +558,53 @@ impl Assembler {
         self.restore_dst();
     }
 
+    pub fn remu(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        width: Width,
+    ) {
+        self.rem_op(dst, lhs, rhs, width, false);
+    }
+
+    pub fn rems(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        width: Width,
+    ) {
+        self.rem_op(dst, lhs, rhs, width, true);
+    }
+
+    pub fn divu(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        width: Width,
+    ) {
+        self.div_op(dst, lhs, rhs, width, false);
+    }
+
+    pub fn divs(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        width: Width,
+    ) {
+        self.div_op(dst, lhs, rhs, width, true);
+    }
+
     pub fn store(&mut self, idx: u32, base: Reg, src: impl Into<Operand>) {
         match src.into() {
             Operand::Reg(src) => {
-                // str src, [base, idx]
                 self.emit_u32(0xf9000000 | (idx << 10) | (base as u32) << 5 | src as u32);
             }
             Operand::Mem64(mem_base, offset) => {
                 self.load(Reg::LoadTemp, offset as u32, mem_base);
-                // We effectively store the memory in the new location by copying it from one area
-                // to another.
                 self.store(idx, base, Reg::LoadTemp);
             }
             Operand::Imm64(imm64) => {
@@ -574,7 +618,6 @@ impl Assembler {
     pub fn load(&mut self, dst: impl Into<Operand>, idx: u32, base: Reg) {
         match dst.into() {
             Operand::Reg(dst) => {
-                // ldr dst, [base, idx]
                 self.emit_u32(0xf9400000 | (idx << 10) | (base as u32) << 5 | dst as u32);
             }
             Operand::Mem64(mem_base, offset) => {
@@ -584,6 +627,90 @@ impl Assembler {
             Operand::Imm64(_) => panic!("cannot load into an immediate"),
             Operand::Unreachable => unreachable!("cannot store an unreachable value"),
         }
+    }
+
+    fn div_op(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        width: Width,
+        signed: bool,
+    ) {
+        let dst = self.resolve_dst(dst);
+        let (lhs, rhs) = self.resolve(lhs, rhs);
+
+        match (lhs, rhs) {
+            (Operand::Reg(lhs), Operand::Reg(rhs)) => {
+                self.emit_u32(
+                    width.apply(0x9ac00800)
+                        | (rhs as u32) << 16
+                        | (signed as u32) << 10
+                        | (lhs as u32) << 5
+                        | (dst as u32),
+                );
+            }
+            (Operand::Reg(lhs), Operand::Imm64(imm64)) => {
+                self.mov(Reg::LoadTemp, imm64);
+                self.div_op(dst, lhs, Reg::LoadTemp, width, signed);
+            }
+            (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
+                self.mov(Reg::LoadTemp, lhs);
+                self.div_op(dst, Reg::LoadTemp, rhs, width, signed);
+            }
+            (Operand::Imm64(lhs), Operand::Reg(rhs)) => {
+                self.mov(Reg::LoadTemp, lhs);
+                self.div_op(dst, Reg::LoadTemp, rhs, width, signed);
+            }
+            _ => unreachable!(),
+        }
+
+        self.restore_dst();
+    }
+
+    fn rem_op(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        width: Width,
+        signed: bool,
+    ) {
+        let dst = self.resolve_dst(dst);
+        let (lhs, rhs) = self.resolve(lhs, rhs);
+        // we need to get lhs and rhs into registers for the msub insruction.
+        let lhs = match lhs {
+            Operand::Reg(reg) => reg,
+            Operand::Imm64(imm64) => {
+                self.mov(Reg::LoadTemp, imm64);
+                Reg::LoadTemp
+            }
+            _ => unreachable!(),
+        };
+        let rhs = match rhs {
+            Operand::Reg(reg) => reg,
+            Operand::Imm64(imm64) => {
+                self.mov(Reg::LoadTemp2, imm64);
+                Reg::LoadTemp2
+            }
+            _ => unreachable!(),
+        };
+
+        if signed {
+            self.divs(dst, lhs, rhs, width);
+        } else {
+            self.divu(dst, lhs, rhs, width);
+        }
+        // msub dst, dst, rhs, lhs
+        self.emit_u32(
+            width.apply(0x9b008000)
+                | (rhs as u32) << 16
+                | (lhs as u32) << 10
+                | (dst as u32) << 5
+                | (dst as u32),
+        );
+
+        self.restore_dst();
     }
 
     fn add_sub_op(
@@ -1111,6 +1238,38 @@ mod tests {
         let code = asm.consume();
         asm_assert_eq!(
             &[0x93c98128, 0x13890928, 0xd280080b, 0xcb0a016a, 0x9aca2d28],
+            &code
+        );
+    }
+
+    #[test]
+    fn div() {
+        let mut asm = Assembler::new();
+        asm.divu(Reg::GPR0, Reg::GPR1, Reg::GPR2, Width::U64);
+        asm.divu(Reg::GPR0, Reg::GPR1, Reg::GPR2, Width::U32);
+        asm.divs(Reg::GPR0, Reg::GPR1, Reg::GPR2, Width::U64);
+        asm.divs(Reg::GPR0, Reg::GPR1, Reg::GPR2, Width::U32);
+        let code = asm.consume();
+        asm_assert_eq!(&[0x9aca0928, 0x1aca0928, 0x9aca0d28, 0x1aca0d28], &code);
+    }
+
+    #[test]
+    fn ands() {
+        let mut asm = Assembler::new();
+        asm.ands(Reg::GPR0, Reg::GPR1, Reg::GPR2, Width::U64);
+        asm.ands(Reg::GPR0, Reg::GPR1, 1, Width::U32);
+        let code = asm.consume();
+        asm_assert_eq!(&[0xea0a0128, 0x72000128], &code);
+    }
+
+    #[test]
+    fn remu() {
+        let mut asm = Assembler::new();
+        asm.remu(Reg::GPR0, Reg::GPR1, Reg::GPR2, Width::U64);
+        asm.remu(Reg::GPR0, Reg::GPR1, 2, Width::U32);
+        let code = asm.consume();
+        asm_assert_eq!(
+            &[0x9aca0928, 0x9b0aa508, 0xd280004c, 0x1acc0928, 0x1b0ca508],
             &code
         );
     }

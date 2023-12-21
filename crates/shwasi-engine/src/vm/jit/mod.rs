@@ -147,6 +147,11 @@ impl<'s> Compiler<'s> {
                     self.free.next_free();
                 }
             }};
+            (@method $method:ident $width:ident) => {{
+                let rhs = pop!();
+                let lhs = pop!();
+                self.$method(stack, rhs, lhs, Width::$width);
+            }};
         }
         macro_rules! unop {
             ($method:ident $width:ident or $fold:ident) => {{
@@ -194,9 +199,7 @@ impl<'s> Compiler<'s> {
                     self.asm.store(idx, Reg::Arg0, *stack.last().unwrap());
                 }
                 I::Unreachable => {
-                    self.asm.mov(Reg::Arg0, Trap::Unreachable as u64);
-                    self.to_end.push((self.asm.addr(), None));
-                    self.asm.nop();
+                    self.trap(Trap::Unreachable);
                     let label = self.labels.last().unwrap();
                     for _ in 0..label.arity {
                         stack.push(Operand::Unreachable);
@@ -227,6 +230,14 @@ impl<'s> Compiler<'s> {
                 I::I64GtS => binop!(gts U64 or gts),
                 I::I32GeS => binop!(ges U32 or ges),
                 I::I64GeS => binop!(ges U64 or ges),
+                I::I32DivS => binop!(@method divs U32),
+                I::I64DivS => binop!(@method divs U64),
+                I::I32DivU => binop!(@method divu U32),
+                I::I64DivU => binop!(@method divu U64),
+                I::I32RemU => binop!(@method remu U32),
+                I::I64RemU => binop!(@method remu U64),
+                I::I32RemS => binop!(@method rems U32),
+                I::I64RemS => binop!(@method rems U64),
                 I::I32Eqz => unop!(eqz U32 or eqz),
                 I::I64Eqz => unop!(eqz U64 or eqz),
                 I::I32Clz => unop!(clz U32 or leading_zeros),
@@ -617,6 +628,126 @@ impl<'s> Compiler<'s> {
         }
 
         self.to_unify.remove(&end_idx);
+    }
+
+    fn trap(&mut self, trap: Trap) {
+        self.asm.mov(Reg::Arg0, trap as u64);
+        self.to_end.push((self.asm.addr(), None));
+        self.asm.nop();
+    }
+
+    fn remu(&mut self, stack: &mut Vec<Operand>, rhs: Operand, lhs: Operand, width: Width) {
+        if let (Operand::Imm64(rhs), Operand::Imm64(lhs)) = (rhs, lhs) {
+            let (lhs, rhs) = match width {
+                Width::U32 => (lhs as u32 as u64, rhs as u32 as u64),
+                Width::U64 => (lhs, rhs),
+            };
+            rhs.checked_rem(lhs).map_or_else(
+                || {
+                    self.trap(Trap::DivideByZero);
+                },
+                |result| {
+                    stack.push(Operand::Imm64(result));
+                },
+            );
+        } else {
+            self.asm.cmp(rhs, 0, Width::U32);
+            self.asm
+                .branch_if(self.asm.addr() as u64 + 12, ConditionCode::Ne);
+            self.trap(Trap::DivideByZero);
+            self.asm.remu(self.free.current, lhs, rhs, width);
+            stack.push(self.free.current);
+            self.free.next_free();
+        }
+    }
+
+    fn rems(&mut self, stack: &mut Vec<Operand>, rhs: Operand, lhs: Operand, width: Width) {
+        if let (Operand::Imm64(rhs), Operand::Imm64(lhs)) = (rhs, lhs) {
+            let (lhs, rhs) = match width {
+                Width::U32 => (lhs as i32 as u32 as u64, rhs as i32 as u32 as u64),
+                Width::U64 => (lhs as i64 as u64, rhs as i64 as u64),
+            };
+            if lhs != 0 {
+                stack.push(Operand::Imm64(rhs % lhs));
+            } else {
+                self.trap(Trap::DivideByZero);
+            }
+        } else {
+            self.asm.cmp(rhs, 0, Width::U32);
+            self.asm
+                .branch_if(self.asm.addr() as u64 + 12, ConditionCode::Ne);
+            self.trap(Trap::DivideByZero);
+            self.asm.rems(self.free.current, lhs, rhs, width);
+            stack.push(self.free.current);
+            self.free.next_free();
+        }
+    }
+
+    fn divs(&mut self, stack: &mut Vec<Operand>, rhs: Operand, lhs: Operand, width: Width) {
+        if let (Operand::Imm64(rhs), Operand::Imm64(lhs)) = (rhs, lhs) {
+            let (lhs, rhs) = match width {
+                Width::U32 => (lhs as i32 as u32 as u64, rhs as i32 as u32 as u64),
+                Width::U64 => (lhs as i64 as u64, rhs as i64 as u64),
+            };
+            rhs.checked_div(lhs).map_or_else(
+                || self.trap(Trap::DivideByZero),
+                |result| {
+                    stack.push(Operand::Imm64(result));
+                },
+            );
+        } else {
+            self.asm.cmp(rhs, 0, Width::U32);
+            self.asm
+                .branch_if(self.asm.addr() as u64 + 12, ConditionCode::Ne);
+            self.trap(Trap::DivideByZero);
+
+            let min = match width {
+                Width::U32 => i32::MIN as u32 as u64,
+                Width::U64 => i64::MIN as u64,
+            };
+            let neg = match width {
+                Width::U32 => (-1i32) as u32 as u64,
+                Width::U64 => (-1i64) as u64,
+            };
+            self.asm.cmp(rhs, neg, width);
+            self.asm.cset(Reg::LoadTemp3, ConditionCode::Eq);
+            self.asm.cmp(lhs, min, width);
+            self.asm.cset(Reg::LoadTemp2, ConditionCode::Eq);
+            self.asm
+                .ands(Reg::LoadTemp, Reg::LoadTemp3, Reg::LoadTemp2, Width::U32);
+            self.asm
+                .branch_if(self.asm.addr() as u64 + 12, ConditionCode::Eq);
+            self.trap(Trap::IntegerOverflow);
+
+            self.asm.divs(self.free.current, lhs, rhs, width);
+            stack.push(self.free.current);
+            self.free.next_free();
+        }
+    }
+
+    fn divu(&mut self, stack: &mut Vec<Operand>, rhs: Operand, lhs: Operand, width: Width) {
+        if let (Operand::Imm64(rhs), Operand::Imm64(lhs)) = (rhs, lhs) {
+            let (lhs, rhs) = match width {
+                Width::U32 => (lhs as u32 as u64, rhs as u32 as u64),
+                Width::U64 => (lhs, rhs),
+            };
+            rhs.checked_div(lhs).map_or_else(
+                || {
+                    self.trap(Trap::DivideByZero);
+                },
+                |result| {
+                    stack.push(Operand::Imm64(result));
+                },
+            );
+        } else {
+            self.asm.cmp(rhs, 0, Width::U32);
+            self.asm
+                .branch_if(self.asm.addr() as u64 + 12, ConditionCode::Ne);
+            self.trap(Trap::DivideByZero);
+            self.asm.divu(self.free.current, lhs, rhs, width);
+            stack.push(self.free.current);
+            self.free.next_free();
+        }
     }
 
     #[inline(always)]

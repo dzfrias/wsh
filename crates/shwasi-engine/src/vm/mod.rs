@@ -107,6 +107,8 @@ pub enum Trap {
     Unreachable,
     #[error("division by zero")]
     DivideByZero,
+    #[error("integer overflow")]
+    IntegerOverflow,
     #[error("bad float truncation")]
     BadTruncate,
     #[error("table get out of bounds")]
