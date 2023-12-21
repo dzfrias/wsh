@@ -208,6 +208,50 @@ impl Assembler {
         self.cset(dst, ConditionCode::Eq);
     }
 
+    pub fn lts(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        width: Width,
+    ) {
+        self.cmp(lhs, rhs, width);
+        self.cset(dst, ConditionCode::Lt);
+    }
+
+    pub fn gts(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        width: Width,
+    ) {
+        self.cmp(lhs, rhs, width);
+        self.cset(dst, ConditionCode::Gt);
+    }
+
+    pub fn ges(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        width: Width,
+    ) {
+        self.cmp(lhs, rhs, width);
+        self.cset(dst, ConditionCode::Ge);
+    }
+
+    pub fn les(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        width: Width,
+    ) {
+        self.cmp(lhs, rhs, width);
+        self.cset(dst, ConditionCode::Le);
+    }
+
     pub fn ne(
         &mut self,
         dst: impl Into<Operand>,
@@ -431,6 +475,10 @@ impl Assembler {
                 self.mov(Reg::LoadTemp, lhs);
                 self.rotr(dst, Reg::LoadTemp, rhs, width);
             }
+            (Operand::Imm64(lhs), Operand::Reg(rhs)) => {
+                self.mov(Reg::LoadTemp, lhs);
+                self.rotr(dst, Reg::LoadTemp, rhs, width);
+            }
             _ => unreachable!(),
         }
 
@@ -458,6 +506,10 @@ impl Assembler {
                 self.rotr(dst, lhs, size - (imm64 % size), width);
             }
             (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
+                self.mov(Reg::LoadTemp, lhs);
+                self.rotl(dst, Reg::LoadTemp, rhs, width);
+            }
+            (Operand::Imm64(lhs), Operand::Reg(rhs)) => {
                 self.mov(Reg::LoadTemp, lhs);
                 self.rotl(dst, Reg::LoadTemp, rhs, width);
             }
