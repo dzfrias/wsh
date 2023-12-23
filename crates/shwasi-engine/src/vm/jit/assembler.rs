@@ -723,6 +723,32 @@ impl Assembler {
         self.div_op(dst, lhs, rhs, width, true);
     }
 
+    pub fn popcount(&mut self, dst: impl Into<Operand>, src: impl Into<Operand>, width: Width) {
+        let dst = self.resolve_dst(dst);
+        let src = match self.resolve1(src) {
+            Operand::Reg(src) => src,
+            Operand::Imm64(imm64) => {
+                self.mov(Reg::LoadTemp, imm64);
+                Reg::LoadTemp
+            }
+            _ => unreachable!(),
+        };
+
+        match width {
+            Width::U32 => {
+                self.emit_u32(0x1e270000 | (src as u32) << 5 | (Reg::LoadTemp2 as u32));
+            }
+            Width::U64 => {
+                self.emit_u32(0x9e670000 | (src as u32) << 5 | (Reg::LoadTemp2 as u32));
+            }
+        }
+        self.emit_u32(0x0e205800 | (Reg::LoadTemp2 as u32) << 5 | (Reg::LoadTemp2 as u32));
+        self.emit_u32(0x2e303800 | (Reg::LoadTemp2 as u32) << 5 | (Reg::LoadTemp2 as u32));
+        self.emit_u32(0x1e260000 | (Reg::LoadTemp2 as u32) << 5 | dst as u32);
+
+        self.restore_dst();
+    }
+
     pub fn store(&mut self, idx: u32, base: Reg, src: impl Into<Operand>) {
         match src.into() {
             Operand::Reg(src) => {
@@ -1409,6 +1435,21 @@ mod tests {
         let code = asm.consume();
         asm_assert_eq!(
             &[0x9aca2128, 0xd280004b, 0x1acb2128, 0x9aca2528, 0xd280004b, 0x1acb2928],
+            &code
+        );
+    }
+
+    #[test]
+    fn popcount() {
+        let mut asm = Assembler::new();
+        asm.popcount(Reg::GPR0, Reg::GPR1, Width::U64);
+        asm.popcount(Reg::GPR0, Reg::GPR1, Width::U32);
+        let code = asm.consume();
+        asm_assert_eq!(
+            &[
+                0x9e67012c, 0xe20598c, 0x2e30398c, 0x1e260188, 0x1e27012c, 0xe20598c, 0x2e30398c,
+                0x1e260188
+            ],
             &code
         );
     }

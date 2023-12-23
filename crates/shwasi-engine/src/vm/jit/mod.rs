@@ -250,6 +250,8 @@ impl<'s> Compiler<'s> {
                 I::I64RemS => binop!(@method rems U64),
                 I::I32Shl => binop!(shl U32 or shl),
                 I::I64Shl => binop!(shl U64 or shl),
+                I::I64Popcnt => unop!(popcount U64 or popcnt),
+                I::I32Popcnt => unop!(popcount U32 or popcnt),
                 I::I32Eqz => unop!(eqz U32 or eqz),
                 I::I64Eqz => unop!(eqz U64 or eqz),
                 I::I32Clz => unop!(clz U32 or leading_zeros),
