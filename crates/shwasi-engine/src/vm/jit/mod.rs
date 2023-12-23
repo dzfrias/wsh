@@ -226,8 +226,12 @@ impl<'s> Compiler<'s> {
                 I::I64LtS => binop!(lts U64 or lts),
                 I::I32LeS => binop!(les U32 or les),
                 I::I64LeS => binop!(les U64 or les),
+                I::I32LeU => binop!(leu U32 or leu),
+                I::I64LeU => binop!(leu U64 or leu),
                 I::I32GtS => binop!(gts U32 or gts),
                 I::I64GtS => binop!(gts U64 or gts),
+                I::I32GtU => binop!(gtu U32 or gtu),
+                I::I64GtU => binop!(gtu U64 or gtu),
                 I::I32GeS => binop!(ges U32 or ges),
                 I::I64GeS => binop!(ges U64 or ges),
                 I::I32DivS => binop!(@method divs U32),
@@ -238,6 +242,8 @@ impl<'s> Compiler<'s> {
                 I::I64RemU => binop!(@method remu U64),
                 I::I32RemS => binop!(@method rems U32),
                 I::I64RemS => binop!(@method rems U64),
+                I::I32Shl => binop!(shl U32 or shl),
+                I::I64Shl => binop!(shl U64 or shl),
                 I::I32Eqz => unop!(eqz U32 or eqz),
                 I::I64Eqz => unop!(eqz U64 or eqz),
                 I::I32Clz => unop!(clz U32 or leading_zeros),
@@ -374,14 +380,22 @@ impl<'s> Compiler<'s> {
                     self.asm.cmp(op, 0, Width::U32);
                     let mut branch_stack = stack.clone();
                     let label = self.get_label(depth);
+                    let init_height = label.init_height;
                     let end = label.end;
                     branch_stack.drain(label.init_height..branch_stack.len() - label.arity);
                     debug_assert!(branch_stack.len() - label.init_height == label.arity);
-                    let unify_addr = self.asm.addr();
-                    self.pad_movs(&branch_stack[label.init_height..]);
-                    let patch_addr = self.asm.addr();
+
+                    let cond_branch_addr = self.asm.addr();
                     self.asm.branch(0xdeadbeef);
-                    self.set_to_patch(end, PatchTarget::conditional(patch_addr, ConditionCode::Ne));
+                    let unify_addr = self.asm.addr();
+                    self.pad_movs(&branch_stack[init_height..]);
+                    self.set_to_patch(end, PatchTarget::unconditional(self.asm.addr()));
+                    self.asm.branch(0xdeadbeef);
+                    let addr = self.asm.addr();
+                    self.asm.patch(cond_branch_addr, |asm| {
+                        asm.branch_if(addr as u64, ConditionCode::Eq);
+                    });
+
                     self.make_branch(
                         end,
                         UnifyTarget {
@@ -389,6 +403,22 @@ impl<'s> Compiler<'s> {
                             stack: branch_stack,
                         },
                     );
+                }
+                I::Block(block) => {
+                    let init_height = stack.len() - self.param_arity(block.ty);
+                    self.labels.push(Label {
+                        init_height,
+                        arity: self.return_arity(block.ty),
+                        result_arity: self.return_arity(block.ty),
+                        end: block.end,
+                    });
+                    let buf = buf.inner().slice(buf.start() + i + 1..block.end);
+                    let len = buf.len();
+                    self.compile_buf(stack, buf.clone())?;
+                    self.unify(stack, block.end);
+                    self.patch(block.end, self.asm.addr());
+                    self.labels.pop().unwrap();
+                    i += len + 1;
                 }
                 I::If { block, else_: None } => {
                     debug_assert!(self.param_arity(block.ty) == self.return_arity(block.ty));
@@ -434,41 +464,40 @@ impl<'s> Compiler<'s> {
                     self.labels.pop().unwrap();
                     i += len + 1;
                 }
-                I::Loop(block) | I::Block(block) => {
-                    let is_block = matches!(instr, I::Block(_));
+                I::Loop(block) => {
                     let init_height = stack.len() - self.param_arity(block.ty);
                     self.labels.push(Label {
                         init_height,
-                        arity: if is_block {
-                            self.return_arity(block.ty)
-                        } else {
-                            self.param_arity(block.ty)
-                        },
+                        arity: self.param_arity(block.ty),
                         result_arity: self.return_arity(block.ty),
                         end: block.end,
                     });
+                    let len = stack.len();
+                    // Loops must never enter with constant params. This is because we don't
+                    // know if it will be branched to or not
+                    for op in &mut stack[len - self.param_arity(block.ty)..] {
+                        if let Operand::Imm64(imm) = *op {
+                            *op = self.free.current;
+                            self.asm.mov(*op, imm);
+                            self.free.next_free();
+                        }
+                    }
+                    let mut stack_clone = stack.clone();
                     let buf = buf.inner().slice(buf.start() + i + 1..block.end);
                     let len = buf.len();
                     let jump_addr = self.asm.addr();
                     self.compile_buf(stack, buf.clone())?;
-                    if is_block {
-                        self.unify(stack, block.end);
-                        self.patch(block.end, self.asm.addr());
-                    } else {
-                        // Loop branches do not have to be unified. Their results can differ from
-                        // their arity.
-                        self.to_unify.remove(&block.end);
-                        // This happens when the loop has no actual results, which is possible
-                        // because branches go to the start of the block, not to the end. So we
-                        // fabricate values.
-                        if stack.len() - init_height < self.return_arity(block.ty) {
-                            stack.extend(
-                                std::iter::repeat(Operand::Imm64(0))
-                                    .take(self.return_arity(block.ty) - stack.len() - init_height),
-                            );
-                        }
-                        self.patch(block.end, jump_addr);
+                    self.unify(&mut stack_clone, block.end);
+                    // This happens when the loop has no actual results, which is possible
+                    // because branches go to the start of the block, not to the end. So we
+                    // fabricate values.
+                    if stack.len() - init_height < self.return_arity(block.ty) {
+                        stack.extend(
+                            std::iter::repeat(Operand::Unreachable)
+                                .take(self.return_arity(block.ty) - stack.len() - init_height),
+                        );
                     }
+                    self.patch(block.end, jump_addr);
                     self.labels.pop().unwrap();
                     i += len + 1;
                 }
@@ -558,29 +587,12 @@ impl<'s> Compiler<'s> {
 
     fn pad_movs(&mut self, ops: &[Operand]) {
         for op in ops {
-            match op {
-                Operand::Imm64(imm) if ((-(1 << 16) + 1)..0).contains(&(*imm as i64)) => {
-                    self.asm.nop();
-                }
-                Operand::Imm64(imm) if *imm > (u32::MAX as u64 + u16::MAX as u64) => {
-                    self.asm.nop();
-                    self.asm.nop();
-                    self.asm.nop();
-                    self.asm.nop();
-                }
-                Operand::Imm64(imm) if *imm > u32::MAX as u64 => {
-                    self.asm.nop();
-                    self.asm.nop();
-                    self.asm.nop();
-                }
-                Operand::Imm64(imm) if *imm > u16::MAX as u64 => {
-                    self.asm.nop();
-                    self.asm.nop();
-                }
-                _ => {
-                    self.asm.nop();
-                }
+            if op == &Operand::Unreachable {
+                continue;
             }
+            self.asm.mov(Reg::LoadTemp, *op);
+            // one extra, in case it needs to be stored in some memory location
+            self.asm.nop();
         }
     }
 
@@ -790,6 +802,7 @@ impl PatchTarget {
         }
     }
 
+    #[allow(dead_code)]
     fn conditional(addr: usize, cond: ConditionCode) -> Self {
         Self {
             addr,

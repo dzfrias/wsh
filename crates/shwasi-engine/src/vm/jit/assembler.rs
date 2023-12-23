@@ -250,6 +250,28 @@ impl Assembler {
         self.cset(dst, ConditionCode::Le);
     }
 
+    pub fn gtu(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        width: Width,
+    ) {
+        self.cmp(lhs, rhs, width);
+        self.cset(dst, ConditionCode::Hi);
+    }
+
+    pub fn leu(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        width: Width,
+    ) {
+        self.cmp(lhs, rhs, width);
+        self.cset(dst, ConditionCode::Ls);
+    }
+
     pub fn ne(
         &mut self,
         dst: impl Into<Operand>,
@@ -419,8 +441,7 @@ impl Assembler {
                 self.emit_u32(width.apply(0xdac01000) | (src as u32) << 5 | (dst as u32));
             }
             Operand::Imm64(imm64) => {
-                self.mov(Reg::LoadTemp, imm64);
-                self.clz(dst, Reg::LoadTemp, width);
+                self.mov(dst, imm64.leading_zeros() as u64);
             }
             _ => unreachable!(),
         }
@@ -447,6 +468,40 @@ impl Assembler {
                 self.emit_u32(width.apply(0xdac00000) | (src as u32) << 5 | (dst as u32));
             }
             Operand::Imm64(imm64) => self.mov(dst, imm64.reverse_bits()),
+            _ => unreachable!(),
+        }
+
+        self.restore_dst();
+    }
+
+    pub fn shl(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        width: Width,
+    ) {
+        let dst = self.resolve_dst(dst);
+        let (lhs, rhs) = self.resolve(lhs, rhs);
+
+        match (lhs, rhs) {
+            (Operand::Reg(lhs), Operand::Reg(rhs)) => {
+                self.emit_u32(
+                    width.apply(0x9ac02000) | (rhs as u32) << 16 | (lhs as u32) << 5 | (dst as u32),
+                );
+            }
+            (Operand::Reg(lhs), Operand::Imm64(imm64)) => {
+                self.mov(Reg::LoadTemp, imm64);
+                self.shl(dst, lhs, Reg::LoadTemp, width);
+            }
+            (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
+                self.mov(Reg::LoadTemp, lhs);
+                self.shl(dst, Reg::LoadTemp, rhs, width);
+            }
+            (Operand::Imm64(lhs), Operand::Reg(rhs)) => {
+                self.mov(Reg::LoadTemp, lhs);
+                self.shl(dst, Reg::LoadTemp, rhs, width);
+            }
             _ => unreachable!(),
         }
 
@@ -1272,5 +1327,14 @@ mod tests {
             &[0x9aca0928, 0x9b0aa508, 0xd280004c, 0x1acc0928, 0x1b0ca508],
             &code
         );
+    }
+
+    #[test]
+    fn shifts() {
+        let mut asm = Assembler::new();
+        asm.shl(Reg::GPR0, Reg::GPR1, Reg::GPR2, Width::U64);
+        asm.shl(Reg::GPR0, Reg::GPR1, 2, Width::U32);
+        let code = asm.consume();
+        asm_assert_eq!(&[0x9aca2128, 0xd280004b, 0x1acb2128], &code);
     }
 }
