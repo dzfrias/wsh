@@ -159,9 +159,7 @@ fn call(
 ) -> (u8, *const ValueUntyped) {
     unsafe {
         let args = slice::from_raw_parts(args_ptr, args_len);
-        for arg in args {
-            (*vm).push(*arg);
-        }
+        (*vm).stack.extend_from_slice(args);
         let f = &(*vm).store.functions[addr];
         let bp = (*vm).frame.bp;
         let trap_code = if let Err(trap) = (*vm).call_raw(addr) {

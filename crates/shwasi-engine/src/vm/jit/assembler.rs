@@ -398,6 +398,50 @@ impl Assembler {
         self.restore_dst();
     }
 
+    pub fn sxtw(&mut self, dst: impl Into<Operand>, src: impl Into<Operand>) {
+        let dst = self.resolve_dst(dst);
+        let src = self.resolve1(src);
+
+        match src {
+            Operand::Reg(src) => {
+                self.emit_u32(0x93407c00 | (src as u32) << 5 | (dst as u32));
+            }
+            Operand::Imm64(imm64) => {
+                self.mov(Reg::LoadTemp, imm64);
+                self.sxtw(dst, Reg::LoadTemp);
+            }
+            _ => unreachable!(),
+        }
+
+        self.restore_dst();
+    }
+
+    pub fn sxtb(&mut self, dst: impl Into<Operand>, src: impl Into<Operand>, width: Width) {
+        self.sx_op(dst, src, width, 0x93401c00);
+    }
+
+    pub fn sxth(&mut self, dst: impl Into<Operand>, src: impl Into<Operand>, width: Width) {
+        self.sx_op(dst, src, width, 0x93403c00);
+    }
+
+    pub fn wrap(&mut self, dst: impl Into<Operand>, src: impl Into<Operand>) {
+        let dst = self.resolve_dst(dst);
+        let src = self.resolve1(src);
+
+        match src {
+            Operand::Reg(src) => {
+                self.emit_u32(0x2a0003e0 | (src as u32) << 16 | (dst as u32));
+            }
+            Operand::Imm64(imm64) => {
+                self.mov(Reg::LoadTemp, imm64);
+                self.wrap(dst, Reg::LoadTemp);
+            }
+            _ => unreachable!(),
+        }
+
+        self.restore_dst();
+    }
+
     pub fn and(
         &mut self,
         dst: impl Into<Operand>,
@@ -812,6 +856,24 @@ impl Assembler {
             (Operand::Imm64(lhs), Operand::Reg(rhs)) => {
                 self.mov(Reg::LoadTemp, lhs);
                 self.div_op(dst, Reg::LoadTemp, rhs, width, signed);
+            }
+            _ => unreachable!(),
+        }
+
+        self.restore_dst();
+    }
+
+    fn sx_op(&mut self, dst: impl Into<Operand>, src: impl Into<Operand>, width: Width, base: u32) {
+        let dst = self.resolve_dst(dst);
+        let src = self.resolve1(src);
+
+        match src {
+            Operand::Reg(src) => {
+                self.emit_u32(width.apply2(base, 22) | (src as u32) << 5 | (dst as u32));
+            }
+            Operand::Imm64(imm64) => {
+                self.mov(Reg::LoadTemp, imm64);
+                self.sxtw(dst, Reg::LoadTemp);
             }
             _ => unreachable!(),
         }
@@ -1452,5 +1514,22 @@ mod tests {
             ],
             &code
         );
+    }
+
+    #[test]
+    fn wrap() {
+        let mut asm = Assembler::new();
+        asm.wrap(Reg::GPR0, Reg::GPR1);
+        let code = asm.consume();
+        asm_assert_eq!(&[0x2a0903e8], &code);
+    }
+
+    #[test]
+    fn sx_ops() {
+        let mut asm = Assembler::new();
+        asm.sxtb(Reg::GPR0, Reg::GPR1, Width::U32);
+        asm.sxth(Reg::GPR0, Reg::GPR1, Width::U64);
+        let code = asm.consume();
+        asm_assert_eq!(&[0x13001d28, 0x93403d28], &code);
     }
 }

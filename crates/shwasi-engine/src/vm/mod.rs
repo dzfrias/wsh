@@ -254,7 +254,7 @@ impl<'s> Vm<'s> {
             Func::Host(host_func) => {
                 let res = (host_func.code)(self);
                 self.clear_block(self.stack.len(), host_func.ty.1.len());
-                self.stack.extend(res);
+                self.stack.extend_from_slice(&res);
             }
         }
 
@@ -301,9 +301,6 @@ impl<'s> Vm<'s> {
         // Our instruction pointer. We don't use a for loop because we need to be able to jump to
         // instructions.
         let mut ip = 0;
-        // We extract into a variable so to not recompute the length every time. This is a sizeable
-        // performance improvement.
-        let len = body.len();
         loop {
             // SAFETY: We know that the instruction pointer is always in bounds because we checked
             // above.
@@ -322,7 +319,7 @@ impl<'s> Vm<'s> {
                 I::I32DivU => binop!(divu for u32, Trap::DivideByZero),
                 I::End => {
                     self.labels.pop().unwrap();
-                    if ip == len - 1 {
+                    if ip == body.len() - 1 {
                         return Ok(());
                     }
                 }
@@ -592,22 +589,10 @@ impl<'s> Vm<'s> {
                 I::I64TruncSatF32U => unop!(trunc_u64_sat for f32),
                 I::I64TruncSatF64S => unop!(trunc_i64_sat for f64),
                 I::I64TruncSatF64U => unop!(trunc_u64_sat for f64),
-                I::I32Extend8S => {
-                    let val = self.pop::<u32>() as i32;
-                    self.push(val as i8 as u32);
-                }
-                I::I32Extend16S => {
-                    let val = self.pop::<u32>() as i32;
-                    self.push(val as i16 as u32);
-                }
-                I::I64Extend8S => {
-                    let val = self.pop::<u64>() as i64;
-                    self.push(val as i8 as u64);
-                }
-                I::I64Extend16S => {
-                    let val = self.pop::<u64>() as i64;
-                    self.push(val as i16 as u64);
-                }
+                I::I32Extend8S => unop!(extend8_s for u32),
+                I::I32Extend16S => unop!(extend16_s for u32),
+                I::I64Extend8S => unop!(extend8_s for u64),
+                I::I64Extend16S => unop!(extend16_s for u64),
                 I::I64Extend32S => {
                     let val = self.pop::<u64>() as i64;
                     self.push(val as i32 as i64);

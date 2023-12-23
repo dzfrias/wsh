@@ -49,6 +49,8 @@ pub trait IntOp: Sized {
     fn convert_f64_u(self) -> f64;
     fn convert_f64_s(self) -> f64;
     fn reinterpret(self) -> Self::FloatType;
+    fn extend8_s(self) -> Self;
+    fn extend16_s(self) -> Self;
 }
 
 macro_rules! impl_int_op {
@@ -250,6 +252,16 @@ macro_rules! impl_int_op {
             #[inline]
             fn reinterpret(self) -> $F {
                 <$F>::from_bits(self)
+            }
+
+            #[inline]
+            fn extend8_s(self) -> $T {
+                (self as $S) as i8 as $T
+            }
+
+            #[inline]
+            fn extend16_s(self) -> $T {
+                (self as $S) as i16 as $T
             }
         }
     };

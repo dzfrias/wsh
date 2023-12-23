@@ -117,6 +117,7 @@ impl<'s> Compiler<'s> {
         Ok(exec)
     }
 
+    #[allow(clippy::match_same_arms)]
     fn compile_buf(
         &mut self,
         stack: &mut Vec<Operand>,
@@ -168,11 +169,22 @@ impl<'s> Compiler<'s> {
                     self.free.next_free();
                 }
             }};
+            ($method:ident (@ty $ty:ty) or $fold:ident) => {{
+                let op = pop!();
+                if let Operand::Imm64(imm64) = op {
+                    stack.push(Operand::Imm64((imm64 as $ty).$fold() as u64));
+                } else {
+                    self.asm.$method(self.free.current, op);
+                    stack.push(self.free.current);
+                    self.free.next_free();
+                }
+            }};
         }
 
         let mut i = 0;
         while i < buf.len() {
             let instr = buf.get(i).unwrap();
+
             match instr {
                 I::Nop => {}
                 I::I32Const(val) => stack.push(Operand::Imm64(val as u64)),
@@ -258,6 +270,15 @@ impl<'s> Compiler<'s> {
                 I::I64Clz => unop!(clz U64 or leading_zeros),
                 I::I32Ctz => unop!(ctz U32 or trailing_zeros),
                 I::I64Ctz => unop!(ctz U64 or trailing_zeros),
+                I::I32Extend8S => unop!(sxtb U32 or extend8_s),
+                I::I64Extend8S => unop!(sxtb U64 or extend8_s),
+                I::I32Extend16S => unop!(sxth U32 or extend16_s),
+                I::I64Extend16S => unop!(sxth U64 or extend16_s),
+                I::I32WrapI64 => unop!(wrap (@ty u64) or wrap),
+                I::I64ExtendI32S => unop!(sxtw (@ty u32) or to_i64),
+                // This can be a nop, since no sign needs to be extended and registers are 8-bits
+                // anyway
+                I::I64ExtendI32U => {}
                 I::Select | I::SelectT(_) => {
                     let cond = pop!();
                     let rhs = pop!();
