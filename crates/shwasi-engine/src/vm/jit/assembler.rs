@@ -272,6 +272,17 @@ impl Assembler {
         self.cset(dst, ConditionCode::Ls);
     }
 
+    pub fn geu(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        width: Width,
+    ) {
+        self.cmp(lhs, rhs, width);
+        self.cset(dst, ConditionCode::Hs);
+    }
+
     pub fn ne(
         &mut self,
         dst: impl Into<Operand>,
@@ -501,6 +512,65 @@ impl Assembler {
             (Operand::Imm64(lhs), Operand::Reg(rhs)) => {
                 self.mov(Reg::LoadTemp, lhs);
                 self.shl(dst, Reg::LoadTemp, rhs, width);
+            }
+            _ => unreachable!(),
+        }
+
+        self.restore_dst();
+    }
+
+    pub fn shrs(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        width: Width,
+    ) {
+        self.shr(dst, lhs, rhs, width, true);
+    }
+
+    pub fn shru(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        width: Width,
+    ) {
+        self.shr(dst, lhs, rhs, width, false);
+    }
+
+    fn shr(
+        &mut self,
+        dst: impl Into<Operand>,
+        lhs: impl Into<Operand>,
+        rhs: impl Into<Operand>,
+        width: Width,
+        signed: bool,
+    ) {
+        let dst = self.resolve_dst(dst);
+        let (lhs, rhs) = self.resolve(lhs, rhs);
+
+        match (lhs, rhs) {
+            (Operand::Reg(lhs), Operand::Reg(rhs)) => {
+                self.emit_u32(
+                    width.apply(0x9ac02000)
+                        | (rhs as u32) << 16
+                        | 1 << (10 + (signed as u32))
+                        | (lhs as u32) << 5
+                        | (dst as u32),
+                );
+            }
+            (Operand::Reg(lhs), Operand::Imm64(imm64)) => {
+                self.mov(Reg::LoadTemp, imm64);
+                self.shr(dst, lhs, Reg::LoadTemp, width, signed);
+            }
+            (Operand::Imm64(lhs), Operand::Imm64(rhs)) => {
+                self.mov(Reg::LoadTemp, lhs);
+                self.shr(dst, Reg::LoadTemp, rhs, width, signed);
+            }
+            (Operand::Imm64(lhs), Operand::Reg(rhs)) => {
+                self.mov(Reg::LoadTemp, lhs);
+                self.shr(dst, Reg::LoadTemp, rhs, width, signed);
             }
             _ => unreachable!(),
         }
@@ -1334,7 +1404,12 @@ mod tests {
         let mut asm = Assembler::new();
         asm.shl(Reg::GPR0, Reg::GPR1, Reg::GPR2, Width::U64);
         asm.shl(Reg::GPR0, Reg::GPR1, 2, Width::U32);
+        asm.shru(Reg::GPR0, Reg::GPR1, Reg::GPR2, Width::U64);
+        asm.shrs(Reg::GPR0, Reg::GPR1, 2, Width::U32);
         let code = asm.consume();
-        asm_assert_eq!(&[0x9aca2128, 0xd280004b, 0x1acb2128], &code);
+        asm_assert_eq!(
+            &[0x9aca2128, 0xd280004b, 0x1acb2128, 0x9aca2528, 0xd280004b, 0x1acb2928],
+            &code
+        );
     }
 }
