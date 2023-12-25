@@ -61,6 +61,7 @@ struct StackFrame {
     /// This starts at STACK_BUDGET and decrements every time we push a new frame. If it reaches
     /// zero, we cannot push a new frame.
     nested_levels: usize,
+    label_idx: usize,
 }
 
 impl StackFrame {
@@ -69,16 +70,19 @@ impl StackFrame {
             module,
             bp: 0,
             nested_levels: STACK_BUDGET,
+            label_idx: 0,
         }
     }
 
     // Because we don't actually have a real stack, this push operation is a bit different.
-    fn push(&self, module: Instance, bp: usize) -> Option<Self> {
+    #[inline(always)]
+    fn push(&self, module: Instance, bp: usize, label_idx: usize) -> Option<Self> {
         Some(Self {
             module,
             bp,
             // Cannot push if our stack budget is exhausted
             nested_levels: self.nested_levels.checked_sub(1)?,
+            label_idx,
         })
     }
 }
@@ -190,7 +194,7 @@ impl<'s> Vm<'s> {
                 let bp = self.stack.len() - f.ty.0.len() - pushed_locals;
                 let new_frame = self
                     .frame
-                    .push(f.inst.clone(), bp)
+                    .push(f.inst.clone(), bp, self.labels.len())
                     .ok_or(Trap::StackOverflow)?;
                 // Keep track of the old frame to replace later. This is what emulates a call stack
                 let old_frame = mem::replace(&mut self.frame, new_frame);
@@ -306,8 +310,8 @@ impl<'s> Vm<'s> {
         // instructions.
         let mut ip = 0;
         loop {
-            // SAFETY: We know that the instruction pointer is always in bounds because we checked
-            // above.
+            // SAFETY: We know that the instruction pointer is always in because we break when we
+            // get to the last `end` instruction. We make sure that we always hit the last `end`
             let instr = unsafe { body.get_unchecked(ip) };
             #[cfg(debug_assertions)]
             trace!("executing instruction: {instr}");
@@ -335,7 +339,7 @@ impl<'s> Vm<'s> {
                     ip = label.ra;
                 }
                 I::Return => {
-                    self.labels.drain(1..);
+                    self.labels.drain(self.frame.label_idx..);
                     return Ok(());
                 }
                 I::Drop => drop(self.stack.pop()),
