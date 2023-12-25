@@ -267,20 +267,24 @@ impl<'s> Vm<'s> {
 
         macro_rules! bool_binop {
             ($op:tt for $conv:ty) => {{
-                let (a, b) = self.pop2::<$conv, $conv>();
-                self.push(a $op b);
+                let b = self.pop::<$conv>();
+                let last: $conv = (*self.stack.last().unwrap()).into();
+                *self.stack.last_mut().unwrap() = (last $op b).into();
             }};
         }
         macro_rules! binop {
             ($method:ident for $conv:ty$(, $err:expr)?) => {{
-                let (a, b) = self.pop2::<$conv, $conv>();
-                self.push(a.$method(b)$(.ok_or($err)?)?);
+                let b = self.pop::<$conv>();
+                let last: $conv = (*self.stack.last().unwrap()).into();
+                *self.stack.last_mut().unwrap() = last
+                    .$method(b)$(.ok_or($err)?)?
+                    .into();
             }};
         }
         macro_rules! unop {
             ($method:ident for $conv:ty$(, $err:expr)?) => {{
-                let a = self.pop::<$conv>();
-                self.push(a.$method()$(.ok_or($err)?)?);
+                let a: $conv = (*self.stack.last().unwrap()).into();
+                *self.stack.last_mut().unwrap() = a.$method()$(.ok_or($err)?)?.into();
             }};
         }
         macro_rules! load {

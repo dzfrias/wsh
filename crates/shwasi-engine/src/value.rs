@@ -16,6 +16,7 @@ pub enum Value {
 }
 
 impl Value {
+    #[inline(always)]
     pub const fn ty(&self) -> ValType {
         match self {
             Self::I32(_) => ValType::I32,
@@ -27,6 +28,7 @@ impl Value {
         }
     }
 
+    #[inline(always)]
     pub fn untyped(self) -> ValueUntyped {
         match self {
             Value::I32(n) => ValueUntyped(n as u64),
@@ -50,46 +52,57 @@ pub type Ref = Option<u32>;
 pub struct ValueUntyped(u64);
 
 impl ValueUntyped {
+    #[inline(always)]
     pub fn as_u32(self) -> u32 {
         self.0 as u32
     }
 
+    #[inline(always)]
     pub fn as_i32(self) -> i32 {
         self.0 as i32
     }
 
+    #[inline(always)]
     pub fn as_u64(self) -> u64 {
         self.0
     }
 
+    #[inline(always)]
     pub fn as_f32(self) -> f32 {
         f32::from_bits(self.0 as u32)
     }
 
+    #[inline(always)]
     pub fn as_f64(self) -> f64 {
         f64::from_bits(self.0)
     }
 
+    #[inline(always)]
     pub fn as_i64(self) -> i64 {
         self.0 as i64
     }
 
+    #[inline(always)]
     pub fn as_ref(self) -> Ref {
         unsafe { mem::transmute(self.0) }
     }
 
+    #[inline(always)]
     pub fn is_true(self) -> bool {
         self.0 != 0
     }
 
+    #[inline(always)]
     pub fn is_false(self) -> bool {
         !self.is_true()
     }
 
+    #[inline(always)]
     pub fn is_null(self) -> bool {
         self.as_ref().is_none()
     }
 
+    #[inline(always)]
     pub fn type_default(ty: ValType) -> Self {
         match ty {
             ValType::I32 | ValType::I64 | ValType::F32 | ValType::F64 => Self(0),
@@ -97,6 +110,7 @@ impl ValueUntyped {
         }
     }
 
+    #[inline(always)]
     pub fn into_typed(self, ty: ValType) -> Value {
         match ty {
             ValType::I32 => Value::I32(self.0 as u32),
@@ -110,6 +124,7 @@ impl ValueUntyped {
 }
 
 impl From<Value> for ValueUntyped {
+    #[inline(always)]
     fn from(value: Value) -> Self {
         match value {
             Value::I32(n) => Self(n as u64),
@@ -122,126 +137,126 @@ impl From<Value> for ValueUntyped {
 }
 
 impl From<u32> for ValueUntyped {
-    #[inline]
+    #[inline(always)]
     fn from(u32: u32) -> Self {
         Self(u32 as u64)
     }
 }
 
 impl From<i32> for ValueUntyped {
-    #[inline]
+    #[inline(always)]
     fn from(i32: i32) -> Self {
         Self(i32 as u64)
     }
 }
 
 impl From<u64> for ValueUntyped {
-    #[inline]
+    #[inline(always)]
     fn from(u64: u64) -> Self {
         Self(u64)
     }
 }
 
 impl From<i64> for ValueUntyped {
-    #[inline]
+    #[inline(always)]
     fn from(i64: i64) -> Self {
         Self(i64 as u64)
     }
 }
 
 impl From<f32> for ValueUntyped {
-    #[inline]
+    #[inline(always)]
     fn from(f32: f32) -> Self {
         Self(f32.to_bits() as u64)
     }
 }
 
 impl From<f64> for ValueUntyped {
-    #[inline]
+    #[inline(always)]
     fn from(f64: f64) -> Self {
         Self(f64.to_bits())
     }
 }
 
 impl From<bool> for ValueUntyped {
-    #[inline]
+    #[inline(always)]
     fn from(b: bool) -> Self {
         Self(if b { 1 } else { 0 })
     }
 }
 
 impl From<Ref> for ValueUntyped {
-    #[inline]
+    #[inline(always)]
     fn from(ref_: Ref) -> Self {
         Self(unsafe { mem::transmute(ref_) })
     }
 }
 
 impl From<ValueUntyped> for u32 {
-    #[inline]
+    #[inline(always)]
     fn from(value: ValueUntyped) -> Self {
         value.as_u32()
     }
 }
 
 impl From<ValueUntyped> for i32 {
-    #[inline]
+    #[inline(always)]
     fn from(value: ValueUntyped) -> Self {
         value.as_i32()
     }
 }
 
 impl From<ValueUntyped> for u64 {
-    #[inline]
+    #[inline(always)]
     fn from(value: ValueUntyped) -> Self {
         value.as_u64()
     }
 }
 
 impl From<ValueUntyped> for i64 {
-    #[inline]
+    #[inline(always)]
     fn from(value: ValueUntyped) -> Self {
         value.as_i64()
     }
 }
 
 impl From<ValueUntyped> for f32 {
-    #[inline]
+    #[inline(always)]
     fn from(value: ValueUntyped) -> Self {
         Self::from_bits(value.as_u32())
     }
 }
 
 impl From<ValueUntyped> for f64 {
-    #[inline]
+    #[inline(always)]
     fn from(value: ValueUntyped) -> Self {
         Self::from_bits(value.as_u64())
     }
 }
 
 impl From<ValueUntyped> for bool {
-    #[inline]
+    #[inline(always)]
     fn from(value: ValueUntyped) -> Self {
         value.is_true()
     }
 }
 
 impl From<ValueUntyped> for Ref {
-    #[inline]
+    #[inline(always)]
     fn from(value: ValueUntyped) -> Self {
         value.as_ref()
     }
 }
 
 impl From<ValueUntyped> for u8 {
-    #[inline]
+    #[inline(always)]
     fn from(value: ValueUntyped) -> Self {
         value.as_u32() as u8
     }
 }
 
 impl From<ValueUntyped> for u16 {
-    #[inline]
+    #[inline(always)]
     fn from(value: ValueUntyped) -> Self {
         value.as_u32() as u16
     }
