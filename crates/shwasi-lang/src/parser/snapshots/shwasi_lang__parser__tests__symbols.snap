@@ -1,0 +1,37 @@
+---
+source: crates/shwasi-lang/src/parser/mod.rs
+expression: ast
+---
+Ast {
+    statements: [
+        Command(
+            Command {
+                name: "echo",
+                args: [
+                    Ident(
+                        Symbol(
+                            0,
+                        ),
+                    ),
+                    Ident(
+                        Symbol(
+                            1,
+                        ),
+                    ),
+                ],
+            },
+        ),
+    ],
+    symbols: {
+        Ident(
+            "x",
+        ): Symbol(
+            0,
+        ),
+        Ident(
+            "y",
+        ): Symbol(
+            1,
+        ),
+    },
+}

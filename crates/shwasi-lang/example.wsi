@@ -1,0 +1,36 @@
+# . is a special character that escapes into eval mode. If it precedes anything,
+# the parser will treat it as an expression (instead of the normal string).
+
+# For example, `.x = 1` will be parsed as an assignment to the variable x.
+# `."hello {x}"` will be parsed as a string with an interpolated expression
+# (strings are automatically interpolated in eval mode).
+
+# The keywords `for` , `if`, and `def` have their own special rules.
+# .(x + ".toml") will be put into eval mode, because there's a . in front of it.
+
+echo hello "hi {1 + 1}" .("hi" + "hello")
+.x = 1
+echo * .x
+
+for i in [1, 2, 3] do
+  echo .i
+  .x += i
+end
+
+for i in $(echo "1 2 3") do
+  echo .i
+end
+
+if x == 7 then
+  echo "x is 7"
+else
+  echo "x is not 7"
+end
+
+def f : x y do
+  echo .x .y
+  cat .(x + (4 / 2) + ".toml") .(y + ".wsi")
+  return .x
+end
+
+f "Cargo" "example"

@@ -4,5 +4,5 @@ use clap::Parser;
 
 #[derive(Debug, Parser)]
 pub struct Cli {
-    pub input: PathBuf,
+    pub input: Option<PathBuf>,
 }

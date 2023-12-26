@@ -14,6 +14,9 @@ clap = { version = "4.4.6", features = ["derive"] }
 dhat = { version = "0.3.2", optional = true }
 shwasi-parser = { path = "crates/shwasi-parser" }
 shwasi-engine = { path = "crates/shwasi-engine" }
+shwasi-lang = { path = "crates/shwasi-lang" }
+rustyline = "13.0.0"
+dirs = "5.0.1"
 
 [features]
 dhat-heap = ["dhat"]
@@ -22,6 +25,7 @@ dhat-heap = ["dhat"]
 members = [
     "crates/shwasi-parser",
     "crates/shwasi-engine",
+    "crates/shwasi-lang",
     "crates/dumbwasm",
     "crates/wasm-leb128",
 ]
@@ -103,7 +107,6 @@ path_buf_push_overwrite = "warn"
 ptr_as_ptr = "warn"
 rc_mutex = "warn"
 rest_pat_in_fully_bound_structs = "warn"
-unused_self = "warn"
 same_functions_in_if_condition = "warn"
 semicolon_if_nothing_returned = "warn"
 single_match_else = "warn"

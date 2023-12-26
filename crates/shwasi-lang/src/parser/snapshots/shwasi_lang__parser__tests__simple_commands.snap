@@ -1,0 +1,32 @@
+---
+source: crates/shwasi-lang/src/parser/mod.rs
+expression: ast
+---
+Ast {
+    statements: [
+        Command(
+            Command {
+                name: "echo",
+                args: [
+                    String(
+                        "hello",
+                    ),
+                    String(
+                        "world",
+                    ),
+                ],
+            },
+        ),
+        Command(
+            Command {
+                name: "ls",
+                args: [
+                    String(
+                        "-l",
+                    ),
+                ],
+            },
+        ),
+    ],
+    symbols: {},
+}

@@ -1,14 +1,14 @@
 mod cli;
+mod executor;
 
 use std::fs;
 
 use anyhow::{Context, Result};
 use clap::Parser as CliParser;
-use shwasi_engine::{Instance, Store};
-use shwasi_parser::Parser;
+use shwasi_lang::{Interpreter, Lexer, Parser};
 use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
 
-use crate::cli::Cli;
+use crate::{cli::Cli, executor::Executor};
 
 #[cfg(feature = "dhat-heap")]
 #[global_allocator]
@@ -31,15 +31,60 @@ fn main() -> Result<()> {
         .init();
 
     let args = Cli::parse();
-    let input = fs::read(args.input).context("error reading input file")?;
+    if let Some(input) = args.input {
+        let input = fs::read_to_string(input).context("error reading input file")?;
+        let tokens = Lexer::new(&input).lex();
+        let ast = Parser::new(&tokens)
+            .parse()
+            .context("error parsing input")?;
+        let executor = Executor::new();
+        Interpreter::new(Box::new(executor)).run(ast)?;
+    } else {
+        start_repl()?;
+    }
 
-    let parser = Parser::new(&input);
-    let module = parser.read_module()?;
-    let mut store = Store::default();
-    let instance = Instance::instantiate(&mut store, module)?;
-    let fib = instance.get_func::<u32, u32>(&store, "fib")?;
-    let result = fib.call(&mut store, 39)?;
-    dbg!(result);
+    Ok(())
+}
+
+fn start_repl() -> Result<()> {
+    const PROMPT: &str = "$ ";
+
+    let mut rl = rustyline::DefaultEditor::new()?;
+    let executor = Executor::new();
+    let mut interpreter = Interpreter::new(Box::new(executor));
+
+    'main: loop {
+        let input = rl.readline(PROMPT);
+
+        'inp: {
+            match input {
+                Ok(input) => {
+                    let tokens = Lexer::new(&input).lex();
+                    let ast = match Parser::new(&tokens).parse() {
+                        Ok(ast) => ast,
+                        Err(err) => {
+                            println!("{err}");
+                            break 'inp;
+                        }
+                    };
+                    match interpreter.run(ast) {
+                        Ok(Some(result)) => println!("{result}"),
+                        Ok(None) => break 'inp,
+                        Err(err) => println!("{err}"),
+                    }
+                }
+                Err(rustyline::error::ReadlineError::Eof) => {
+                    break 'main;
+                }
+                Err(rustyline::error::ReadlineError::Interrupted) => {
+                    continue 'main;
+                }
+                Err(e) => todo!("{e:?}"),
+            }
+        }
+
+        println!();
+    }
 
     Ok(())
 }
