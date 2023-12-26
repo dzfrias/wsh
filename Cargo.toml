@@ -17,6 +17,7 @@ shwasi-engine = { path = "crates/shwasi-engine" }
 shwasi-lang = { path = "crates/shwasi-lang" }
 rustyline = "13.0.0"
 dirs = "5.0.1"
+ctrlc = "3.4.2"
 
 [features]
 dhat-heap = ["dhat"]

@@ -1,8 +1,4 @@
-use std::{
-    env, io,
-    path::PathBuf,
-    process::{Command, Stdio},
-};
+use std::{env, io, path::PathBuf, process::Command};
 
 use shwasi_lang::{RuntimeError, RuntimeResult, Value};
 
@@ -21,7 +17,6 @@ impl shwasi_lang::Executor for Executor {
             "cd" => cd(args),
             _ => Command::new(name)
                 .args(args)
-                .stdout(Stdio::piped())
                 .spawn()
                 .map_err(RuntimeError::CommandFailed)?
                 .wait()

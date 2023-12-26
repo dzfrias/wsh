@@ -30,6 +30,9 @@ fn main() -> Result<()> {
         .with(fmt_layer)
         .init();
 
+    // Catch ctrlc. This will make sure that shwasi does not exit when ctrlc is pressed.
+    std::thread::spawn(|| ctrlc::set_handler(|| {}));
+
     let args = Cli::parse();
     if let Some(input) = args.input {
         let input = fs::read_to_string(input).context("error reading input file")?;
