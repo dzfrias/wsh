@@ -1,5 +1,4 @@
 mod cli;
-mod executor;
 
 use std::fs;
 
@@ -8,7 +7,7 @@ use clap::Parser as CliParser;
 use shwasi_lang::{Interpreter, Lexer, Parser};
 use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
 
-use crate::{cli::Cli, executor::Executor};
+use crate::cli::Cli;
 
 #[cfg(feature = "dhat-heap")]
 #[global_allocator]
@@ -40,8 +39,7 @@ fn main() -> Result<()> {
         let ast = Parser::new(&tokens)
             .parse()
             .context("error parsing input")?;
-        let executor = Executor::new();
-        Interpreter::new(Box::new(executor)).run(ast)?;
+        Interpreter::new().run(ast)?;
     } else {
         start_repl()?;
     }
@@ -53,8 +51,7 @@ fn start_repl() -> Result<()> {
     const PROMPT: &str = "$ ";
 
     let mut rl = rustyline::DefaultEditor::new()?;
-    let executor = Executor::new();
-    let mut interpreter = Interpreter::new(Box::new(executor));
+    let mut interpreter = Interpreter::new();
 
     'main: loop {
         let input = rl.readline(PROMPT);

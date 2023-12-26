@@ -1333,7 +1333,6 @@ dependencies = [
  "clap",
  "ctrlc",
  "dhat",
- "dirs",
  "paste",
  "rustyline",
  "shwasi-engine",
@@ -1372,6 +1371,7 @@ dependencies = [
 name = "shwasi-lang"
 version = "0.1.0"
 dependencies = [
+ "dirs",
  "insta",
  "smol_str",
  "thiserror",

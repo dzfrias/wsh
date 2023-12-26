@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use crate::{interpreter::value::Value, parser::Symbol};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Env {
     env: HashMap<Symbol, Value>,
 }

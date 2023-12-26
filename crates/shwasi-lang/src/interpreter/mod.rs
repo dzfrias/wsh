@@ -1,29 +1,29 @@
+mod builtins;
 mod env;
 mod error;
 mod executor;
 mod value;
 
+use std::process;
+
 use crate::{
     ast::{InfixOp, PrefixOp},
-    interpreter::env::Env,
+    interpreter::{builtins::Builtin, env::Env},
     parser::ast::{Ast, Command, Expr, InfixExpr, PrefixExpr, Stmt},
 };
 pub use error::*;
 pub use executor::Executor;
 pub use value::*;
 
+#[derive(Default)]
 pub struct Interpreter {
     #[allow(dead_code)]
     env: Env,
-    executor: Box<dyn Executor>,
 }
 
 impl Interpreter {
-    pub fn new(executor: Box<dyn Executor>) -> Self {
-        Self {
-            env: Env::new(),
-            executor,
-        }
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn run(&mut self, program: Ast) -> RuntimeResult<Option<Value>> {
@@ -47,7 +47,18 @@ impl Interpreter {
             .iter()
             .map(|arg| self.eval_expr(arg).map(|val| val.to_string()))
             .collect::<RuntimeResult<Vec<_>>>()?;
-        self.executor.run(name, &args)?;
+
+        if let Some(builtin) = Builtin::from_name(name.as_str()) {
+            builtin.run(&args)?;
+            return Ok(Value::Null);
+        }
+
+        process::Command::new(name.as_str())
+            .args(args)
+            .spawn()
+            .map_err(RuntimeError::CommandFailed)?
+            .wait()
+            .map_err(RuntimeError::CommandFailed)?;
 
         Ok(Value::Null)
     }
