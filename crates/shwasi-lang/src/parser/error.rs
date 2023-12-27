@@ -53,6 +53,14 @@ impl ParseError {
             labels: vec![],
         }
     }
+
+    pub fn new_with_labels(offset: usize, kind: ParseErrorKind, labels: Vec<Label>) -> Self {
+        Self {
+            offset,
+            kind,
+            labels,
+        }
+    }
 }
 
 impl Label {

@@ -11,6 +11,7 @@ pub struct Lexer<'src> {
 
     mode: Mode,
     peek: Option<(usize, char)>,
+    current: char,
     pos: usize,
 }
 
@@ -21,6 +22,7 @@ impl<'src> Lexer<'src> {
             chars: src.char_indices(),
 
             mode: Mode::Normal,
+            current: '\0',
             peek: None,
             pos: 0,
         }
@@ -145,11 +147,13 @@ impl<'src> Lexer<'src> {
     fn next(&mut self) -> Option<char> {
         if let Some((pos, c)) = self.peek.take() {
             self.pos = pos;
+            self.current = c;
             return Some(c);
         }
 
         let (pos, c) = self.chars.next()?;
         self.pos = pos;
+        self.current = c;
         Some(c)
     }
 
@@ -199,8 +203,8 @@ impl<'src> Lexer<'src> {
             }
             self.next();
         }
-        let end_pos = self.pos;
-        &self.src[start_pos..end_pos + 1]
+        let end = self.pos + self.current.len_utf8();
+        &self.src[start_pos..end]
     }
 }
 

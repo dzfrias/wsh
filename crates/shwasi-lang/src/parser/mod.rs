@@ -248,12 +248,13 @@ mod tests {
         let buf = Lexer::new(input).lex();
         let result = Parser::new(&buf).parse().unwrap_err();
         assert_eq!(
-            ParseError::new(
+            ParseError::new_with_labels(
                 8,
                 ParseErrorKind::UnexpectedToken {
                     token: Token::Eof,
                     expected: "expected rparen to close expression",
-                }
+                },
+                vec![Label::new(6..7, "lparen found here")],
             ),
             result
         );
