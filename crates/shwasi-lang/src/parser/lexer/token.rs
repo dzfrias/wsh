@@ -7,6 +7,7 @@ pub enum Token {
     Number(f64),
     String(SmolStr),
     Assign,
+    Pipe,
     Newline,
 
     LParen,
@@ -118,6 +119,7 @@ impl TokenBuffer {
             TokenKind::Then => Token::Then,
             TokenKind::Else => Token::Else,
             TokenKind::End => Token::End,
+            TokenKind::Pipe => Token::Pipe,
             TokenKind::Invalid => Token::Invalid(*payload as u8 as char),
             TokenKind::Eof => Token::Eof,
         };
@@ -170,6 +172,7 @@ pub(super) enum TokenKind {
     Number,
     String,
     Assign,
+    Pipe,
     Newline,
 
     LParen,
@@ -261,6 +264,7 @@ impl Token {
             Token::Eq => TokenKind::Eq,
             Token::Ne => TokenKind::Ne,
             Token::Bang => TokenKind::Bang,
+            Token::Pipe => TokenKind::Pipe,
 
             Token::If => TokenKind::If,
             Token::Then => TokenKind::Then,
@@ -283,7 +287,8 @@ impl Token {
             | Token::Slash
             | Token::Newline
             | Token::Invalid(_)
-            | Token::Bang => 1,
+            | Token::Bang
+            | Token::Pipe => 1,
             Token::Eq | Token::Ne | Token::If => 2,
             Token::Then | Token::Else => 4,
             Token::End => 3,
@@ -330,6 +335,7 @@ impl fmt::Display for Token {
             Token::Then => write!(f, "then"),
             Token::Else => write!(f, "else"),
             Token::End => write!(f, "end"),
+            Token::Pipe => write!(f, "pipe"),
             Token::Invalid(c) => write!(f, "invalid `{c}`"),
             Token::Eof => write!(f, "eof"),
         }

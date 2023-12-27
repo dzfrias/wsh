@@ -1,5 +1,6 @@
 ---
 source: crates/shwasi-lang/src/parser/mod.rs
+assertion_line: 270
 expression: ast
 ---
 Ast {
@@ -11,26 +12,13 @@ Ast {
                         name: "echo",
                         args: [
                             String(
-                                "hello",
-                            ),
-                            String(
-                                "world",
+                                "hi",
                             ),
                         ],
                     },
-                ],
-            ),
-        ),
-        Pipeline(
-            Pipeline(
-                [
                     Command {
-                        name: "ls",
-                        args: [
-                            String(
-                                "-l",
-                            ),
-                        ],
+                        name: "cat",
+                        args: [],
                     },
                 ],
             ),

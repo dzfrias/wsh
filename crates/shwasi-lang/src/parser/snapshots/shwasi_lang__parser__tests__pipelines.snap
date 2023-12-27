@@ -11,24 +11,19 @@ Ast {
                         name: "echo",
                         args: [
                             String(
-                                "hello",
-                            ),
-                            String(
-                                "world",
+                                "hi",
                             ),
                         ],
                     },
-                ],
-            ),
-        ),
-        Pipeline(
-            Pipeline(
-                [
                     Command {
-                        name: "ls",
+                        name: "cat",
+                        args: [],
+                    },
+                    Command {
+                        name: "wc",
                         args: [
                             String(
-                                "-l",
+                                "-w",
                             ),
                         ],
                     },

@@ -4,47 +4,51 @@ expression: ast
 ---
 Ast {
     statements: [
-        Command(
-            Command {
-                name: "echo",
-                args: [
-                    Infix(
-                        InfixExpr {
-                            lhs: Number(
-                                1.0,
-                            ),
-                            rhs: Infix(
+        Pipeline(
+            Pipeline(
+                [
+                    Command {
+                        name: "echo",
+                        args: [
+                            Infix(
                                 InfixExpr {
-                                    lhs: Infix(
-                                        InfixExpr {
-                                            lhs: Number(
-                                                2.0,
-                                            ),
-                                            rhs: Number(
-                                                3.0,
-                                            ),
-                                            op: Mul,
-                                        },
+                                    lhs: Number(
+                                        1.0,
                                     ),
                                     rhs: Infix(
                                         InfixExpr {
-                                            lhs: Number(
-                                                4.0,
+                                            lhs: Infix(
+                                                InfixExpr {
+                                                    lhs: Number(
+                                                        2.0,
+                                                    ),
+                                                    rhs: Number(
+                                                        3.0,
+                                                    ),
+                                                    op: Mul,
+                                                },
                                             ),
-                                            rhs: Number(
-                                                5.0,
+                                            rhs: Infix(
+                                                InfixExpr {
+                                                    lhs: Number(
+                                                        4.0,
+                                                    ),
+                                                    rhs: Number(
+                                                        5.0,
+                                                    ),
+                                                    op: Sub,
+                                                },
                                             ),
-                                            op: Sub,
+                                            op: Div,
                                         },
                                     ),
-                                    op: Div,
+                                    op: Add,
                                 },
                             ),
-                            op: Add,
-                        },
-                    ),
+                        ],
+                    },
                 ],
-            },
+            ),
         ),
     ],
     symbols: {},

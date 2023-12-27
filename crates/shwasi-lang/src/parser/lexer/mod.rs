@@ -61,6 +61,7 @@ impl<'src> Lexer<'src> {
                     push!(Number(n.parse().unwrap()));
                 }
                 '=' => push!(Assign),
+                '|' => push!(Pipe),
 
                 '(' if self.strict() => {
                     if let Mode::Strict {

@@ -3,8 +3,9 @@ mod cli;
 use std::fs;
 
 use anyhow::{Context, Result};
+use ariadne::{Color, Label, Report, ReportKind, Source};
 use clap::Parser as CliParser;
-use shwasi_lang::{Interpreter, Lexer, Parser};
+use shwasi_lang::{Interpreter, Lexer, ParseError, Parser};
 use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
 
 use crate::cli::Cli;
@@ -63,7 +64,7 @@ fn start_repl() -> Result<()> {
                     let ast = match Parser::new(&tokens).parse() {
                         Ok(ast) => ast,
                         Err(err) => {
-                            println!("{err}");
+                            print_parse_error(err, &input, None);
                             break 'inp;
                         }
                     };
@@ -87,4 +88,27 @@ fn start_repl() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn print_parse_error(mut err: ParseError, input: &str, name: Option<&str>) {
+    let a = Color::Blue;
+    let b = Color::Green;
+    let name = name.unwrap_or("prompt");
+    err.offset = err.offset.min(input.len() - 1);
+
+    Report::build(ReportKind::Error, name, err.offset)
+        .with_message(err.kind.to_string())
+        .with_label(
+            Label::new((name, err.offset..err.offset + 1))
+                .with_message("error happened here")
+                .with_color(a),
+        )
+        .with_labels(err.labels.into_iter().map(|label| {
+            Label::new((name, label.range))
+                .with_message(label.message)
+                .with_color(b)
+        }))
+        .finish()
+        .eprint((name, Source::from(input)))
+        .unwrap();
 }

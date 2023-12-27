@@ -4,22 +4,26 @@ expression: ast
 ---
 Ast {
     statements: [
-        Command(
-            Command {
-                name: "echo",
-                args: [
-                    Ident(
-                        Symbol(
-                            0,
-                        ),
-                    ),
-                    Ident(
-                        Symbol(
-                            1,
-                        ),
-                    ),
+        Pipeline(
+            Pipeline(
+                [
+                    Command {
+                        name: "echo",
+                        args: [
+                            Ident(
+                                Symbol(
+                                    0,
+                                ),
+                            ),
+                            Ident(
+                                Symbol(
+                                    1,
+                                ),
+                            ),
+                        ],
+                    },
                 ],
-            },
+            ),
         ),
     ],
     symbols: {

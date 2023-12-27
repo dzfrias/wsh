@@ -4,10 +4,8 @@ mod error;
 mod executor;
 mod value;
 
-use std::process;
-
 use crate::{
-    ast::{InfixOp, PrefixOp},
+    ast::{InfixOp, Pipeline, PrefixOp},
     interpreter::{builtins::Builtin, env::Env},
     parser::ast::{Ast, Command, Expr, InfixExpr, PrefixExpr, Stmt},
 };
@@ -37,30 +35,48 @@ impl Interpreter {
 
     fn eval_stmt(&mut self, stmt: &Stmt) -> RuntimeResult<Value> {
         match stmt {
-            Stmt::Command(cmd) => self.eval_cmd(cmd),
+            Stmt::Pipeline(pipeline) => self.eval_pipeline(pipeline),
             Stmt::Expr(expr) => self.eval_expr(expr),
         }
     }
 
-    fn eval_cmd(&mut self, Command { name, args }: &Command) -> RuntimeResult<Value> {
+    fn eval_pipeline(&mut self, Pipeline(commands): &Pipeline) -> RuntimeResult<Value> {
+        let popen_error = |e| match e {
+            subprocess::PopenError::IoError(e) => RuntimeError::CommandFailed(e),
+            e => unreachable!("shouldn't have other popen error: {e}"),
+        };
+
+        if commands.len() == 1 {
+            let exec = self.make_exec(&commands[0])?;
+            if let Some(exec) = exec {
+                exec.join().map_err(popen_error)?;
+            }
+            return Ok(Value::Null);
+        }
+        let pipeline = commands
+            .iter()
+            .filter_map(|cmd| self.make_exec(cmd).transpose())
+            .collect::<RuntimeResult<Vec<_>>>()?;
+        let pipeline = subprocess::Pipeline::from_exec_iter(pipeline);
+        pipeline.join().map_err(popen_error)?;
+
+        Ok(Value::Null)
+    }
+
+    fn make_exec(
+        &mut self,
+        Command { name, args }: &Command,
+    ) -> RuntimeResult<Option<subprocess::Exec>> {
         let args = args
             .iter()
             .map(|arg| self.eval_expr(arg).map(|val| val.to_string()))
             .collect::<RuntimeResult<Vec<_>>>()?;
-
         if let Some(builtin) = Builtin::from_name(name.as_str()) {
             builtin.run(&args)?;
-            return Ok(Value::Null);
+            return Ok(None);
         }
-
-        process::Command::new(name.as_str())
-            .args(args)
-            .spawn()
-            .map_err(RuntimeError::CommandFailed)?
-            .wait()
-            .map_err(RuntimeError::CommandFailed)?;
-
-        Ok(Value::Null)
+        let exec = subprocess::Exec::cmd(name.as_str()).args(&args);
+        Ok(Some(exec))
     }
 
     fn eval_expr(&mut self, expr: &Expr) -> RuntimeResult<Value> {

@@ -18,45 +18,16 @@ impl Ast {
     }
 }
 
-impl IntoIterator for Ast {
-    type Item = Stmt;
-    type IntoIter = AstIter;
-
-    fn into_iter(self) -> Self::IntoIter {
-        AstIter { ast: self, pos: 0 }
-    }
-}
-
-#[derive(Debug)]
-pub struct AstIter {
-    ast: Ast,
-    pos: usize,
-}
-
-impl Iterator for AstIter {
-    type Item = Stmt;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.pos >= self.ast.statements.len() {
-            return None;
-        }
-
-        let stmt = std::mem::replace(
-            &mut self.ast.statements[self.pos],
-            Stmt::Expr(Expr::Number(0.0)),
-        );
-        self.pos += 1;
-        Some(stmt)
-    }
-}
-
 #[derive(Debug, Clone)]
 pub enum Stmt {
-    Command(Command),
+    Pipeline(Pipeline),
     Expr(Expr),
 }
 
 #[derive(Debug, Clone)]
+pub struct Pipeline(pub Vec<Command>);
+
+#[derive(Debug, Clone, Default)]
 pub struct Command {
     pub name: SmolStr,
     pub args: Vec<Expr>,
@@ -98,4 +69,36 @@ pub enum PrefixOp {
     Neg,
     Sign,
     Bang,
+}
+
+impl IntoIterator for Ast {
+    type Item = Stmt;
+    type IntoIter = AstIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        AstIter { ast: self, pos: 0 }
+    }
+}
+
+#[derive(Debug)]
+pub struct AstIter {
+    ast: Ast,
+    pos: usize,
+}
+
+impl Iterator for AstIter {
+    type Item = Stmt;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.pos >= self.ast.statements.len() {
+            return None;
+        }
+
+        let stmt = std::mem::replace(
+            &mut self.ast.statements[self.pos],
+            Stmt::Expr(Expr::Number(0.0)),
+        );
+        self.pos += 1;
+        Some(stmt)
+    }
 }

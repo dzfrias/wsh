@@ -5,7 +5,10 @@ mod symbol;
 
 pub use self::error::*;
 pub use self::symbol::*;
-use crate::parser::ast::{Ast, Command, Expr, InfixExpr, InfixOp, PrefixExpr, PrefixOp, Stmt};
+use crate::{
+    ast::Pipeline,
+    parser::ast::{Ast, Command, Expr, InfixExpr, InfixOp, PrefixExpr, PrefixOp, Stmt},
+};
 pub use lexer::*;
 
 #[derive(Debug)]
@@ -40,15 +43,30 @@ impl<'src> Parser<'src> {
 
     fn parse_stmt(&mut self) -> ParseResult<Stmt> {
         Ok(match self.current_token {
-            Token::String(_) => Stmt::Command(self.parse_cmd()?),
+            Token::String(_) => Stmt::Pipeline(self.parse_pipeline()?),
             _ => Stmt::Expr(self.parse_expr(Precedence::Lowest)?),
         })
     }
 
+    fn parse_pipeline(&mut self) -> ParseResult<Pipeline> {
+        let mut cmds = vec![];
+        cmds.push(self.parse_cmd()?);
+
+        while self.current_token == Token::Pipe {
+            self.next_token();
+            cmds.push(self.parse_cmd()?);
+        }
+
+        Ok(Pipeline(cmds))
+    }
+
     fn parse_cmd(&mut self) -> ParseResult<Command> {
-        let name = self.buf.get_string(self.tok_idx).unwrap().clone();
+        let name = self
+            .buf
+            .get_string(self.tok_idx)
+            .ok_or(self.error(ParseErrorKind::UnfinishedPipeline))?;
         let mut args = vec![];
-        while !matches!(self.peek(), Token::Newline | Token::Eof) {
+        while !matches!(self.peek(), Token::Newline | Token::Eof | Token::Pipe) {
             self.next_token();
             let arg = self.parse_expr(Precedence::Lowest)?;
             args.push(arg);
@@ -66,7 +84,7 @@ impl<'src> Parser<'src> {
             Token::Ident(ident) => Expr::Ident(self.symbols.intern(ident.clone())),
             Token::LParen => self.parse_grouped_expr()?,
             Token::Bang | Token::Minus | Token::Plus => Expr::Prefix(self.parse_prefix()?),
-            _ => return Err(self.expected("valid expression")),
+            _ => return Err(self.expected("expected valid expression")),
         };
 
         while self.peek() != Token::Newline && precedence < self.peek().into() {
@@ -103,9 +121,15 @@ impl<'src> Parser<'src> {
     }
 
     fn parse_grouped_expr(&mut self) -> ParseResult<Expr> {
+        let start = self.offset();
+        if self.peek() == Token::RParen {
+            self.next_token();
+            return Ok(Expr::String("".into()));
+        }
         self.next_token();
         let expr = self.parse_expr(Precedence::Lowest)?;
-        self.expect_next(Token::RParen, "expected rparen to close expression")?;
+        self.expect_next(Token::RParen, "expected rparen to close expression")
+            .attach(Label::new(start..start + 1, "lparen found here"))?;
 
         Ok(expr)
     }
@@ -153,15 +177,20 @@ impl<'src> Parser<'src> {
     }
 
     fn expected(&self, msg: &'static str) -> ParseError {
-        ParseError::new(
-            self.buf
-                .offset(self.tok_idx)
-                .expect("token index should be within bounds"),
-            ErrorKind::UnexpectedToken {
-                token: self.current_token.clone(),
-                expected: msg,
-            },
-        )
+        self.error(ParseErrorKind::UnexpectedToken {
+            token: self.current_token.clone(),
+            expected: msg,
+        })
+    }
+
+    fn error(&self, kind: ParseErrorKind) -> ParseError {
+        ParseError::new(self.offset(), kind)
+    }
+
+    fn offset(&self) -> usize {
+        self.buf
+            .offset(self.tok_idx)
+            .expect("token index should be within bounds")
     }
 }
 
@@ -221,7 +250,7 @@ mod tests {
         assert_eq!(
             ParseError::new(
                 8,
-                ErrorKind::UnexpectedToken {
+                ParseErrorKind::UnexpectedToken {
                     token: Token::Eof,
                     expected: "expected rparen to close expression",
                 }
@@ -236,5 +265,21 @@ mod tests {
         let buf = Lexer::new(input).lex();
         let ast = Parser::new(&buf).parse().unwrap();
         insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn pipelines() {
+        let input = "echo hi | cat | wc -w";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn empty_pipelines() {
+        let input = "echo hi | cat |";
+        let buf = Lexer::new(input).lex();
+        let err = Parser::new(&buf).parse().unwrap_err();
+        assert_eq!(ParseError::new(15, ParseErrorKind::UnfinishedPipeline), err);
     }
 }

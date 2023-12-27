@@ -4,41 +4,45 @@ expression: ast
 ---
 Ast {
     statements: [
-        Command(
-            Command {
-                name: "echo",
-                args: [
-                    Infix(
-                        InfixExpr {
-                            lhs: Prefix(
-                                PrefixExpr {
-                                    expr: Number(
-                                        1.0,
-                                    ),
-                                    op: Neg,
-                                },
-                            ),
-                            rhs: Infix(
+        Pipeline(
+            Pipeline(
+                [
+                    Command {
+                        name: "echo",
+                        args: [
+                            Infix(
                                 InfixExpr {
-                                    lhs: Number(
-                                        2.0,
-                                    ),
-                                    rhs: Prefix(
+                                    lhs: Prefix(
                                         PrefixExpr {
                                             expr: Number(
-                                                3.0,
+                                                1.0,
                                             ),
-                                            op: Bang,
+                                            op: Neg,
                                         },
                                     ),
-                                    op: Mul,
+                                    rhs: Infix(
+                                        InfixExpr {
+                                            lhs: Number(
+                                                2.0,
+                                            ),
+                                            rhs: Prefix(
+                                                PrefixExpr {
+                                                    expr: Number(
+                                                        3.0,
+                                                    ),
+                                                    op: Bang,
+                                                },
+                                            ),
+                                            op: Mul,
+                                        },
+                                    ),
+                                    op: Add,
                                 },
                             ),
-                            op: Add,
-                        },
-                    ),
+                        ],
+                    },
                 ],
-            },
+            ),
         ),
     ],
     symbols: {},
