@@ -1,7 +1,6 @@
 mod builtins;
 mod env;
 mod error;
-mod executor;
 mod value;
 
 use crate::{
@@ -10,7 +9,6 @@ use crate::{
     parser::ast::{Ast, Command, Expr, InfixExpr, PrefixExpr, Stmt},
 };
 pub use error::*;
-pub use executor::Executor;
 use smol_str::SmolStr;
 pub use value::*;
 
