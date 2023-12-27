@@ -94,12 +94,13 @@ fn print_parse_error(mut err: ParseError, input: &str, name: Option<&str>) {
     let a = Color::Blue;
     let b = Color::Green;
     let name = name.unwrap_or("prompt");
-    err.offset = err.offset.min(input.len() - 1);
+    err.range.start = err.range.start.min(input.len() - 1);
+    err.range.end = err.range.end.min(input.len());
 
-    Report::build(ReportKind::Error, name, err.offset)
+    Report::build(ReportKind::Error, name, err.range.start)
         .with_message(err.kind.to_string())
         .with_label(
-            Label::new((name, err.offset..err.offset + 1))
+            Label::new((name, err.range))
                 .with_message("error happened here")
                 .with_color(a),
         )

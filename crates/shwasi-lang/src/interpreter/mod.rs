@@ -11,6 +11,7 @@ use crate::{
 };
 pub use error::*;
 pub use executor::Executor;
+use smol_str::SmolStr;
 pub use value::*;
 
 #[derive(Default)]
@@ -95,7 +96,12 @@ impl Interpreter {
 
         match (lhs, rhs) {
             (Value::Number(lhs), Value::Number(rhs)) => self.eval_numeric_infix(infix.op, lhs, rhs),
-            _ => todo!("other infix exprs"),
+            (Value::String(lhs), Value::String(rhs)) => self.eval_string_infix(infix.op, lhs, rhs),
+            (Value::String(lhs), Value::Number(rhs)) => {
+                self.eval_string_numeric_infix(infix.op, lhs, rhs)
+            }
+            // TODO: handle numeric string infix
+            _ => todo!("error"),
         }
     }
 
@@ -127,5 +133,34 @@ impl Interpreter {
         };
 
         Ok(Value::Number(result))
+    }
+
+    fn eval_string_infix(
+        &mut self,
+        op: InfixOp,
+        lhs: SmolStr,
+        rhs: SmolStr,
+    ) -> RuntimeResult<Value> {
+        let result = match op {
+            InfixOp::Add => format!("{lhs}{rhs}").into(),
+            _ => todo!("error"),
+        };
+
+        Ok(Value::String(result))
+    }
+
+    fn eval_string_numeric_infix(
+        &mut self,
+        op: InfixOp,
+        lhs: SmolStr,
+        rhs: f64,
+    ) -> RuntimeResult<Value> {
+        let result = match op {
+            InfixOp::Add => format!("{lhs}{rhs}"),
+            InfixOp::Mul => lhs.repeat(rhs as usize),
+            _ => todo!("error"),
+        };
+
+        Ok(Value::String(result.into()))
     }
 }

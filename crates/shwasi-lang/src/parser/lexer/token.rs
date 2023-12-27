@@ -6,6 +6,8 @@ pub enum Token {
     Ident(Ident),
     Number(f64),
     String(SmolStr),
+    QuotedString(SmolStr),
+    UnquotedString(SmolStr),
     Assign,
     Pipe,
     Newline,
@@ -68,7 +70,7 @@ impl TokenBuffer {
                 self.number_table.push(n);
                 (self.number_table.len() - 1) as u32
             }
-            Token::String(s) => {
+            Token::String(s) | Token::UnquotedString(s) | Token::QuotedString(s) => {
                 let offset = self.str_table.len();
                 self.str_table.push(s);
                 offset as u32
@@ -99,6 +101,14 @@ impl TokenBuffer {
             TokenKind::String => {
                 let s = &self.str_table[*payload as usize];
                 Token::String(s.clone())
+            }
+            TokenKind::QuotedString => {
+                let s = &self.str_table[*payload as usize];
+                Token::QuotedString(s.clone())
+            }
+            TokenKind::UnquotedString => {
+                let s = &self.str_table[*payload as usize];
+                Token::UnquotedString(s.clone())
             }
             TokenKind::Number => {
                 let n = self.number_table[*payload as usize];
@@ -136,7 +146,7 @@ impl TokenBuffer {
 
     pub fn get_string(&self, main: usize) -> Option<SmolStr> {
         self.get(main).and_then(|t| match t {
-            Token::String(s) => Some(s),
+            Token::String(s) | Token::QuotedString(s) => Some(s),
             _ => None,
         })
     }
@@ -171,6 +181,8 @@ pub(super) enum TokenKind {
     Ident,
     Number,
     String,
+    UnquotedString,
+    QuotedString,
     Assign,
     Pipe,
     Newline,
@@ -252,6 +264,8 @@ impl Token {
             Token::Ident(_) => TokenKind::Ident,
             Token::Number(_) => TokenKind::Number,
             Token::String(_) => TokenKind::String,
+            Token::UnquotedString(_) => TokenKind::UnquotedString,
+            Token::QuotedString(_) => TokenKind::QuotedString,
             Token::Assign => TokenKind::Assign,
 
             Token::LParen => TokenKind::LParen,
@@ -276,7 +290,7 @@ impl Token {
         }
     }
 
-    pub(super) fn size(&self) -> usize {
+    pub fn size(&self) -> usize {
         match self {
             Token::Assign
             | Token::LParen
@@ -293,6 +307,8 @@ impl Token {
             Token::Then | Token::Else => 4,
             Token::End => 3,
             Token::Ident(Ident(s)) | Token::String(s) => s.len(),
+            Token::QuotedString(s) => s.len() + 2,
+            Token::UnquotedString(s) => s.len() + 1,
             // TODO: perhaps the ryu crate can be used here?
             Token::Number(n) => n.to_string().len(),
             Token::Eof => 0,
@@ -320,6 +336,8 @@ impl fmt::Display for Token {
             Token::Ident(ident) => write!(f, "ident `{ident}`"),
             Token::Number(i) => write!(f, "int `{i}`"),
             Token::String(s) => write!(f, "string `{s}`"),
+            Token::UnquotedString(s) => write!(f, "unquoted string `{s}`"),
+            Token::QuotedString(s) => write!(f, "quoted string `{s}`"),
             Token::Assign => write!(f, "assign"),
             Token::Newline => write!(f, "newline"),
             Token::LParen => write!(f, "lparen"),

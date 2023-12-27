@@ -43,7 +43,7 @@ impl<'src> Parser<'src> {
 
     fn parse_stmt(&mut self) -> ParseResult<Stmt> {
         Ok(match self.current_token {
-            Token::String(_) => Stmt::Pipeline(self.parse_pipeline()?),
+            Token::String(_) | Token::QuotedString(_) => Stmt::Pipeline(self.parse_pipeline()?),
             _ => Stmt::Expr(self.parse_expr(Precedence::Lowest)?),
         })
     }
@@ -79,7 +79,7 @@ impl<'src> Parser<'src> {
 
     fn parse_expr(&mut self, precedence: Precedence) -> ParseResult<Expr> {
         let mut expr = match &self.current_token {
-            Token::String(s) => Expr::String(s.clone()),
+            Token::String(s) | Token::QuotedString(s) => Expr::String(s.clone()),
             Token::Number(i) => Expr::Number(*i),
             Token::Ident(ident) => Expr::Ident(self.symbols.intern(ident.clone())),
             Token::LParen => self.parse_grouped_expr()?,
@@ -177,14 +177,25 @@ impl<'src> Parser<'src> {
     }
 
     fn expected(&self, msg: &'static str) -> ParseError {
-        self.error(ParseErrorKind::UnexpectedToken {
-            token: self.current_token.clone(),
-            expected: msg,
-        })
+        let tok = self.current_token.clone();
+        let len = tok.size();
+        self.error_with_len(
+            ParseErrorKind::UnexpectedToken {
+                token: tok,
+                expected: msg,
+            },
+            len,
+        )
     }
 
     fn error(&self, kind: ParseErrorKind) -> ParseError {
-        ParseError::new(self.offset(), kind)
+        ParseError::new(self.offset()..self.offset() + 1, kind)
+    }
+
+    fn error_with_len(&self, kind: ParseErrorKind, len: usize) -> ParseError {
+        let mut e = self.error(kind);
+        e.range = e.range.start..e.range.start + len;
+        e
     }
 
     fn offset(&self) -> usize {
@@ -249,7 +260,7 @@ mod tests {
         let result = Parser::new(&buf).parse().unwrap_err();
         assert_eq!(
             ParseError::new_with_labels(
-                8,
+                8..8,
                 ParseErrorKind::UnexpectedToken {
                     token: Token::Eof,
                     expected: "expected rparen to close expression",
@@ -281,6 +292,9 @@ mod tests {
         let input = "echo hi | cat |";
         let buf = Lexer::new(input).lex();
         let err = Parser::new(&buf).parse().unwrap_err();
-        assert_eq!(ParseError::new(15, ParseErrorKind::UnfinishedPipeline), err);
+        assert_eq!(
+            ParseError::new(15..16, ParseErrorKind::UnfinishedPipeline),
+            err
+        );
     }
 }

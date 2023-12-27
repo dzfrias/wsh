@@ -18,9 +18,9 @@ pub enum ParseErrorKind {
 }
 
 #[derive(Debug, Error, PartialEq)]
-#[error("{offset}: {kind}")]
+#[error("{range:?}: {kind}")]
 pub struct ParseError {
-    pub offset: usize,
+    pub range: Range<usize>,
     pub kind: ParseErrorKind,
     pub labels: Vec<Label>,
 }
@@ -46,17 +46,17 @@ impl<T> LabelAttach for Result<T, ParseError> {
 }
 
 impl ParseError {
-    pub fn new(offset: usize, kind: ParseErrorKind) -> Self {
+    pub fn new(range: Range<usize>, kind: ParseErrorKind) -> Self {
         Self {
-            offset,
+            range,
             kind,
             labels: vec![],
         }
     }
 
-    pub fn new_with_labels(offset: usize, kind: ParseErrorKind, labels: Vec<Label>) -> Self {
+    pub fn new_with_labels(range: Range<usize>, kind: ParseErrorKind, labels: Vec<Label>) -> Self {
         Self {
-            offset,
+            range,
             kind,
             labels,
         }
