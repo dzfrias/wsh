@@ -57,6 +57,7 @@ impl<'src> Lexer<'src> {
                     push!(Ne);
                 }
                 '!' if self.strict() => push!(Bang),
+                '?' if self.strict() => push!(QuestionMark),
                 '+' if self.strict() => push!(Plus),
                 '-' if self.strict() => push!(Minus),
                 '*' if self.strict() => push!(Star),
@@ -116,6 +117,11 @@ impl<'src> Lexer<'src> {
                             ending: Token::RParen,
                             count: 0,
                         };
+                    }
+                    Some('?') => {
+                        buf.skip(1);
+                        self.next();
+                        push!(QuestionMark);
                     }
                     Some(c) if is_ident_char(c) && !c.is_ascii_digit() => {
                         buf.skip(1);
@@ -442,6 +448,22 @@ mod tests {
         let lexer = Lexer::new(input);
         let buf = lexer.lex();
         let expect = token_buf!(Token::String("hello".into()), Token::Pipe, Token::Eof);
+        assert_eq!(expect, buf);
+    }
+
+    #[test]
+    fn question_mark() {
+        let input = "echo .? .(?)";
+        let lexer = Lexer::new(input);
+        let buf = lexer.lex();
+        let expect = token_buf!(
+            Token::String("echo".into()),
+            Token::QuestionMark,
+            Token::LParen,
+            Token::QuestionMark,
+            Token::RParen,
+            Token::Eof
+        );
         assert_eq!(expect, buf);
     }
 }

@@ -12,6 +12,7 @@ pub enum Token {
     Assign,
     Pipe,
     Newline,
+    QuestionMark,
 
     LParen,
     RParen,
@@ -129,6 +130,7 @@ impl TokenBuffer {
             TokenKind::Bang => Token::Bang,
             TokenKind::If => Token::If,
             TokenKind::Then => Token::Then,
+            TokenKind::QuestionMark => Token::QuestionMark,
             TokenKind::Else => Token::Else,
             TokenKind::End => Token::End,
             TokenKind::Pipe => Token::Pipe,
@@ -189,6 +191,7 @@ pub(super) enum TokenKind {
     Pipe,
     Newline,
     Backtick,
+    QuestionMark,
 
     LParen,
     RParen,
@@ -290,6 +293,7 @@ impl Token {
             Token::End => TokenKind::End,
             Token::Newline => TokenKind::Newline,
             Token::Invalid(_) => TokenKind::Invalid,
+            Token::QuestionMark => TokenKind::QuestionMark,
             Token::Eof => TokenKind::Eof,
         }
     }
@@ -307,7 +311,8 @@ impl Token {
             | Token::Invalid(_)
             | Token::Bang
             | Token::Pipe
-            | Token::Backtick => 1,
+            | Token::Backtick
+            | Token::QuestionMark => 1,
             Token::Eq | Token::Ne | Token::If => 2,
             Token::Then | Token::Else => 4,
             Token::End => 3,
@@ -353,6 +358,7 @@ impl fmt::Display for Token {
             Token::Slash => write!(f, "slash"),
             Token::Eq => write!(f, "eq"),
             Token::Ne => write!(f, "ne"),
+            Token::QuestionMark => write!(f, "question mark"),
             Token::Bang => write!(f, "bang"),
             Token::If => write!(f, "if"),
             Token::Then => write!(f, "then"),

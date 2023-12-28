@@ -101,6 +101,7 @@ impl<'src> Parser<'src> {
             Token::LParen => self.parse_grouped_expr()?,
             Token::Bang | Token::Minus | Token::Plus => Expr::Prefix(self.parse_prefix()?),
             Token::Backtick => Expr::Pipeline(self.parse_backtick()?),
+            Token::QuestionMark => Expr::LastStatus,
             _ => return Err(self.expected("expected valid expression")),
         };
 
@@ -326,6 +327,14 @@ mod tests {
     #[test]
     fn backtick_in_expressions() {
         let input = "echo .(`cat file.txt` + \"nice\")";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn last_status() {
+        let input = "echo .? .(? + 10)";
         let buf = Lexer::new(input).lex();
         let ast = Parser::new(&buf).parse().unwrap();
         insta::assert_debug_snapshot!(ast);

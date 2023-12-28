@@ -1,0 +1,30 @@
+---
+source: crates/shwasi-lang/src/parser/mod.rs
+expression: ast
+---
+Ast {
+    statements: [
+        Pipeline(
+            Pipeline(
+                [
+                    Command {
+                        name: "echo",
+                        args: [
+                            LastStatus,
+                            Infix(
+                                InfixExpr {
+                                    lhs: LastStatus,
+                                    rhs: Number(
+                                        10.0,
+                                    ),
+                                    op: Add,
+                                },
+                            ),
+                        ],
+                    },
+                ],
+            ),
+        ),
+    ],
+    symbols: {},
+}

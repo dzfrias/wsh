@@ -16,6 +16,7 @@ pub use value::*;
 pub struct Interpreter {
     #[allow(dead_code)]
     env: Env,
+    last_status: i32,
 }
 
 impl Interpreter {
@@ -54,9 +55,16 @@ impl Interpreter {
             if let Some(exec) = exec {
                 if capture {
                     let out = exec.capture().map_err(popen_error)?;
+                    self.set_status(out.exit_status);
                     return Ok(Value::String(out.stdout_str().trim().into()));
                 } else {
-                    exec.join().map_err(popen_error)?;
+                    let status = exec.join().map_err(popen_error)?;
+                    self.set_status(status);
+                }
+            } else {
+                self.last_status = 0;
+                if capture {
+                    return Ok(Value::String("".into()));
                 }
             }
             return Ok(Value::Null);
@@ -68,13 +76,24 @@ impl Interpreter {
         let pipeline = subprocess::Pipeline::from_exec_iter(pipeline);
         let result = if capture {
             let out = pipeline.capture().map_err(popen_error)?;
+            self.set_status(out.exit_status);
             Value::String(out.stdout_str().trim().into())
         } else {
-            pipeline.join().map_err(popen_error)?;
+            let status = pipeline.join().map_err(popen_error)?;
+            self.set_status(status);
             Value::Null
         };
 
         Ok(result)
+    }
+
+    fn set_status(&mut self, exit_status: subprocess::ExitStatus) {
+        self.last_status = match exit_status {
+            subprocess::ExitStatus::Exited(i) => i as i32,
+            subprocess::ExitStatus::Signaled(i) => i as i32,
+            subprocess::ExitStatus::Other(i) => i,
+            subprocess::ExitStatus::Undetermined => 0,
+        };
     }
 
     fn make_exec(
@@ -101,6 +120,7 @@ impl Interpreter {
             Expr::String(s) => Value::String(s.clone()),
             Expr::Number(n) => Value::Number(*n),
             Expr::Pipeline(pipeline) => self.eval_pipeline(pipeline, /*capture =*/ true)?,
+            Expr::LastStatus => Value::Number(self.last_status as f64),
         })
     }
 
