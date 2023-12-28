@@ -43,7 +43,10 @@ impl<'src> Lexer<'src> {
         while let Some(c) = self.next() {
             match c {
                 '\n' => push!(Newline),
-                ' ' | '\t' => buf.skip(1),
+                ' ' | '\t' => {
+                    let len = self.consume_while(|c| c.is_whitespace() && c != '\n').len();
+                    buf.skip(len);
+                }
 
                 '=' if self.peek() == Some('=') && self.strict() => {
                     self.next();
