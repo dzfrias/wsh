@@ -1,0 +1,42 @@
+---
+source: crates/shwasi-lang/src/parser/mod.rs
+expression: ast
+---
+Ast {
+    statements: [
+        Pipeline(
+            Pipeline(
+                [
+                    Command {
+                        name: "echo",
+                        args: [
+                            Pipeline(
+                                Pipeline(
+                                    [
+                                        Command {
+                                            name: "cat",
+                                            args: [
+                                                String(
+                                                    "file.txt",
+                                                ),
+                                            ],
+                                        },
+                                        Command {
+                                            name: "wc",
+                                            args: [
+                                                String(
+                                                    "-l",
+                                                ),
+                                            ],
+                                        },
+                                    ],
+                                ),
+                            ),
+                        ],
+                    },
+                ],
+            ),
+        ),
+    ],
+    symbols: {},
+}

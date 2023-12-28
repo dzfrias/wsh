@@ -38,6 +38,7 @@ pub enum Expr {
     Ident(Symbol),
     String(SmolStr),
     Number(f64),
+    Pipeline(Pipeline),
 
     Infix(InfixExpr),
     Prefix(PrefixExpr),

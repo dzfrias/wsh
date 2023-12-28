@@ -8,6 +8,7 @@ pub enum Token {
     String(SmolStr),
     QuotedString(SmolStr),
     UnquotedString(SmolStr),
+    Backtick,
     Assign,
     Pipe,
     Newline,
@@ -98,6 +99,7 @@ impl TokenBuffer {
                 let s = &self.str_table[*payload as usize];
                 Token::Ident(Ident(s.clone()))
             }
+            TokenKind::Backtick => Token::Backtick,
             TokenKind::String => {
                 let s = &self.str_table[*payload as usize];
                 Token::String(s.clone())
@@ -186,6 +188,7 @@ pub(super) enum TokenKind {
     Assign,
     Pipe,
     Newline,
+    Backtick,
 
     LParen,
     RParen,
@@ -267,6 +270,7 @@ impl Token {
             Token::UnquotedString(_) => TokenKind::UnquotedString,
             Token::QuotedString(_) => TokenKind::QuotedString,
             Token::Assign => TokenKind::Assign,
+            Token::Backtick => TokenKind::Backtick,
 
             Token::LParen => TokenKind::LParen,
             Token::RParen => TokenKind::RParen,
@@ -302,7 +306,8 @@ impl Token {
             | Token::Newline
             | Token::Invalid(_)
             | Token::Bang
-            | Token::Pipe => 1,
+            | Token::Pipe
+            | Token::Backtick => 1,
             Token::Eq | Token::Ne | Token::If => 2,
             Token::Then | Token::Else => 4,
             Token::End => 3,
@@ -354,6 +359,7 @@ impl fmt::Display for Token {
             Token::Else => write!(f, "else"),
             Token::End => write!(f, "end"),
             Token::Pipe => write!(f, "pipe"),
+            Token::Backtick => write!(f, "backtick"),
             Token::Invalid(c) => write!(f, "invalid `{c}`"),
             Token::Eof => write!(f, "eof"),
         }

@@ -17,6 +17,7 @@ pub struct Parser<'src> {
     tok_idx: usize,
     current_token: Token,
     symbols: SymbolTable,
+    in_subcmd: bool,
 }
 
 impl<'src> Parser<'src> {
@@ -26,6 +27,7 @@ impl<'src> Parser<'src> {
             tok_idx: 0,
             current_token: buf.get(0).unwrap_or(Token::Eof).clone(),
             symbols: SymbolTable::new(),
+            in_subcmd: false,
         }
     }
 
@@ -60,6 +62,17 @@ impl<'src> Parser<'src> {
         Ok(Pipeline(cmds))
     }
 
+    fn parse_backtick(&mut self) -> ParseResult<Pipeline> {
+        let start = self.offset();
+        self.next_token();
+        self.in_subcmd = true;
+        let pipeline = self.parse_pipeline()?;
+        self.expect_next(Token::Backtick, "expected backtick to close command")
+            .attach(Label::new(start..start + 1, "backtick found here"))?;
+        self.in_subcmd = false;
+        Ok(pipeline)
+    }
+
     fn parse_cmd(&mut self) -> ParseResult<Command> {
         let name = self
             .buf
@@ -70,6 +83,9 @@ impl<'src> Parser<'src> {
             self.next_token();
             let arg = self.parse_expr(Precedence::Lowest)?;
             args.push(arg);
+            if self.peek() == Token::Backtick && self.in_subcmd {
+                return Ok(Command { name, args });
+            }
         }
         self.next_token();
         let cmd = Command { name, args };
@@ -84,6 +100,7 @@ impl<'src> Parser<'src> {
             Token::Ident(ident) => Expr::Ident(self.symbols.intern(ident.clone())),
             Token::LParen => self.parse_grouped_expr()?,
             Token::Bang | Token::Minus | Token::Plus => Expr::Prefix(self.parse_prefix()?),
+            Token::Backtick => Expr::Pipeline(self.parse_backtick()?),
             _ => return Err(self.expected("expected valid expression")),
         };
 
@@ -296,5 +313,21 @@ mod tests {
             ParseError::new(15..16, ParseErrorKind::UnfinishedPipeline),
             err
         );
+    }
+
+    #[test]
+    fn backtick_piplines() {
+        let input = "echo `cat file.txt | wc -l`";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn backtick_in_expressions() {
+        let input = "echo .(`cat file.txt` + \"nice\")";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
     }
 }

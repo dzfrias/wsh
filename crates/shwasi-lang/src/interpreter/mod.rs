@@ -34,12 +34,16 @@ impl Interpreter {
 
     fn eval_stmt(&mut self, stmt: &Stmt) -> RuntimeResult<Value> {
         match stmt {
-            Stmt::Pipeline(pipeline) => self.eval_pipeline(pipeline),
+            Stmt::Pipeline(pipeline) => self.eval_pipeline(pipeline, /*capture =*/ false),
             Stmt::Expr(expr) => self.eval_expr(expr),
         }
     }
 
-    fn eval_pipeline(&mut self, Pipeline(commands): &Pipeline) -> RuntimeResult<Value> {
+    fn eval_pipeline(
+        &mut self,
+        Pipeline(commands): &Pipeline,
+        capture: bool,
+    ) -> RuntimeResult<Value> {
         let popen_error = |e| match e {
             subprocess::PopenError::IoError(e) => RuntimeError::CommandFailed(e),
             e => unreachable!("shouldn't have other popen error: {e}"),
@@ -48,7 +52,12 @@ impl Interpreter {
         if commands.len() == 1 {
             let exec = self.make_exec(&commands[0])?;
             if let Some(exec) = exec {
-                exec.join().map_err(popen_error)?;
+                if capture {
+                    let out = exec.capture().map_err(popen_error)?;
+                    return Ok(Value::String(out.stdout_str().trim().into()));
+                } else {
+                    exec.join().map_err(popen_error)?;
+                }
             }
             return Ok(Value::Null);
         }
@@ -57,9 +66,15 @@ impl Interpreter {
             .filter_map(|cmd| self.make_exec(cmd).transpose())
             .collect::<RuntimeResult<Vec<_>>>()?;
         let pipeline = subprocess::Pipeline::from_exec_iter(pipeline);
-        pipeline.join().map_err(popen_error)?;
+        let result = if capture {
+            let out = pipeline.capture().map_err(popen_error)?;
+            Value::String(out.stdout_str().trim().into())
+        } else {
+            pipeline.join().map_err(popen_error)?;
+            Value::Null
+        };
 
-        Ok(Value::Null)
+        Ok(result)
     }
 
     fn make_exec(
@@ -85,6 +100,7 @@ impl Interpreter {
             Expr::Prefix(prefix) => self.eval_prefix(prefix)?,
             Expr::String(s) => Value::String(s.clone()),
             Expr::Number(n) => Value::Number(*n),
+            Expr::Pipeline(pipeline) => self.eval_pipeline(pipeline, /*capture =*/ true)?,
         })
     }
 

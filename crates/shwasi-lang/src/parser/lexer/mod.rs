@@ -67,6 +67,14 @@ impl<'src> Lexer<'src> {
                 }
                 '=' => push!(Assign),
                 '|' => push!(Pipe),
+                '`' => {
+                    if let Mode::NormalUntilBacktick(old) = self.mode {
+                        self.mode = *old;
+                    } else {
+                        self.mode = Mode::NormalUntilBacktick(self.mode.into());
+                    }
+                    push!(Backtick);
+                }
                 '"' | '\'' => {
                     let (s, ok) = self.consume_quoted_str(c);
                     let tok = if ok {
@@ -183,7 +191,7 @@ impl<'src> Lexer<'src> {
     }
 
     fn consume_str(&mut self) -> &'src str {
-        self.consume_while(|c| !c.is_whitespace())
+        self.consume_while(|c| !c.is_whitespace() && !matches!(c, '`' | '|' | '='))
     }
 
     fn consume_quoted_str(&mut self, end: char) -> (&'src str, bool) {
@@ -235,9 +243,10 @@ fn is_ident_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '_'
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 enum Mode {
     Normal,
+    NormalUntilBacktick(Box<Mode>),
     Strict { ending: Token, count: u32 },
     StrictNoEnd,
 }
@@ -409,6 +418,30 @@ mod tests {
             Token::UnquotedString("hello".into()),
             Token::Eof,
         );
+        assert_eq!(expect, buf);
+    }
+
+    #[test]
+    fn backticks() {
+        let input = "echo `nice`";
+        let lexer = Lexer::new(input);
+        let buf = lexer.lex();
+        let expect = token_buf!(
+            Token::String("echo".into()),
+            Token::Backtick,
+            Token::String("nice".into()),
+            Token::Backtick,
+            Token::Eof,
+        );
+        assert_eq!(expect, buf);
+    }
+
+    #[test]
+    fn pipe_after_string() {
+        let input = "hello|";
+        let lexer = Lexer::new(input);
+        let buf = lexer.lex();
+        let expect = token_buf!(Token::String("hello".into()), Token::Pipe, Token::Eof);
         assert_eq!(expect, buf);
     }
 }
