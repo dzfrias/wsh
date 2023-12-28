@@ -3,6 +3,10 @@ name = "shwasi-lang"
 version = "0.1.0"
 edition = "2021"
 
+[[test]]
+name = "integration"
+path = "tests/tests.rs"
+
 [dependencies]
 thiserror.workspace = true
 smol_str = "0.2.0"

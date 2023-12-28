@@ -98,7 +98,9 @@ impl Interpreter {
             (Value::String(lhs), Value::Number(rhs)) => {
                 self.eval_string_numeric_infix(infix.op, lhs, rhs)
             }
-            // TODO: handle numeric string infix
+            (Value::Number(lhs), Value::String(rhs)) => {
+                self.eval_numeric_string_infix(infix.op, lhs, rhs)
+            }
             _ => todo!("error"),
         }
     }
@@ -108,6 +110,9 @@ impl Interpreter {
 
         match value {
             Value::Number(n) => self.eval_numeric_prefix(prefix.op, n),
+            Value::String(s) if s.parse::<f64>().is_ok() => {
+                self.eval_numeric_prefix(prefix.op, s.parse().unwrap())
+            }
             _ => todo!("error"),
         }
     }
@@ -153,9 +158,32 @@ impl Interpreter {
         lhs: SmolStr,
         rhs: f64,
     ) -> RuntimeResult<Value> {
+        if let Ok(lhs) = lhs.parse::<f64>() {
+            return self.eval_numeric_infix(op, lhs, rhs);
+        }
+
         let result = match op {
             InfixOp::Add => format!("{lhs}{rhs}"),
             InfixOp::Mul => lhs.repeat(rhs as usize),
+            _ => todo!("error"),
+        };
+
+        Ok(Value::String(result.into()))
+    }
+
+    fn eval_numeric_string_infix(
+        &mut self,
+        op: InfixOp,
+        lhs: f64,
+        rhs: SmolStr,
+    ) -> RuntimeResult<Value> {
+        if let Ok(rhs) = rhs.parse::<f64>() {
+            return self.eval_numeric_infix(op, lhs, rhs);
+        }
+
+        let result = match op {
+            InfixOp::Add => format!("{lhs}{rhs}"),
+            InfixOp::Mul => rhs.repeat(lhs as usize),
             _ => todo!("error"),
         };
 

@@ -2,7 +2,7 @@ use std::fmt;
 
 use smol_str::SmolStr;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value {
     Number(f64),
     String(SmolStr),
