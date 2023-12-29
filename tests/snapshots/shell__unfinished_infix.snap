@@ -1,0 +1,13 @@
+---
+source: tests/shell.rs
+expression: stderr
+---
+Error: unexpected token: rparen, expected valid expression
+   ╭─[unfinished_infix.tmp:1:11]
+   │
+ 1 │ echo .(1 +)
+   │           ┬  
+   │           ╰── error happened here
+───╯
+Error: error parsing input
+

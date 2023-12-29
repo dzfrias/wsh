@@ -2,7 +2,7 @@ mod cli;
 
 use std::fs;
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use ariadne::{Color, Label, Report, ReportKind, Source};
 use clap::Parser as CliParser;
 use shwasi_lang::{Interpreter, Lexer, ParseError, Parser};
@@ -35,11 +35,15 @@ fn main() -> Result<()> {
 
     let args = Cli::parse();
     if let Some(input) = args.input {
-        let input = fs::read_to_string(input).context("error reading input file")?;
-        let tokens = Lexer::new(&input).lex();
-        let ast = Parser::new(&tokens)
-            .parse()
-            .context("error parsing input")?;
+        let file_input = fs::read_to_string(&input).context("error reading input file")?;
+        let tokens = Lexer::new(&file_input).lex();
+        let ast = match Parser::new(&tokens).parse() {
+            Ok(ast) => ast,
+            Err(err) => {
+                print_parse_error(err, &file_input, Some(&input.as_os_str().to_string_lossy()));
+                bail!("error parsing input");
+            }
+        };
         Interpreter::new().run(ast)?;
     } else {
         start_repl()?;

@@ -1,3 +1,5 @@
+#[cfg(not(target_os = "windows"))]
+mod shell;
 mod spectests;
 
 macro_rules! spectests {
