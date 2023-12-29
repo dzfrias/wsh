@@ -22,6 +22,13 @@ impl Ast {
 pub enum Stmt {
     Pipeline(Pipeline),
     Expr(Expr),
+    AliasAssign(AliasAssign),
+}
+
+#[derive(Debug, Clone)]
+pub struct AliasAssign {
+    pub name: SmolStr,
+    pub pipeline: Pipeline,
 }
 
 #[derive(Debug, Clone)]

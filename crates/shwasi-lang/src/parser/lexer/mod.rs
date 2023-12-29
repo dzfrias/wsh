@@ -466,4 +466,20 @@ mod tests {
         );
         assert_eq!(expect, buf);
     }
+
+    #[test]
+    fn alias() {
+        let input = "alias echo = echo -n";
+        let lexer = Lexer::new(input);
+        let buf = lexer.lex();
+        let expect = token_buf!(
+            Token::Alias,
+            Token::String("echo".into()),
+            Token::Assign,
+            Token::String("echo".into()),
+            Token::String("-n".into()),
+            Token::Eof
+        );
+        assert_eq!(expect, buf);
+    }
 }

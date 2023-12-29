@@ -4,17 +4,17 @@ mod error;
 mod value;
 
 use crate::{
-    ast::{InfixOp, Pipeline, PrefixOp},
+    ast::{AliasAssign, InfixOp, Pipeline, PrefixOp},
     interpreter::{builtins::Builtin, env::Env},
     parser::ast::{Ast, Command, Expr, InfixExpr, PrefixExpr, Stmt},
 };
 pub use error::*;
 use smol_str::SmolStr;
+use std::process;
 pub use value::*;
 
 #[derive(Default)]
 pub struct Interpreter {
-    #[allow(dead_code)]
     env: Env,
     last_status: i32,
 }
@@ -37,49 +37,36 @@ impl Interpreter {
         match stmt {
             Stmt::Pipeline(pipeline) => self.eval_pipeline(pipeline, /*capture =*/ false),
             Stmt::Expr(expr) => self.eval_expr(expr),
+            Stmt::AliasAssign(assign) => {
+                self.eval_alias_assign(assign)?;
+                Ok(Value::Null)
+            }
         }
     }
 
-    fn eval_pipeline(
-        &mut self,
-        Pipeline(commands): &Pipeline,
-        capture: bool,
-    ) -> RuntimeResult<Value> {
-        let popen_error = |e| match e {
-            subprocess::PopenError::IoError(e) => RuntimeError::CommandFailed(e),
-            e => unreachable!("shouldn't have other popen error: {e}"),
-        };
-
-        if commands.len() == 1 {
-            let exec = self.make_exec(&commands[0])?;
-            if let Some(exec) = exec {
-                if capture {
-                    let out = exec.capture().map_err(popen_error)?;
-                    self.set_status(out.exit_status);
-                    return Ok(Value::String(out.stdout_str().trim().into()));
-                } else {
-                    let status = exec.join().map_err(popen_error)?;
-                    self.set_status(status);
-                }
+    fn eval_pipeline(&mut self, pipeline: &Pipeline, capture: bool) -> RuntimeResult<Value> {
+        let expression = self.make_pipeline(pipeline)?;
+        let Some(expression) = expression else {
+            return Ok(if capture {
+                Value::String("".into())
             } else {
-                self.last_status = 0;
-                if capture {
-                    return Ok(Value::String("".into()));
-                }
-            }
-            return Ok(Value::Null);
-        }
-        let pipeline = commands
-            .iter()
-            .filter_map(|cmd| self.make_exec(cmd).transpose())
-            .collect::<RuntimeResult<Vec<_>>>()?;
-        let pipeline = subprocess::Pipeline::from_exec_iter(pipeline);
+                Value::Null
+            });
+        };
         let result = if capture {
-            let out = pipeline.capture().map_err(popen_error)?;
-            self.set_status(out.exit_status);
-            Value::String(out.stdout_str().trim().into())
+            let out = expression
+                .stdout_capture()
+                .unchecked()
+                .run()
+                .map_err(RuntimeError::CommandFailed)?;
+            self.set_status(out.status);
+            Value::String(String::from_utf8_lossy(&out.stdout).trim().into())
         } else {
-            let status = pipeline.join().map_err(popen_error)?;
+            let status = expression
+                .unchecked()
+                .run()
+                .map_err(RuntimeError::CommandFailed)?
+                .status;
             self.set_status(status);
             Value::Null
         };
@@ -87,28 +74,45 @@ impl Interpreter {
         Ok(result)
     }
 
-    fn set_status(&mut self, exit_status: subprocess::ExitStatus) {
-        self.last_status = match exit_status {
-            subprocess::ExitStatus::Exited(i) => i as i32,
-            subprocess::ExitStatus::Signaled(i) => i as i32,
-            subprocess::ExitStatus::Other(i) => i,
-            subprocess::ExitStatus::Undetermined => 0,
-        };
+    fn eval_alias_assign(
+        &mut self,
+        AliasAssign { name, pipeline }: &AliasAssign,
+    ) -> RuntimeResult<()> {
+        let expr = self.make_pipeline(pipeline)?.unwrap();
+        self.env.set_alias(name.clone(), expr);
+        Ok(())
+    }
+
+    fn make_pipeline(&mut self, pipeline: &Pipeline) -> RuntimeResult<Option<duct::Expression>> {
+        let mut expression = self.make_exec(&pipeline.0[0])?;
+        for cmd in pipeline.0.iter().skip(1) {
+            let Some(exec) = self.make_exec(cmd)? else {
+                continue;
+            };
+            expression = expression.map(|expr| expr.pipe(&exec)).or(Some(exec));
+        }
+
+        Ok(expression)
     }
 
     fn make_exec(
         &mut self,
         Command { name, args }: &Command,
-    ) -> RuntimeResult<Option<subprocess::Exec>> {
+    ) -> RuntimeResult<Option<duct::Expression>> {
+        if let Some(alias) = self.env.get_alias(name.as_str()) {
+            return Ok(Some(alias));
+        }
+
         let args = args
             .iter()
             .map(|arg| self.eval_expr(arg).map(|val| val.to_string()))
             .collect::<RuntimeResult<Vec<_>>>()?;
+
         if let Some(builtin) = Builtin::from_name(name.as_str()) {
             builtin.run(&args)?;
             return Ok(None);
         }
-        let exec = subprocess::Exec::cmd(name.as_str()).args(&args);
+        let exec = duct::cmd(name.as_str(), args);
         Ok(Some(exec))
     }
 
@@ -224,5 +228,11 @@ impl Interpreter {
         };
 
         Ok(Value::String(result.into()))
+    }
+
+    fn set_status(&mut self, exit_status: process::ExitStatus) {
+        if let Some(code) = exit_status.code() {
+            self.last_status = code;
+        }
     }
 }

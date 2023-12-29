@@ -1,0 +1,30 @@
+---
+source: crates/shwasi-lang/src/parser/mod.rs
+expression: ast
+---
+Ast {
+    statements: [
+        AliasAssign(
+            AliasAssign {
+                name: "foo",
+                pipeline: Pipeline(
+                    [
+                        Command {
+                            name: "echo",
+                            args: [
+                                String(
+                                    "hi",
+                                ),
+                            ],
+                        },
+                        Command {
+                            name: "cat",
+                            args: [],
+                        },
+                    ],
+                ),
+            },
+        ),
+    ],
+    symbols: {},
+}

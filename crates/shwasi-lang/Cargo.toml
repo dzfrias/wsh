@@ -11,7 +11,7 @@ path = "tests/tests.rs"
 thiserror.workspace = true
 smol_str = "0.2.0"
 dirs = "5.0.1"
-subprocess = "0.2.9"
+duct = "0.13.7"
 
 [dev-dependencies]
 insta.workspace = true

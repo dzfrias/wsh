@@ -47,6 +47,8 @@ shell_test!(piping, "echo \"hello world\" | wc -w | xargs", "2");
 shell_test!(nested_commands, "echo `echo .(1 / 1)`", "1");
 shell_test!(last_status, "false\necho .?\ntrue\necho .?", "1\n0");
 shell_test!(last_status_in_piping, "false | echo .?", "0");
+shell_test!(aliases, "alias foo = echo hi\nfoo", "hi");
+
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");
 shell_test!(@fail unfinished_pipe, "echo hi |");
 shell_test!(@fail unclosed_backtick, "echo `echo hi");

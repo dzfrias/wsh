@@ -29,6 +29,7 @@ pub enum Token {
     Then,
     Else,
     End,
+    Alias,
 
     Invalid(char),
     Eof,
@@ -129,6 +130,7 @@ impl TokenBuffer {
             TokenKind::Ne => Token::Ne,
             TokenKind::Bang => Token::Bang,
             TokenKind::If => Token::If,
+            TokenKind::Alias => Token::Alias,
             TokenKind::Then => Token::Then,
             TokenKind::QuestionMark => Token::QuestionMark,
             TokenKind::Else => Token::Else,
@@ -208,6 +210,7 @@ pub(super) enum TokenKind {
     Then,
     Else,
     End,
+    Alias,
 
     Invalid,
     Eof,
@@ -295,6 +298,7 @@ impl Token {
             Token::Invalid(_) => TokenKind::Invalid,
             Token::QuestionMark => TokenKind::QuestionMark,
             Token::Eof => TokenKind::Eof,
+            Token::Alias => TokenKind::Alias,
         }
     }
 
@@ -315,6 +319,7 @@ impl Token {
             | Token::QuestionMark => 1,
             Token::Eq | Token::Ne | Token::If => 2,
             Token::Then | Token::Else => 4,
+            Token::Alias => 5,
             Token::End => 3,
             Token::Ident(Ident(s)) | Token::String(s) => s.len(),
             Token::QuotedString(s) => s.len() + 2,
@@ -331,6 +336,7 @@ impl Token {
             "then" => Token::Then,
             "else" => Token::Else,
             "end" => Token::End,
+            "alias" => Token::Alias,
             _ => return None,
         })
     }
@@ -361,6 +367,7 @@ impl fmt::Display for Token {
             Token::QuestionMark => write!(f, "question mark"),
             Token::Bang => write!(f, "bang"),
             Token::If => write!(f, "if"),
+            Token::Alias => write!(f, "alias"),
             Token::Then => write!(f, "then"),
             Token::Else => write!(f, "else"),
             Token::End => write!(f, "end"),

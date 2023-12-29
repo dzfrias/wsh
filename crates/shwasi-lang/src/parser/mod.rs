@@ -6,7 +6,7 @@ mod symbol;
 pub use self::error::*;
 pub use self::symbol::*;
 use crate::{
-    ast::Pipeline,
+    ast::{AliasAssign, Pipeline},
     parser::ast::{Ast, Command, Expr, InfixExpr, InfixOp, PrefixExpr, PrefixOp, Stmt},
 };
 pub use lexer::*;
@@ -46,6 +46,7 @@ impl<'src> Parser<'src> {
     fn parse_stmt(&mut self) -> ParseResult<Stmt> {
         Ok(match self.current_token {
             Token::String(_) | Token::QuotedString(_) => Stmt::Pipeline(self.parse_pipeline()?),
+            Token::Alias => Stmt::AliasAssign(self.parse_alias_assign()?),
             _ => Stmt::Expr(self.parse_expr(Precedence::Lowest)?),
         })
     }
@@ -60,6 +61,19 @@ impl<'src> Parser<'src> {
         }
 
         Ok(Pipeline(cmds))
+    }
+
+    fn parse_alias_assign(&mut self) -> ParseResult<AliasAssign> {
+        debug_assert_eq!(self.current_token, Token::Alias);
+        self.next_token();
+        let name = self
+            .buf
+            .get_string(self.tok_idx)
+            .ok_or_else(|| self.expected("expected a valid command name"))?;
+        self.expect_next(Token::Assign, "expected assign after alias name")?;
+        self.next_token();
+        let pipeline = self.parse_pipeline()?;
+        Ok(AliasAssign { name, pipeline })
     }
 
     fn parse_backtick(&mut self) -> ParseResult<Pipeline> {
@@ -338,5 +352,30 @@ mod tests {
         let buf = Lexer::new(input).lex();
         let ast = Parser::new(&buf).parse().unwrap();
         insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn alias() {
+        let input = "alias foo = echo hi | cat";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn alias_with_invalid_name() {
+        let input = "alias = = echo hi | cat";
+        let buf = Lexer::new(input).lex();
+        let err = Parser::new(&buf).parse().unwrap_err();
+        assert_eq!(
+            ParseError::new(
+                6..7,
+                ParseErrorKind::UnexpectedToken {
+                    token: Token::Assign,
+                    expected: "expected a valid command name"
+                }
+            ),
+            err
+        );
     }
 }
