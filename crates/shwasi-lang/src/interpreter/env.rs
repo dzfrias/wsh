@@ -4,12 +4,12 @@ use std::collections::HashMap;
 
 use smol_str::SmolStr;
 
-use crate::{interpreter::value::Value, Ident};
+use crate::{ast::Pipeline, interpreter::value::Value, Ident};
 
 #[derive(Debug, Default)]
 pub struct Env {
     env: HashMap<Ident, Value>,
-    aliases: HashMap<SmolStr, duct::Expression>,
+    aliases: HashMap<SmolStr, Pipeline>,
 }
 
 impl Env {
@@ -28,11 +28,11 @@ impl Env {
         self.env.insert(sym, value);
     }
 
-    pub fn set_alias(&mut self, name: SmolStr, expr: duct::Expression) {
+    pub fn set_alias(&mut self, name: SmolStr, expr: Pipeline) {
         self.aliases.insert(name, expr);
     }
 
-    pub fn get_alias(&self, name: &str) -> Option<duct::Expression> {
+    pub fn get_alias(&self, name: &str) -> Option<Pipeline> {
         self.aliases.get(name).cloned()
     }
 }

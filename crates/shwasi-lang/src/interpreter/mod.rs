@@ -82,8 +82,7 @@ impl Interpreter {
         &mut self,
         AliasAssign { name, pipeline }: &AliasAssign,
     ) -> RuntimeResult<()> {
-        let expr = self.make_pipeline(pipeline)?.unwrap();
-        self.env.set_alias(name.clone(), expr);
+        self.env.set_alias(name.clone(), pipeline.clone());
         Ok(())
     }
 
@@ -225,7 +224,8 @@ impl Interpreter {
         Command { name, args }: &Command,
     ) -> RuntimeResult<Option<duct::Expression>> {
         if let Some(alias) = self.env.get_alias(name.as_str()) {
-            return Ok(Some(alias));
+            let exec = self.make_pipeline(&alias)?;
+            return Ok(exec);
         }
 
         let args = args
