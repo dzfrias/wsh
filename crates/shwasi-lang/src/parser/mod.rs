@@ -50,14 +50,30 @@ impl<'src> Parser<'src> {
 
     fn parse_pipeline(&mut self) -> ParseResult<Pipeline> {
         let mut cmds = vec![];
+        let mut write = None;
         cmds.push(self.parse_cmd()?);
 
         while self.current_token == Token::Pipe {
             self.next_token();
             cmds.push(self.parse_cmd()?);
         }
+        if self.current_token == Token::Write {
+            self.next_token();
+            write = Some(self.parse_expr(Precedence::Lowest)?.into());
+            if self.peek() != Token::Eof {
+                self.expect_next(
+                    Token::Newline,
+                    "expected newline after file write redirection",
+                )?;
+            } else {
+                self.next_token();
+            }
+        }
 
-        Ok(Pipeline(cmds))
+        Ok(Pipeline {
+            commands: cmds,
+            write,
+        })
     }
 
     fn parse_alias_assign(&mut self) -> ParseResult<AliasAssign> {
@@ -102,7 +118,10 @@ impl<'src> Parser<'src> {
             .get_string(self.tok_idx)
             .ok_or(self.error(ParseErrorKind::UnfinishedPipeline))?;
         let mut args = vec![];
-        while !matches!(self.peek(), Token::Newline | Token::Eof | Token::Pipe) {
+        while !matches!(
+            self.peek(),
+            Token::Newline | Token::Eof | Token::Pipe | Token::Write
+        ) {
             if self.peek() == Token::Backtick && self.in_subcmd {
                 return Ok(Command { name, args });
             }
@@ -423,5 +442,31 @@ mod tests {
         let buf = Lexer::new(input).lex();
         let ast = Parser::new(&buf).parse().unwrap();
         insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn pipeline_with_file_write() {
+        let input =
+            "echo hi > file.txt\necho \"hello world\" | wc -w | xargs > .(\"test\" + \".txt\")";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn redirects_must_be_at_end() {
+        let input = "echo hi > file.txt | echo hi";
+        let buf = Lexer::new(input).lex();
+        let err = Parser::new(&buf).parse().unwrap_err();
+        assert_eq!(
+            ParseError::new(
+                19..20,
+                ParseErrorKind::UnexpectedToken {
+                    token: Token::Pipe,
+                    expected: "expected newline after file write redirection"
+                }
+            ),
+            err
+        );
     }
 }

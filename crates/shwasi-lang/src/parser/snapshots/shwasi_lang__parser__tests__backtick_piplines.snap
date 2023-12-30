@@ -5,14 +5,14 @@ expression: ast
 Ast {
     statements: [
         Pipeline(
-            Pipeline(
-                [
+            Pipeline {
+                commands: [
                     Command {
                         name: "echo",
                         args: [
                             Pipeline(
-                                Pipeline(
-                                    [
+                                Pipeline {
+                                    commands: [
                                         Command {
                                             name: "cat",
                                             args: [
@@ -30,12 +30,14 @@ Ast {
                                             ],
                                         },
                                     ],
-                                ),
+                                    write: None,
+                                },
                             ),
                         ],
                     },
                 ],
-            ),
+                write: None,
+            },
         ),
     ],
 }

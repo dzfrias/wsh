@@ -1,0 +1,13 @@
+---
+source: tests/shell.rs
+expression: stderr
+---
+Error: unexpected token: pipe, expected newline after file write redirection
+   ╭─[bad_redirect_position.tmp:1:20]
+   │
+ 1 │ echo hi > file.txt | cat
+   │                    ┬  
+   │                    ╰── error happened here
+───╯
+Error: error parsing input
+

@@ -54,9 +54,15 @@ shell_test!(
     "alias foo = echo hi\n.x = `foo`\necho .x",
     "hi"
 );
+shell_test!(
+    file_redirects,
+    "echo hi > .(\"file\" + \".txt\")\n.x = `cat file.txt`\nrm file.txt\necho .x",
+    "hi"
+);
 
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");
 shell_test!(@fail unfinished_pipe, "echo hi |");
 shell_test!(@fail unclosed_backtick, "echo `echo hi");
 shell_test!(@fail unfinished_infix, "echo .(1 +)");
 shell_test!(@fail unfinished_prefix, "echo .(!)");
+shell_test!(@fail bad_redirect_position, "echo hi > file.txt | cat");

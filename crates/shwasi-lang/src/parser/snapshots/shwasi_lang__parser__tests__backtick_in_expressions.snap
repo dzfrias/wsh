@@ -5,16 +5,16 @@ expression: ast
 Ast {
     statements: [
         Pipeline(
-            Pipeline(
-                [
+            Pipeline {
+                commands: [
                     Command {
                         name: "echo",
                         args: [
                             Infix(
                                 InfixExpr {
                                     lhs: Pipeline(
-                                        Pipeline(
-                                            [
+                                        Pipeline {
+                                            commands: [
                                                 Command {
                                                     name: "cat",
                                                     args: [
@@ -24,7 +24,8 @@ Ast {
                                                     ],
                                                 },
                                             ],
-                                        ),
+                                            write: None,
+                                        },
                                     ),
                                     rhs: String(
                                         "nice",
@@ -35,7 +36,8 @@ Ast {
                         ],
                     },
                 ],
-            ),
+                write: None,
+            },
         ),
     ],
 }

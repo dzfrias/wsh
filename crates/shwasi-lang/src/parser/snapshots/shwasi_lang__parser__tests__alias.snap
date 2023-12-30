@@ -7,8 +7,8 @@ Ast {
         AliasAssign(
             AliasAssign {
                 name: "foo",
-                pipeline: Pipeline(
-                    [
+                pipeline: Pipeline {
+                    commands: [
                         Command {
                             name: "echo",
                             args: [
@@ -22,7 +22,8 @@ Ast {
                             args: [],
                         },
                     ],
-                ),
+                    write: None,
+                },
             },
         ),
     ],

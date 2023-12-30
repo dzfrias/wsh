@@ -32,7 +32,7 @@ impl Env {
         self.aliases.insert(name, expr);
     }
 
-    pub fn get_alias(&self, name: &str) -> Option<Pipeline> {
-        self.aliases.get(name).cloned()
+    pub fn get_alias(&self, name: &str) -> Option<&Pipeline> {
+        self.aliases.get(name)
     }
 }

@@ -82,6 +82,7 @@ impl Interpreter {
         &mut self,
         AliasAssign { name, pipeline }: &AliasAssign,
     ) -> RuntimeResult<()> {
+        // TODO: avoid clone here?
         self.env.set_alias(name.clone(), pipeline.clone());
         Ok(())
     }
@@ -268,12 +269,16 @@ impl Interpreter {
     }
 
     fn make_pipeline(&mut self, pipeline: &Pipeline) -> RuntimeResult<Option<duct::Expression>> {
-        let mut expression = self.make_exec(&pipeline.0[0])?;
-        for cmd in pipeline.0.iter().skip(1) {
+        let mut expression = self.make_exec(&pipeline.commands[0])?;
+        for cmd in pipeline.commands.iter().skip(1) {
             let Some(exec) = self.make_exec(cmd)? else {
                 continue;
             };
             expression = expression.map(|expr| expr.pipe(&exec)).or(Some(exec));
+        }
+        if let Some(write) = pipeline.write.as_ref() {
+            let write_to = self.eval_expr(write)?;
+            expression = expression.map(|expr| expr.stdout_path(write_to.to_string()));
         }
 
         Ok(expression)
@@ -283,7 +288,8 @@ impl Interpreter {
         &mut self,
         Command { name, args }: &Command,
     ) -> RuntimeResult<Option<duct::Expression>> {
-        if let Some(alias) = self.env.get_alias(name.as_str()) {
+        // TODO: avoid clone here?
+        if let Some(alias) = self.env.get_alias(name.as_str()).cloned() {
             let exec = self.make_pipeline(&alias)?;
             return Ok(exec);
         }

@@ -5,8 +5,8 @@ expression: ast
 Ast {
     statements: [
         Pipeline(
-            Pipeline(
-                [
+            Pipeline {
+                commands: [
                     Command {
                         name: "echo",
                         args: [
@@ -28,7 +28,8 @@ Ast {
                         ],
                     },
                 ],
-            ),
+                write: None,
+            },
         ),
     ],
 }

@@ -36,7 +36,10 @@ pub struct AliasAssign {
 }
 
 #[derive(Debug, Clone)]
-pub struct Pipeline(pub Vec<Command>);
+pub struct Pipeline {
+    pub commands: Vec<Command>,
+    pub write: Option<Box<Expr>>,
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct Command {
