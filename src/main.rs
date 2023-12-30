@@ -58,8 +58,15 @@ fn start_repl() -> Result<()> {
     let mut rl = rustyline::DefaultEditor::new()?;
     let mut interpreter = Interpreter::new();
 
+    let mut dir = std::env::current_dir().context("error getting current directory")?;
     'main: loop {
-        let input = rl.readline(PROMPT);
+        if let Ok(new_dir) = std::env::current_dir() {
+            dir = new_dir;
+        } else {
+            eprintln!("WARNING: current directory could not be read");
+        }
+        let current_dir = dir.file_stem().unwrap().to_string_lossy();
+        let input = rl.readline(&format!("{current_dir} {PROMPT}"));
 
         'inp: {
             match input {
