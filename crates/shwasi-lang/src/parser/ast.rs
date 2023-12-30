@@ -1,3 +1,5 @@
+use std::fmt;
+
 use smol_str::SmolStr;
 
 use crate::Ident;
@@ -118,5 +120,32 @@ impl Iterator for AstIter {
         );
         self.pos += 1;
         Some(stmt)
+    }
+}
+
+impl fmt::Display for InfixOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            InfixOp::Add => write!(f, "+"),
+            InfixOp::Sub => write!(f, "-"),
+            InfixOp::Mul => write!(f, "*"),
+            InfixOp::Div => write!(f, "/"),
+            InfixOp::Lt => write!(f, "<"),
+            InfixOp::Gt => write!(f, ">"),
+            InfixOp::Le => write!(f, "<="),
+            InfixOp::Ge => write!(f, ">="),
+            InfixOp::Eq => write!(f, "=="),
+            InfixOp::Ne => write!(f, "!="),
+        }
+    }
+}
+
+impl fmt::Display for PrefixOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PrefixOp::Neg => write!(f, "-"),
+            PrefixOp::Sign => write!(f, "+"),
+            PrefixOp::Bang => write!(f, "!"),
+        }
     }
 }

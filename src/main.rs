@@ -82,7 +82,7 @@ fn start_repl() -> Result<()> {
                     match interpreter.run(ast) {
                         Ok(Some(result)) => println!("{result}"),
                         Ok(None) => break 'inp,
-                        Err(err) => println!("{err}"),
+                        Err(err) => println!("shwasi: {err}"),
                     }
                 }
                 Err(rustyline::error::ReadlineError::Eof) => {

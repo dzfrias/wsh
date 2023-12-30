@@ -95,7 +95,11 @@ impl Interpreter {
 
     fn eval_expr(&mut self, expr: &Expr) -> RuntimeResult<Value> {
         Ok(match expr {
-            Expr::Ident(name) => self.env.get(name).cloned().expect("TODO: error"),
+            Expr::Ident(name) => self
+                .env
+                .get(name)
+                .cloned()
+                .ok_or_else(|| RuntimeError::Unbound(name.clone()))?,
             Expr::Infix(infix) => self.eval_infix(infix)?,
             Expr::Prefix(prefix) => self.eval_prefix(prefix)?,
             Expr::String(s) => Value::String(s.clone()),
@@ -109,6 +113,8 @@ impl Interpreter {
     fn eval_infix(&mut self, infix: &InfixExpr) -> RuntimeResult<Value> {
         let lhs = self.eval_expr(&infix.lhs)?;
         let rhs = self.eval_expr(&infix.rhs)?;
+        let lhs_type = lhs.type_of();
+        let rhs_type = rhs.type_of();
 
         match (lhs, rhs) {
             (Value::Number(lhs), Value::Number(rhs)) => self.eval_numeric_infix(infix.op, lhs, rhs),
@@ -126,7 +132,11 @@ impl Interpreter {
             (Value::String(lhs), Value::Bool(rhs)) => {
                 self.eval_string_infix(infix.op, lhs, rhs.to_string().into())
             }
-            _ => todo!("error"),
+            _ => Err(RuntimeError::TypeErrorInfix {
+                lhs: lhs_type,
+                rhs: rhs_type,
+                op: infix.op,
+            }),
         }
     }
 
@@ -138,7 +148,10 @@ impl Interpreter {
             Value::String(s) if s.parse::<f64>().is_ok() => {
                 self.eval_numeric_prefix(prefix.op, s.parse().unwrap())
             }
-            _ => todo!("error"),
+            _ => Err(RuntimeError::TypeErrorPrefix {
+                expr: value.type_of(),
+                op: prefix.op,
+            }),
         }
     }
 
@@ -171,7 +184,12 @@ impl Interpreter {
         let result = match op {
             PrefixOp::Sign => n,
             PrefixOp::Neg => -n,
-            PrefixOp::Bang => todo!("error"),
+            PrefixOp::Bang => {
+                return Err(RuntimeError::TypeErrorPrefix {
+                    expr: Type::Number,
+                    op,
+                })
+            }
         };
 
         Ok(Value::Number(result))
@@ -187,7 +205,13 @@ impl Interpreter {
             InfixOp::Add => Value::String(format!("{lhs}{rhs}").into()),
             InfixOp::Eq => Value::Bool(lhs == rhs),
             InfixOp::Ne => Value::Bool(lhs != rhs),
-            _ => todo!("error"),
+            _ => {
+                return Err(RuntimeError::TypeErrorInfix {
+                    lhs: Type::String,
+                    rhs: Type::String,
+                    op,
+                })
+            }
         };
 
         Ok(result)
@@ -206,7 +230,13 @@ impl Interpreter {
         let result = match op {
             InfixOp::Add => format!("{lhs}{rhs}"),
             InfixOp::Mul => lhs.repeat(rhs as usize),
-            _ => todo!("error"),
+            _ => {
+                return Err(RuntimeError::TypeErrorInfix {
+                    lhs: Type::String,
+                    rhs: Type::Number,
+                    op,
+                })
+            }
         };
 
         Ok(Value::String(result.into()))
@@ -225,7 +255,13 @@ impl Interpreter {
         let result = match op {
             InfixOp::Add => format!("{lhs}{rhs}"),
             InfixOp::Mul => rhs.repeat(lhs as usize),
-            _ => todo!("error"),
+            _ => {
+                return Err(RuntimeError::TypeErrorInfix {
+                    lhs: Type::Number,
+                    rhs: Type::String,
+                    op,
+                })
+            }
         };
 
         Ok(Value::String(result.into()))
