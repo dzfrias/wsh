@@ -120,6 +120,8 @@ impl<'src> Parser<'src> {
         let mut expr = match &self.current_token {
             Token::String(s) | Token::QuotedString(s) => Expr::String(s.clone()),
             Token::Number(i) => Expr::Number(*i),
+            Token::BoolFalse => Expr::Bool(false),
+            Token::BoolTrue => Expr::Bool(true),
             Token::Ident(ident) => Expr::Ident(ident.clone()),
             Token::LParen => self.parse_grouped_expr()?,
             Token::Bang | Token::Minus | Token::Plus => Expr::Prefix(self.parse_prefix()?),
@@ -130,7 +132,16 @@ impl<'src> Parser<'src> {
 
         while self.peek() != Token::Newline && precedence < self.peek().into() {
             expr = match self.peek() {
-                Token::Plus | Token::Minus | Token::Star | Token::Slash => {
+                Token::Plus
+                | Token::Minus
+                | Token::Star
+                | Token::Slash
+                | Token::Lt
+                | Token::Gt
+                | Token::Le
+                | Token::Ge
+                | Token::Eq
+                | Token::Ne => {
                     self.next_token();
                     Expr::Infix(self.parse_infix(expr)?)
                 }
@@ -154,6 +165,12 @@ impl<'src> Parser<'src> {
                 Token::Minus => InfixOp::Sub,
                 Token::Star => InfixOp::Mul,
                 Token::Slash => InfixOp::Div,
+                Token::Lt => InfixOp::Lt,
+                Token::Gt => InfixOp::Gt,
+                Token::Le => InfixOp::Le,
+                Token::Ge => InfixOp::Ge,
+                Token::Eq => InfixOp::Eq,
+                Token::Ne => InfixOp::Ne,
                 _ => unreachable!(),
             },
         };
@@ -249,6 +266,8 @@ impl<'src> Parser<'src> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 enum Precedence {
     Lowest,
+    Eq,
+    Cmp,
     Sum,
     Product,
     Prefix,
@@ -259,6 +278,8 @@ impl From<Token> for Precedence {
         match tok {
             Token::Plus | Token::Minus => Self::Sum,
             Token::Star | Token::Slash => Self::Product,
+            Token::Lt | Token::Gt | Token::Ge | Token::Le => Self::Cmp,
+            Token::Eq | Token::Ne => Self::Eq,
             _ => Self::Lowest,
         }
     }
@@ -391,6 +412,14 @@ mod tests {
     #[test]
     fn assignments() {
         let input = ".x = 11 + 10";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn comparisons() {
+        let input = ".(1 < 2) .(1 > 2) .(1 <= 2) .(1 >= 2) .(1 == 2) .(1 != 2)";
         let buf = Lexer::new(input).lex();
         let ast = Parser::new(&buf).parse().unwrap();
         insta::assert_debug_snapshot!(ast);

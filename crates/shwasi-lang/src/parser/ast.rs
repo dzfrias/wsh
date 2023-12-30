@@ -48,6 +48,7 @@ pub enum Expr {
     String(SmolStr),
     Number(f64),
     Pipeline(Pipeline),
+    Bool(bool),
     LastStatus,
 
     Infix(InfixExpr),
@@ -67,6 +68,12 @@ pub enum InfixOp {
     Sub,
     Mul,
     Div,
+    Lt,
+    Gt,
+    Le,
+    Ge,
+    Eq,
+    Ne,
 }
 
 #[derive(Debug, Clone)]

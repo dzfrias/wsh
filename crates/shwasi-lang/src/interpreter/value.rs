@@ -6,6 +6,7 @@ use smol_str::SmolStr;
 pub enum Value {
     Number(f64),
     String(SmolStr),
+    Bool(bool),
     Null,
 }
 
@@ -18,8 +19,9 @@ impl Value {
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Value::Number(n) => write!(f, "{}", n),
-            Value::String(s) => write!(f, "{}", s),
+            Value::Number(n) => write!(f, "{n}"),
+            Value::String(s) => write!(f, "{s}"),
+            Value::Bool(b) => write!(f, "{b}"),
             Value::Null => write!(f, "null"),
         }
     }

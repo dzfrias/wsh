@@ -65,6 +65,16 @@ impl<'src> Lexer<'src> {
                     self.next();
                     push!(Ne);
                 }
+                '<' if self.peek() == Some('=') && self.strict() => {
+                    self.next();
+                    push!(Le);
+                }
+                '>' if self.peek() == Some('=') && self.strict() => {
+                    self.next();
+                    push!(Ge);
+                }
+                '<' if self.strict() => push!(Lt),
+                '>' if self.strict() => push!(Gt),
                 '!' if self.strict() => push!(Bang),
                 '?' if self.strict() => push!(QuestionMark),
                 '+' if self.strict() => push!(Plus),
@@ -159,6 +169,8 @@ impl<'src> Lexer<'src> {
                             self.mode = Mode::Normal;
                             push!(t);
                         }
+                        None if s == "true" => push!(BoolTrue),
+                        None if s == "false" => push!(BoolFalse),
                         None => push!(Ident(token::Ident::new(s))),
                     }
                 }
@@ -213,7 +225,7 @@ impl<'src> Lexer<'src> {
     }
 
     fn consume_str(&mut self) -> &'src str {
-        self.consume_while(|c| !c.is_whitespace() && !matches!(c, '`' | '|' | '='))
+        self.consume_while(|c| !c.is_whitespace() && !matches!(c, '`' | '|' | '=' | '(' | ')'))
     }
 
     fn consume_quoted_str(&mut self, end: char) -> (&'src str, bool) {
@@ -508,6 +520,40 @@ mod tests {
             Token::Ident(Ident::new("x")),
             Token::Assign,
             Token::Number(10.0),
+            Token::Eof
+        );
+        assert_eq!(expect, buf);
+    }
+
+    #[test]
+    fn comparison_tokens() {
+        let input = ".(>= > < <=)";
+        let lexer = Lexer::new(input);
+        let buf = lexer.lex();
+        let expect = token_buf!(
+            Token::LParen,
+            Token::Ge,
+            Token::Gt,
+            Token::Lt,
+            Token::Le,
+            Token::RParen,
+            Token::Eof
+        );
+        assert_eq!(expect, buf);
+    }
+
+    #[test]
+    fn boolean_literals() {
+        let input = "true false .(true false)";
+        let lexer = Lexer::new(input);
+        let buf = lexer.lex();
+        let expect = token_buf!(
+            Token::String("true".into()),
+            Token::String("false".into()),
+            Token::LParen,
+            Token::BoolTrue,
+            Token::BoolFalse,
+            Token::RParen,
             Token::Eof
         );
         assert_eq!(expect, buf);

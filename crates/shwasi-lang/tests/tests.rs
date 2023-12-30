@@ -50,3 +50,15 @@ shwasi_test!(
     ".(\"3.3\" + \"hello\")",
     Value::String("3.3hello".into())
 );
+
+shwasi_test!(
+    bool_string_compare,
+    ".(true == \"true\")",
+    Value::Bool(true)
+);
+
+shwasi_test!(
+    bool_string_add,
+    ".(true + \"false\")",
+    Value::String("truefalse".into())
+);

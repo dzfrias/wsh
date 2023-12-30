@@ -99,6 +99,7 @@ impl Interpreter {
             Expr::Infix(infix) => self.eval_infix(infix)?,
             Expr::Prefix(prefix) => self.eval_prefix(prefix)?,
             Expr::String(s) => Value::String(s.clone()),
+            Expr::Bool(b) => Value::Bool(*b),
             Expr::Number(n) => Value::Number(*n),
             Expr::Pipeline(pipeline) => self.eval_pipeline(pipeline, /*capture =*/ true)?,
             Expr::LastStatus => Value::Number(self.last_status as f64),
@@ -118,6 +119,13 @@ impl Interpreter {
             (Value::Number(lhs), Value::String(rhs)) => {
                 self.eval_numeric_string_infix(infix.op, lhs, rhs)
             }
+            (Value::Bool(lhs), Value::Bool(rhs)) => self.eval_bool_infix(infix.op, lhs, rhs),
+            (Value::Bool(lhs), Value::String(rhs)) => {
+                self.eval_string_infix(infix.op, lhs.to_string().into(), rhs)
+            }
+            (Value::String(lhs), Value::Bool(rhs)) => {
+                self.eval_string_infix(infix.op, lhs, rhs.to_string().into())
+            }
             _ => todo!("error"),
         }
     }
@@ -135,14 +143,28 @@ impl Interpreter {
     }
 
     fn eval_numeric_infix(&mut self, op: InfixOp, lhs: f64, rhs: f64) -> RuntimeResult<Value> {
+        Ok(match op {
+            InfixOp::Add => Value::Number(lhs + rhs),
+            InfixOp::Sub => Value::Number(lhs - rhs),
+            InfixOp::Mul => Value::Number(lhs * rhs),
+            InfixOp::Div => Value::Number(lhs / rhs),
+            InfixOp::Lt => Value::Bool(lhs < rhs),
+            InfixOp::Gt => Value::Bool(lhs > rhs),
+            InfixOp::Le => Value::Bool(lhs <= rhs),
+            InfixOp::Ge => Value::Bool(lhs >= rhs),
+            InfixOp::Eq => Value::Bool(lhs == rhs),
+            InfixOp::Ne => Value::Bool(lhs != rhs),
+        })
+    }
+
+    fn eval_bool_infix(&mut self, op: InfixOp, lhs: bool, rhs: bool) -> RuntimeResult<Value> {
         let result = match op {
-            InfixOp::Add => lhs + rhs,
-            InfixOp::Sub => lhs - rhs,
-            InfixOp::Mul => lhs * rhs,
-            InfixOp::Div => lhs / rhs,
+            InfixOp::Eq => Value::Bool(lhs == rhs),
+            InfixOp::Ne => Value::Bool(lhs != rhs),
+            _ => self.eval_string_infix(op, lhs.to_string().into(), rhs.to_string().into())?,
         };
 
-        Ok(Value::Number(result))
+        Ok(result)
     }
 
     fn eval_numeric_prefix(&mut self, op: PrefixOp, n: f64) -> RuntimeResult<Value> {
@@ -162,11 +184,13 @@ impl Interpreter {
         rhs: SmolStr,
     ) -> RuntimeResult<Value> {
         let result = match op {
-            InfixOp::Add => format!("{lhs}{rhs}").into(),
+            InfixOp::Add => Value::String(format!("{lhs}{rhs}").into()),
+            InfixOp::Eq => Value::Bool(lhs == rhs),
+            InfixOp::Ne => Value::Bool(lhs != rhs),
             _ => todo!("error"),
         };
 
-        Ok(Value::String(result))
+        Ok(result)
     }
 
     fn eval_string_numeric_infix(
