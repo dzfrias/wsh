@@ -1,0 +1,26 @@
+---
+source: crates/shwasi-lang/src/parser/mod.rs
+expression: ast
+---
+Ast {
+    statements: [
+        Assign(
+            Assign {
+                name: Ident(
+                    "x",
+                ),
+                expr: Infix(
+                    InfixExpr {
+                        lhs: Number(
+                            11.0,
+                        ),
+                        rhs: Number(
+                            10.0,
+                        ),
+                        op: Add,
+                    },
+                ),
+            },
+        ),
+    ],
+}

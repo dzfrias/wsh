@@ -4,7 +4,7 @@ mod error;
 mod value;
 
 use crate::{
-    ast::{AliasAssign, InfixOp, Pipeline, PrefixOp},
+    ast::{AliasAssign, Assign, InfixOp, Pipeline, PrefixOp},
     interpreter::{builtins::Builtin, env::Env},
     parser::ast::{Ast, Command, Expr, InfixExpr, PrefixExpr, Stmt},
 };
@@ -39,6 +39,10 @@ impl Interpreter {
             Stmt::Expr(expr) => self.eval_expr(expr),
             Stmt::AliasAssign(assign) => {
                 self.eval_alias_assign(assign)?;
+                Ok(Value::Null)
+            }
+            Stmt::Assign(assign) => {
+                self.eval_assign(assign)?;
                 Ok(Value::Null)
             }
         }
@@ -83,42 +87,16 @@ impl Interpreter {
         Ok(())
     }
 
-    fn make_pipeline(&mut self, pipeline: &Pipeline) -> RuntimeResult<Option<duct::Expression>> {
-        let mut expression = self.make_exec(&pipeline.0[0])?;
-        for cmd in pipeline.0.iter().skip(1) {
-            let Some(exec) = self.make_exec(cmd)? else {
-                continue;
-            };
-            expression = expression.map(|expr| expr.pipe(&exec)).or(Some(exec));
-        }
+    fn eval_assign(&mut self, Assign { name, expr }: &Assign) -> RuntimeResult<()> {
+        let val = self.eval_expr(expr)?;
+        self.env.set(name.clone(), val);
 
-        Ok(expression)
-    }
-
-    fn make_exec(
-        &mut self,
-        Command { name, args }: &Command,
-    ) -> RuntimeResult<Option<duct::Expression>> {
-        if let Some(alias) = self.env.get_alias(name.as_str()) {
-            return Ok(Some(alias));
-        }
-
-        let args = args
-            .iter()
-            .map(|arg| self.eval_expr(arg).map(|val| val.to_string()))
-            .collect::<RuntimeResult<Vec<_>>>()?;
-
-        if let Some(builtin) = Builtin::from_name(name.as_str()) {
-            builtin.run(&args)?;
-            return Ok(None);
-        }
-        let exec = duct::cmd(name.as_str(), args);
-        Ok(Some(exec))
+        Ok(())
     }
 
     fn eval_expr(&mut self, expr: &Expr) -> RuntimeResult<Value> {
         Ok(match expr {
-            Expr::Ident(_) => todo!(),
+            Expr::Ident(name) => self.env.get(name).cloned().expect("TODO: error"),
             Expr::Infix(infix) => self.eval_infix(infix)?,
             Expr::Prefix(prefix) => self.eval_prefix(prefix)?,
             Expr::String(s) => Value::String(s.clone()),
@@ -228,6 +206,39 @@ impl Interpreter {
         };
 
         Ok(Value::String(result.into()))
+    }
+
+    fn make_pipeline(&mut self, pipeline: &Pipeline) -> RuntimeResult<Option<duct::Expression>> {
+        let mut expression = self.make_exec(&pipeline.0[0])?;
+        for cmd in pipeline.0.iter().skip(1) {
+            let Some(exec) = self.make_exec(cmd)? else {
+                continue;
+            };
+            expression = expression.map(|expr| expr.pipe(&exec)).or(Some(exec));
+        }
+
+        Ok(expression)
+    }
+
+    fn make_exec(
+        &mut self,
+        Command { name, args }: &Command,
+    ) -> RuntimeResult<Option<duct::Expression>> {
+        if let Some(alias) = self.env.get_alias(name.as_str()) {
+            return Ok(Some(alias));
+        }
+
+        let args = args
+            .iter()
+            .map(|arg| self.eval_expr(arg).map(|val| val.to_string()))
+            .collect::<RuntimeResult<Vec<_>>>()?;
+
+        if let Some(builtin) = Builtin::from_name(name.as_str()) {
+            builtin.run(&args)?;
+            return Ok(None);
+        }
+        let exec = duct::cmd(name.as_str(), args);
+        Ok(Some(exec))
     }
 
     fn set_status(&mut self, exit_status: process::ExitStatus) {

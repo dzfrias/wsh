@@ -42,7 +42,16 @@ impl<'src> Lexer<'src> {
 
         while let Some(c) = self.next() {
             match c {
-                '\n' => push!(Newline),
+                '\n' => {
+                    if let Mode::Strict {
+                        ending: Token::Newline,
+                        ..
+                    } = self.mode
+                    {
+                        self.mode = Mode::Normal;
+                    }
+                    push!(Newline);
+                }
                 ' ' | '\t' => {
                     let len = self.consume_while(|c| c.is_whitespace() && c != '\n').len();
                     buf.skip(len);
@@ -127,6 +136,13 @@ impl<'src> Lexer<'src> {
                         buf.skip(1);
                         self.next();
                         push!(Ident(token::Ident::new(self.consume_str())));
+                        self.consume_while(|c| c.is_whitespace());
+                        if self.peek() == Some('=') {
+                            self.mode = Mode::Strict {
+                                ending: Token::Newline,
+                                count: 0,
+                            };
+                        }
                     }
                     _ => push!(String(self.consume_str().into())),
                 },
@@ -478,6 +494,20 @@ mod tests {
             Token::Assign,
             Token::String("echo".into()),
             Token::String("-n".into()),
+            Token::Eof
+        );
+        assert_eq!(expect, buf);
+    }
+
+    #[test]
+    fn assign() {
+        let input = ".x = 10";
+        let lexer = Lexer::new(input);
+        let buf = lexer.lex();
+        let expect = token_buf!(
+            Token::Ident(Ident::new("x")),
+            Token::Assign,
+            Token::Number(10.0),
             Token::Eof
         );
         assert_eq!(expect, buf);

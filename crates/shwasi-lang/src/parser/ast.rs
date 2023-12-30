@@ -1,20 +1,15 @@
 use smol_str::SmolStr;
 
-use crate::parser::{Symbol, SymbolTable};
+use crate::Ident;
 
 #[derive(Debug, Clone)]
 pub struct Ast {
     statements: Vec<Stmt>,
-    #[allow(dead_code)]
-    symbols: SymbolTable,
 }
 
 impl Ast {
-    pub fn new(statements: Vec<Stmt>, symbols: SymbolTable) -> Self {
-        Self {
-            statements,
-            symbols,
-        }
+    pub fn new(statements: Vec<Stmt>) -> Self {
+        Self { statements }
     }
 }
 
@@ -23,6 +18,13 @@ pub enum Stmt {
     Pipeline(Pipeline),
     Expr(Expr),
     AliasAssign(AliasAssign),
+    Assign(Assign),
+}
+
+#[derive(Debug, Clone)]
+pub struct Assign {
+    pub name: Ident,
+    pub expr: Expr,
 }
 
 #[derive(Debug, Clone)]
@@ -42,7 +44,7 @@ pub struct Command {
 
 #[derive(Debug, Clone)]
 pub enum Expr {
-    Ident(Symbol),
+    Ident(Ident),
     String(SmolStr),
     Number(f64),
     Pipeline(Pipeline),

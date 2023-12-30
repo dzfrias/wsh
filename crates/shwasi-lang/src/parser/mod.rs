@@ -1,12 +1,10 @@
 pub mod ast;
 mod error;
 mod lexer;
-mod symbol;
 
 pub use self::error::*;
-pub use self::symbol::*;
 use crate::{
-    ast::{AliasAssign, Pipeline},
+    ast::{AliasAssign, Assign, Pipeline},
     parser::ast::{Ast, Command, Expr, InfixExpr, InfixOp, PrefixExpr, PrefixOp, Stmt},
 };
 pub use lexer::*;
@@ -16,7 +14,6 @@ pub struct Parser<'src> {
     buf: &'src TokenBuffer,
     tok_idx: usize,
     current_token: Token,
-    symbols: SymbolTable,
     in_subcmd: bool,
 }
 
@@ -26,7 +23,6 @@ impl<'src> Parser<'src> {
             buf,
             tok_idx: 0,
             current_token: buf.get(0).unwrap_or(Token::Eof).clone(),
-            symbols: SymbolTable::new(),
             in_subcmd: false,
         }
     }
@@ -40,13 +36,14 @@ impl<'src> Parser<'src> {
             self.next_token();
         }
 
-        Ok(Ast::new(stmts, self.symbols))
+        Ok(Ast::new(stmts))
     }
 
     fn parse_stmt(&mut self) -> ParseResult<Stmt> {
         Ok(match self.current_token {
             Token::String(_) | Token::QuotedString(_) => Stmt::Pipeline(self.parse_pipeline()?),
             Token::Alias => Stmt::AliasAssign(self.parse_alias_assign()?),
+            Token::Ident(_) if self.peek() == Token::Assign => Stmt::Assign(self.parse_assign()?),
             _ => Stmt::Expr(self.parse_expr(Precedence::Lowest)?),
         })
     }
@@ -76,6 +73,18 @@ impl<'src> Parser<'src> {
         Ok(AliasAssign { name, pipeline })
     }
 
+    fn parse_assign(&mut self) -> ParseResult<Assign> {
+        debug_assert!(matches!(self.current_token, Token::Ident(_)));
+
+        let name = self.buf.get_ident(self.tok_idx).unwrap();
+        self.expect_next(Token::Assign, "BUG: should be unreachable")
+            .unwrap();
+        self.next_token();
+        let expr = self.parse_expr(Precedence::Lowest)?;
+        self.next_token();
+        Ok(Assign { name, expr })
+    }
+
     fn parse_backtick(&mut self) -> ParseResult<Pipeline> {
         let start = self.offset();
         self.next_token();
@@ -94,12 +103,12 @@ impl<'src> Parser<'src> {
             .ok_or(self.error(ParseErrorKind::UnfinishedPipeline))?;
         let mut args = vec![];
         while !matches!(self.peek(), Token::Newline | Token::Eof | Token::Pipe) {
-            self.next_token();
-            let arg = self.parse_expr(Precedence::Lowest)?;
-            args.push(arg);
             if self.peek() == Token::Backtick && self.in_subcmd {
                 return Ok(Command { name, args });
             }
+            self.next_token();
+            let arg = self.parse_expr(Precedence::Lowest)?;
+            args.push(arg);
         }
         self.next_token();
         let cmd = Command { name, args };
@@ -111,7 +120,7 @@ impl<'src> Parser<'src> {
         let mut expr = match &self.current_token {
             Token::String(s) | Token::QuotedString(s) => Expr::String(s.clone()),
             Token::Number(i) => Expr::Number(*i),
-            Token::Ident(ident) => Expr::Ident(self.symbols.intern(ident.clone())),
+            Token::Ident(ident) => Expr::Ident(ident.clone()),
             Token::LParen => self.parse_grouped_expr()?,
             Token::Bang | Token::Minus | Token::Plus => Expr::Prefix(self.parse_prefix()?),
             Token::Backtick => Expr::Pipeline(self.parse_backtick()?),
@@ -377,5 +386,13 @@ mod tests {
             ),
             err
         );
+    }
+
+    #[test]
+    fn assignments() {
+        let input = ".x = 11 + 10";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
     }
 }

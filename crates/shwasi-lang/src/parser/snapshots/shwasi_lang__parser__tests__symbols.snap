@@ -11,13 +11,13 @@ Ast {
                         name: "echo",
                         args: [
                             Ident(
-                                Symbol(
-                                    0,
+                                Ident(
+                                    "x",
                                 ),
                             ),
                             Ident(
-                                Symbol(
-                                    1,
+                                Ident(
+                                    "y",
                                 ),
                             ),
                         ],
@@ -26,16 +26,4 @@ Ast {
             ),
         ),
     ],
-    symbols: {
-        Ident(
-            "x",
-        ): Symbol(
-            0,
-        ),
-        Ident(
-            "y",
-        ): Symbol(
-            1,
-        ),
-    },
 }

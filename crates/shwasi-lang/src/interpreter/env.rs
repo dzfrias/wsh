@@ -4,11 +4,11 @@ use std::collections::HashMap;
 
 use smol_str::SmolStr;
 
-use crate::{interpreter::value::Value, parser::Symbol};
+use crate::{interpreter::value::Value, Ident};
 
 #[derive(Debug, Default)]
 pub struct Env {
-    env: HashMap<Symbol, Value>,
+    env: HashMap<Ident, Value>,
     aliases: HashMap<SmolStr, duct::Expression>,
 }
 
@@ -20,11 +20,11 @@ impl Env {
         }
     }
 
-    pub fn get(&self, sym: Symbol) -> Option<&Value> {
-        self.env.get(&sym)
+    pub fn get(&self, sym: &Ident) -> Option<&Value> {
+        self.env.get(sym)
     }
 
-    pub fn set(&mut self, sym: Symbol, value: Value) {
+    pub fn set(&mut self, sym: Ident, value: Value) {
         self.env.insert(sym, value);
     }
 
