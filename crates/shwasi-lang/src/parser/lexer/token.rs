@@ -1,6 +1,7 @@
 use smol_str::SmolStr;
 use std::{fmt, ops::Deref};
 
+/// A token in the shwasi shell language.
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     Ident(Ident),
@@ -45,6 +46,7 @@ pub enum Token {
     Eof,
 }
 
+/// A container of tokens.
 #[derive(Debug, Default)]
 pub struct TokenBuffer {
     infos: Vec<TokenInfo>,
@@ -70,6 +72,7 @@ impl TokenBuffer {
         }
     }
 
+    /// Push a token to the buffer.
     pub fn push(&mut self, tok: Token) {
         let kind = tok.kind();
         let size = tok.size();
@@ -99,6 +102,7 @@ impl TokenBuffer {
         self.offset += size;
     }
 
+    /// Get the token at the given index.
     pub fn get(&self, i: usize) -> Option<Token> {
         let TokenInfo {
             kind,
@@ -163,6 +167,8 @@ impl TokenBuffer {
         Some(t)
     }
 
+    /// Get the token at the given index, as an identifier. If it is not an identifier, this method
+    /// returns `None`.
     pub fn get_ident(&self, main: usize) -> Option<Ident> {
         self.get(main).and_then(|t| match t {
             Token::Ident(ident) => Some(ident),
@@ -170,6 +176,8 @@ impl TokenBuffer {
         })
     }
 
+    /// Get the token at the given index, as a string. If it is not a string, this method returns
+    /// `None`.
     pub fn get_string(&self, main: usize) -> Option<SmolStr> {
         self.get(main).and_then(|t| match t {
             Token::String(s) | Token::QuotedString(s) => Some(s),
@@ -177,22 +185,31 @@ impl TokenBuffer {
         })
     }
 
+    /// Create an iterator over the tokens in the buffer.
     pub fn iter(&self) -> TokensIter<'_> {
         TokensIter { buf: self, i: 0 }
     }
 
+    /// Get the offset of the token at the given index.
     pub fn offset(&self, i: usize) -> Option<usize> {
         Some(self.get_info(i)?.offset)
     }
 
+    /// Get the length of the buffer.
     pub fn len(&self) -> usize {
         self.infos.len()
     }
 
+    /// Check if the buffer is empty.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    /// Incremenent the offset by the given amount. This is used during creation of the buffer.
+    ///
+    /// Most of the time, the positions of each token are kept track of automatically (using
+    /// `Token::size`). However, as an escape hatch, this method can be used to manually increment
+    /// the offset, since lexing may be a lossy process.
     pub(super) fn skip(&mut self, n: usize) {
         self.offset += n;
     }
@@ -202,6 +219,7 @@ impl TokenBuffer {
     }
 }
 
+/// The kind of a token. This enum **should** have a 1:1 mapping with the `Token` enum.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub(super) enum TokenKind {
     Ident,
@@ -246,6 +264,7 @@ pub(super) enum TokenKind {
     Eof,
 }
 
+/// An iterator over the tokens in a `TokenBuffer`.
 pub struct TokensIter<'a> {
     buf: &'a TokenBuffer,
     i: usize,
@@ -262,7 +281,9 @@ impl<'a> Iterator for TokensIter<'a> {
 }
 
 impl PartialEq for TokenBuffer {
-    /// Compare two token buffers based on the tokens they contain.
+    /// Compare two token buffers based on the tokens they contain. Note that this does not compare
+    /// offsets, so two token buffers with the same tokens but different offsets will be considered
+    /// equal.
     fn eq(&self, other: &Self) -> bool {
         self.len() == other.len()
             && self
@@ -271,9 +292,17 @@ impl PartialEq for TokenBuffer {
                 .zip(other.infos.iter())
                 .all(|(a, b)| a.kind == b.kind)
             && self.str_table == other.str_table
+            && self.number_table == other.number_table
     }
 }
 
+/// An identifier in the shwasi shell language.
+///
+/// This includes:
+/// - ascii alphanumeric characters
+/// - '_'
+///
+/// And cannot start with a digit.
 #[derive(Debug, PartialEq, Eq, Clone, Hash, PartialOrd, Ord)]
 pub struct Ident(SmolStr);
 
@@ -298,6 +327,7 @@ impl fmt::Display for Ident {
 }
 
 impl Token {
+    /// Get the kind of the token.
     pub(super) fn kind(&self) -> TokenKind {
         match self {
             Token::Ident(_) => TokenKind::Ident,
@@ -342,6 +372,7 @@ impl Token {
         }
     }
 
+    /// Get the expected size of the token in as a string.
     pub fn size(&self) -> usize {
         match self {
             Token::Assign
@@ -375,6 +406,7 @@ impl Token {
         }
     }
 
+    /// Return the keyword corresponding to the given string, if it exists.
     pub(super) fn from_kw(kw: &str) -> Option<Self> {
         Some(match kw {
             "if" => Token::If,
@@ -387,6 +419,10 @@ impl Token {
         })
     }
 
+    /// Check if the token is a keyword that should switch the lexer mode.
+    ///
+    /// A common example of this is the `if` keyword, which allows expression tokens after it,
+    /// until the `then` keyword is encountered.
     pub(super) fn is_mode_switch_kw(&self) -> bool {
         matches!(self, Token::If)
     }

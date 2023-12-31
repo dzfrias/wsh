@@ -4,6 +4,7 @@ use std::str::CharIndices;
 
 pub use token::*;
 
+/// A lexer that creates a `TokenBuffer` from a source string in the shwasi shell language.
 #[derive(Debug)]
 pub struct Lexer<'src> {
     src: &'src str,
@@ -16,6 +17,7 @@ pub struct Lexer<'src> {
 }
 
 impl<'src> Lexer<'src> {
+    /// Create a new lexer from the given source string.
     pub fn new(src: &'src str) -> Self {
         Self {
             src,
@@ -28,6 +30,7 @@ impl<'src> Lexer<'src> {
         }
     }
 
+    /// Lex the source string into a new `TokenBuffer`.
     pub fn lex(mut self) -> TokenBuffer {
         let mut buf = TokenBuffer::new();
 
