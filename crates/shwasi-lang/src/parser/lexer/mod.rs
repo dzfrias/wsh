@@ -89,8 +89,14 @@ impl<'src> Lexer<'src> {
                     self.next();
                 }
                 i if i.is_ascii_digit() && self.strict() => {
-                    let n = self.consume_num();
-                    push!(Number(n.parse().unwrap()));
+                    let n_str = self.consume_num();
+                    let n = n_str.parse::<f64>().unwrap();
+                    let len = n.to_string().len();
+                    // We need to skip the proper number of characters parsed. Since 1.00000 parses
+                    // as 1, we need to skip the difference between the actual token length and the
+                    // parsed number length.
+                    buf.skip(n_str.len() - len);
+                    push!(Number(n));
                 }
                 '=' => push!(Assign),
                 '|' => push!(Pipe),

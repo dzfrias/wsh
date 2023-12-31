@@ -105,3 +105,4 @@ shell_test!(@fail bad_redirect_position, "echo hi > file.txt | cat");
 // Should fail as a result of `__should_not_be_defined` not being a valid command. Note that this
 // CAN possibly fail if the user has a command named `__should_not_be_defined` in their PATH.
 shell_test!(@fail recursive_alias, "alias __should_not_be_defined = __should_not_be_defined\n__should_not_be_defined");
+shell_test!(@fail accurate_errors_with_bloated_floats, "echo .(1.0000000000000)\necho .(1");
