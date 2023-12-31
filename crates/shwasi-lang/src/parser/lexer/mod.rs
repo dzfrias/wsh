@@ -43,6 +43,8 @@ impl<'src> Lexer<'src> {
         while let Some(c) = self.next() {
             match c {
                 '\n' => {
+                    let len = self.consume_while(|c| c == '\n').len();
+                    buf.skip(len - 1);
                     if let Mode::Strict {
                         ending: Token::Newline,
                         ..
@@ -81,6 +83,11 @@ impl<'src> Lexer<'src> {
                 '-' if self.strict() => push!(Minus),
                 '*' if self.strict() => push!(Star),
                 '/' if self.strict() => push!(Slash),
+                '#' => {
+                    let s = self.consume_while(|c| c != '\n');
+                    buf.skip(s.len() + 1);
+                    self.next();
+                }
                 i if i.is_ascii_digit() && self.strict() => {
                     let n = self.consume_num();
                     push!(Number(n.parse().unwrap()));
@@ -612,6 +619,28 @@ mod tests {
         let lexer = Lexer::new(input);
         let buf = lexer.lex();
         let expect = token_buf!(Token::Export, Token::Eof);
+        assert_eq!(expect, buf);
+    }
+
+    #[test]
+    fn ignore_comments() {
+        let input = "# I'm a comment!\necho hi";
+        let lexer = Lexer::new(input);
+        let buf = lexer.lex();
+        let expect = token_buf!(
+            Token::String("echo".into()),
+            Token::String("hi".into()),
+            Token::Eof
+        );
+        assert_eq!(expect, buf);
+    }
+
+    #[test]
+    fn newlines_collapse() {
+        let input = "\n\n\n\nhi";
+        let lexer = Lexer::new(input);
+        let buf = lexer.lex();
+        let expect = token_buf!(Token::Newline, Token::String("hi".into()), Token::Eof);
         assert_eq!(expect, buf);
     }
 }
