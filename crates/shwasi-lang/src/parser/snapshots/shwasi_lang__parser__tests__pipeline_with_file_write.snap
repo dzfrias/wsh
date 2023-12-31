@@ -17,9 +17,12 @@ Ast {
                     },
                 ],
                 write: Some(
-                    String(
-                        "file.txt",
-                    ),
+                    PipelineEnd {
+                        kind: Write,
+                        expr: String(
+                            "file.txt",
+                        ),
+                    },
                 ),
             },
         ),
@@ -48,17 +51,20 @@ Ast {
                     },
                 ],
                 write: Some(
-                    Infix(
-                        InfixExpr {
-                            lhs: String(
-                                "test",
-                            ),
-                            rhs: String(
-                                ".txt",
-                            ),
-                            op: Add,
-                        },
-                    ),
+                    PipelineEnd {
+                        kind: Write,
+                        expr: Infix(
+                            InfixExpr {
+                                lhs: String(
+                                    "test",
+                                ),
+                                rhs: String(
+                                    ".txt",
+                                ),
+                                op: Add,
+                            },
+                        ),
+                    },
                 ),
             },
         ),

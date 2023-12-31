@@ -87,6 +87,10 @@ impl<'src> Lexer<'src> {
                 }
                 '=' => push!(Assign),
                 '|' => push!(Pipe),
+                '>' if self.peek() == Some('>') && !self.strict() => {
+                    self.next();
+                    push!(Append);
+                }
                 '>' => push!(Write),
                 '`' => {
                     if let Mode::NormalUntilBacktick(old) = self.mode {
@@ -571,6 +575,21 @@ mod tests {
             Token::String("echo".into()),
             Token::String("hi".into()),
             Token::Write,
+            Token::String("t".into()),
+            Token::Eof
+        );
+        assert_eq!(expect, buf);
+    }
+
+    #[test]
+    fn append_redirect() {
+        let input = "echo hi >> t";
+        let lexer = Lexer::new(input);
+        let buf = lexer.lex();
+        let expect = token_buf!(
+            Token::String("echo".into()),
+            Token::String("hi".into()),
+            Token::Append,
             Token::String("t".into()),
             Token::Eof
         );

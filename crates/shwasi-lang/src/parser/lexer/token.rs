@@ -14,6 +14,7 @@ pub enum Token {
     Assign,
     Pipe,
     Write,
+    Append,
     Newline,
     QuestionMark,
 
@@ -150,6 +151,7 @@ impl TokenBuffer {
             TokenKind::BoolTrue => Token::BoolTrue,
             TokenKind::BoolFalse => Token::BoolFalse,
             TokenKind::Write => Token::Write,
+            TokenKind::Append => Token::Append,
             TokenKind::Invalid => Token::Invalid(*payload as u8 as char),
             TokenKind::Eof => Token::Eof,
         };
@@ -208,6 +210,7 @@ pub(super) enum TokenKind {
     Assign,
     Pipe,
     Write,
+    Append,
     Newline,
     Backtick,
     QuestionMark,
@@ -326,6 +329,7 @@ impl Token {
             Token::Ge => TokenKind::Ge,
             Token::Eof => TokenKind::Eof,
             Token::Write => TokenKind::Write,
+            Token::Append => TokenKind::Append,
             Token::Alias => TokenKind::Alias,
         }
     }
@@ -348,7 +352,7 @@ impl Token {
             | Token::Gt
             | Token::Lt
             | Token::Write => 1,
-            Token::Eq | Token::Ne | Token::If | Token::Le | Token::Ge => 2,
+            Token::Eq | Token::Ne | Token::If | Token::Le | Token::Ge | Token::Append => 2,
             Token::Then | Token::Else | Token::BoolTrue => 4,
             Token::Alias | Token::BoolFalse => 5,
             Token::End => 3,
@@ -410,6 +414,7 @@ impl fmt::Display for Token {
             Token::End => write!(f, "end"),
             Token::Pipe => write!(f, "pipe"),
             Token::Write => write!(f, "write"),
+            Token::Append => write!(f, "append"),
             Token::Backtick => write!(f, "backtick"),
             Token::Invalid(c) => write!(f, "invalid `{c}`"),
             Token::Eof => write!(f, "eof"),

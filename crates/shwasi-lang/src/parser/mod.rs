@@ -4,7 +4,7 @@ mod lexer;
 
 pub use self::error::*;
 use crate::{
-    ast::{AliasAssign, Assign, Pipeline},
+    ast::{AliasAssign, Assign, Pipeline, PipelineEnd, PipelineEndKind},
     parser::ast::{Ast, Command, Expr, InfixExpr, InfixOp, PrefixExpr, PrefixOp, Stmt},
 };
 pub use lexer::*;
@@ -57,9 +57,18 @@ impl<'src> Parser<'src> {
             self.next_token();
             cmds.push(self.parse_cmd()?);
         }
-        if self.current_token == Token::Write {
+        if matches!(self.current_token, Token::Write | Token::Append) {
+            let kind = match self.current_token {
+                Token::Write => PipelineEndKind::Write,
+                Token::Append => PipelineEndKind::Append,
+                _ => unreachable!(),
+            };
             self.next_token();
-            write = Some(self.parse_expr(Precedence::Lowest)?.into());
+            let pipeline_end = PipelineEnd {
+                kind,
+                expr: self.parse_expr(Precedence::Lowest)?,
+            };
+            write = Some(Box::new(pipeline_end));
             if self.peek() != Token::Eof {
                 self.expect_next(
                     Token::Newline,
@@ -120,7 +129,7 @@ impl<'src> Parser<'src> {
         let mut args = vec![];
         while !matches!(
             self.peek(),
-            Token::Newline | Token::Eof | Token::Pipe | Token::Write
+            Token::Newline | Token::Eof | Token::Pipe | Token::Write | Token::Append
         ) {
             if self.peek() == Token::Backtick && self.in_subcmd {
                 return Ok(Command { name, args });
@@ -468,5 +477,13 @@ mod tests {
             ),
             err
         );
+    }
+
+    #[test]
+    fn redirect_append() {
+        let input = "echo hi >> file.txt";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
     }
 }

@@ -4,13 +4,13 @@ mod error;
 mod value;
 
 use crate::{
-    ast::{AliasAssign, Assign, InfixOp, Pipeline, PrefixOp},
+    ast::{AliasAssign, Assign, InfixOp, Pipeline, PipelineEndKind, PrefixOp},
     interpreter::{builtins::Builtin, env::Env},
     parser::ast::{Ast, Command, Expr, InfixExpr, PrefixExpr, Stmt},
 };
 pub use error::*;
 use smol_str::SmolStr;
-use std::process;
+use std::{fs::OpenOptions, process};
 pub use value::*;
 
 #[derive(Default)]
@@ -277,8 +277,20 @@ impl Interpreter {
             expression = expression.map(|expr| expr.pipe(&exec)).or(Some(exec));
         }
         if let Some(write) = pipeline.write.as_ref() {
-            let write_to = self.eval_expr(write)?;
-            expression = expression.map(|expr| expr.stdout_path(write_to.to_string()));
+            let write_to = self.eval_expr(&write.expr)?;
+            expression = expression
+                .map(|expr| match write.kind {
+                    PipelineEndKind::Append => {
+                        let file = OpenOptions::new()
+                            .append(true)
+                            .create(true)
+                            .open(write_to.to_string())
+                            .map_err(RuntimeError::CommandFailed)?;
+                        Ok(expr.stdout_file(file))
+                    }
+                    PipelineEndKind::Write => Ok(expr.stdout_path(write_to.to_string())),
+                })
+                .transpose()?;
         }
 
         Ok(expression)
