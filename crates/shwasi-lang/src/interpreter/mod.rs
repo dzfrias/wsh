@@ -301,7 +301,20 @@ impl Interpreter {
         Command { name, args }: &Command,
     ) -> RuntimeResult<Option<duct::Expression>> {
         // TODO: avoid clone here?
-        if let Some(alias) = self.env.get_alias(name.as_str()).cloned() {
+        if let Some(mut alias) = self.env.get_alias(name).cloned() {
+            alias
+                .commands
+                .last_mut()
+                .unwrap()
+                .args
+                .extend_from_slice(args);
+            // Recursive alias found
+            if alias.commands.iter().any(|cmd| &cmd.name == name) {
+                let pipeline = self.env.remove_alias(name).unwrap();
+                let exec = self.make_pipeline(&alias)?;
+                self.env.set_alias(name.clone(), pipeline);
+                return Ok(exec);
+            }
             let exec = self.make_pipeline(&alias)?;
             return Ok(exec);
         }

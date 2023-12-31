@@ -2,12 +2,15 @@ pub mod ast;
 mod error;
 mod lexer;
 
+use std::collections::HashMap;
+
 pub use self::error::*;
 use crate::{
     ast::{AliasAssign, Assign, Pipeline, PipelineEnd, PipelineEndKind},
     parser::ast::{Ast, Command, Expr, InfixExpr, InfixOp, PrefixExpr, PrefixOp, Stmt},
 };
 pub use lexer::*;
+use smol_str::SmolStr;
 
 #[derive(Debug)]
 pub struct Parser<'src> {
@@ -15,6 +18,7 @@ pub struct Parser<'src> {
     tok_idx: usize,
     current_token: Token,
     in_subcmd: bool,
+    aliases: HashMap<SmolStr, Pipeline>,
 }
 
 impl<'src> Parser<'src> {
@@ -24,6 +28,7 @@ impl<'src> Parser<'src> {
             tok_idx: 0,
             current_token: buf.get(0).unwrap_or(Token::Eof).clone(),
             in_subcmd: false,
+            aliases: HashMap::new(),
         }
     }
 
@@ -95,6 +100,7 @@ impl<'src> Parser<'src> {
         self.expect_next(Token::Assign, "expected assign after alias name")?;
         self.next_token();
         let pipeline = self.parse_pipeline()?;
+        self.aliases.insert(name.clone(), pipeline.clone());
         Ok(AliasAssign { name, pipeline })
     }
 

@@ -75,6 +75,12 @@ shell_test!(
     "echo hi >> .(\"t\" + \".txt\")\necho hi >> t.txt\n.x = `cat t.txt`\nrm t.txt\necho .x",
     "hi\nhi"
 );
+shell_test!(alias_with_args, "alias foo = echo\nfoo hi", "hi");
+shell_test!(
+    alias_with_args_and_piping,
+    "alias foo = echo\nfoo hi | wc -c | xargs",
+    "3"
+);
 
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");
 shell_test!(@fail unfinished_pipe, "echo hi |");
@@ -82,3 +88,6 @@ shell_test!(@fail unclosed_backtick, "echo `echo hi");
 shell_test!(@fail unfinished_infix, "echo .(1 +)");
 shell_test!(@fail unfinished_prefix, "echo .(!)");
 shell_test!(@fail bad_redirect_position, "echo hi > file.txt | cat");
+// Should fail as a result of `__should_not_be_defined` not being a valid command. Note that this
+// CAN possibly fail if the user has a command named `__should_not_be_defined` in their PATH.
+shell_test!(@fail recursive_alias, "alias __should_not_be_defined = __should_not_be_defined\n__should_not_be_defined");

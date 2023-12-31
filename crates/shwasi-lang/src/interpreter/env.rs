@@ -35,4 +35,8 @@ impl Env {
     pub fn get_alias(&self, name: &str) -> Option<&Pipeline> {
         self.aliases.get(name)
     }
+
+    pub fn remove_alias(&mut self, name: &str) -> Option<Pipeline> {
+        self.aliases.remove(name)
+    }
 }

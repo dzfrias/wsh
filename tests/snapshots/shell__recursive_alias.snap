@@ -1,0 +1,6 @@
+---
+source: tests/shell.rs
+expression: stderr
+---
+Error: command failed: No such file or directory (os error 2)
+
