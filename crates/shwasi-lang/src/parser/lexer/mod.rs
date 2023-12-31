@@ -87,6 +87,7 @@ impl<'src> Lexer<'src> {
                 }
                 '=' => push!(Assign),
                 '|' => push!(Pipe),
+                '$' => push!(Dollar),
                 '>' if self.peek() == Some('>') && !self.strict() => {
                     self.next();
                     push!(Append);
@@ -231,7 +232,7 @@ impl<'src> Lexer<'src> {
 
     fn consume_str(&mut self) -> &'src str {
         self.consume_while(|c| {
-            !c.is_whitespace() && !matches!(c, '`' | '|' | '=' | '(' | ')' | '>')
+            !c.is_whitespace() && !matches!(c, '`' | '|' | '=' | '(' | ')' | '>' | '$')
         })
     }
 
@@ -593,6 +594,24 @@ mod tests {
             Token::String("t".into()),
             Token::Eof
         );
+        assert_eq!(expect, buf);
+    }
+
+    #[test]
+    fn dollar() {
+        let input = "$";
+        let lexer = Lexer::new(input);
+        let buf = lexer.lex();
+        let expect = token_buf!(Token::Dollar, Token::Eof);
+        assert_eq!(expect, buf);
+    }
+
+    #[test]
+    fn export() {
+        let input = "export";
+        let lexer = Lexer::new(input);
+        let buf = lexer.lex();
+        let expect = token_buf!(Token::Export, Token::Eof);
         assert_eq!(expect, buf);
     }
 }

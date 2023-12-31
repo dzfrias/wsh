@@ -11,20 +11,8 @@ Ast {
                     Command {
                         name: "echo",
                         args: [
-                            String(
-                                "hi",
-                            ),
-                        ],
-                    },
-                    Command {
-                        name: "cat",
-                        args: [],
-                    },
-                    Command {
-                        name: "wc",
-                        args: [
-                            String(
-                                "-w",
+                            Env(
+                                "FOO",
                             ),
                         ],
                     },

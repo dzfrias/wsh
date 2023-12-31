@@ -6,12 +6,14 @@ Ast {
     statements: [
         Pipeline(
             Pipeline {
+                env: [],
                 commands: [
                     Command {
                         name: "echo",
                         args: [
                             Pipeline(
                                 Pipeline {
+                                    env: [],
                                     commands: [
                                         Command {
                                             name: "cat",

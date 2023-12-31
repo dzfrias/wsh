@@ -17,6 +17,7 @@ pub enum Token {
     Append,
     Newline,
     QuestionMark,
+    Dollar,
 
     LParen,
     RParen,
@@ -38,6 +39,7 @@ pub enum Token {
     Else,
     End,
     Alias,
+    Export,
 
     Invalid(char),
     Eof,
@@ -152,6 +154,8 @@ impl TokenBuffer {
             TokenKind::BoolFalse => Token::BoolFalse,
             TokenKind::Write => Token::Write,
             TokenKind::Append => Token::Append,
+            TokenKind::Dollar => Token::Dollar,
+            TokenKind::Export => Token::Export,
             TokenKind::Invalid => Token::Invalid(*payload as u8 as char),
             TokenKind::Eof => Token::Eof,
         };
@@ -214,6 +218,7 @@ pub(super) enum TokenKind {
     Newline,
     Backtick,
     QuestionMark,
+    Dollar,
 
     LParen,
     RParen,
@@ -235,6 +240,7 @@ pub(super) enum TokenKind {
     Else,
     End,
     Alias,
+    Export,
 
     Invalid,
     Eof,
@@ -318,6 +324,7 @@ impl Token {
             Token::Then => TokenKind::Then,
             Token::Else => TokenKind::Else,
             Token::End => TokenKind::End,
+            Token::Export => TokenKind::Export,
             Token::Newline => TokenKind::Newline,
             Token::Invalid(_) => TokenKind::Invalid,
             Token::QuestionMark => TokenKind::QuestionMark,
@@ -330,6 +337,7 @@ impl Token {
             Token::Eof => TokenKind::Eof,
             Token::Write => TokenKind::Write,
             Token::Append => TokenKind::Append,
+            Token::Dollar => TokenKind::Dollar,
             Token::Alias => TokenKind::Alias,
         }
     }
@@ -351,10 +359,12 @@ impl Token {
             | Token::QuestionMark
             | Token::Gt
             | Token::Lt
-            | Token::Write => 1,
+            | Token::Write
+            | Token::Dollar => 1,
             Token::Eq | Token::Ne | Token::If | Token::Le | Token::Ge | Token::Append => 2,
             Token::Then | Token::Else | Token::BoolTrue => 4,
             Token::Alias | Token::BoolFalse => 5,
+            Token::Export => 6,
             Token::End => 3,
             Token::Ident(Ident(s)) | Token::String(s) => s.len(),
             Token::QuotedString(s) => s.len() + 2,
@@ -372,6 +382,7 @@ impl Token {
             "else" => Token::Else,
             "end" => Token::End,
             "alias" => Token::Alias,
+            "export" => Token::Export,
             _ => return None,
         })
     }
@@ -412,8 +423,10 @@ impl fmt::Display for Token {
             Token::Then => write!(f, "then"),
             Token::Else => write!(f, "else"),
             Token::End => write!(f, "end"),
+            Token::Export => write!(f, "export"),
             Token::Pipe => write!(f, "pipe"),
             Token::Write => write!(f, "write"),
+            Token::Dollar => write!(f, "dollar"),
             Token::Append => write!(f, "append"),
             Token::Backtick => write!(f, "backtick"),
             Token::Invalid(c) => write!(f, "invalid `{c}`"),

@@ -21,11 +21,18 @@ pub enum Stmt {
     Expr(Expr),
     AliasAssign(AliasAssign),
     Assign(Assign),
+    Export(Export),
 }
 
 #[derive(Debug, Clone)]
 pub struct Assign {
     pub name: Ident,
+    pub expr: Expr,
+}
+
+#[derive(Debug, Clone)]
+pub struct Export {
+    pub name: SmolStr,
     pub expr: Expr,
 }
 
@@ -37,8 +44,15 @@ pub struct AliasAssign {
 
 #[derive(Debug, Clone)]
 pub struct Pipeline {
+    pub env: Vec<EnvSet>,
     pub commands: Vec<Command>,
     pub write: Option<Box<PipelineEnd>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct EnvSet {
+    pub name: SmolStr,
+    pub expr: Expr,
 }
 
 #[derive(Debug, Clone)]
@@ -62,6 +76,7 @@ pub struct Command {
 #[derive(Debug, Clone)]
 pub enum Expr {
     Ident(Ident),
+    Env(SmolStr),
     String(SmolStr),
     Number(f64),
     Pipeline(Pipeline),

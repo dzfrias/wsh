@@ -4,13 +4,13 @@ mod error;
 mod value;
 
 use crate::{
-    ast::{AliasAssign, Assign, InfixOp, Pipeline, PipelineEndKind, PrefixOp},
+    ast::{AliasAssign, Assign, EnvSet, Export, InfixOp, Pipeline, PipelineEndKind, PrefixOp},
     interpreter::{builtins::Builtin, env::Env},
     parser::ast::{Ast, Command, Expr, InfixExpr, PrefixExpr, Stmt},
 };
 pub use error::*;
 use smol_str::SmolStr;
-use std::{fs::OpenOptions, process};
+use std::{borrow::Cow, fs::OpenOptions, process};
 pub use value::*;
 
 #[derive(Default)]
@@ -43,6 +43,10 @@ impl Interpreter {
             }
             Stmt::Assign(assign) => {
                 self.eval_assign(assign)?;
+                Ok(Value::Null)
+            }
+            Stmt::Export(export) => {
+                self.eval_export(export)?;
                 Ok(Value::Null)
             }
         }
@@ -94,6 +98,15 @@ impl Interpreter {
         Ok(())
     }
 
+    fn eval_export(&mut self, export: &Export) -> RuntimeResult<()> {
+        std::env::set_var(
+            export.name.as_str(),
+            self.eval_expr(&export.expr)?.to_string(),
+        );
+
+        Ok(())
+    }
+
     fn eval_expr(&mut self, expr: &Expr) -> RuntimeResult<Value> {
         Ok(match expr {
             Expr::Ident(name) => self
@@ -108,6 +121,7 @@ impl Interpreter {
             Expr::Number(n) => Value::Number(*n),
             Expr::Pipeline(pipeline) => self.eval_pipeline(pipeline, /*capture =*/ true)?,
             Expr::LastStatus => Value::Number(self.last_status as f64),
+            Expr::Env(name) => self.eval_env_var(name)?,
         })
     }
 
@@ -268,6 +282,17 @@ impl Interpreter {
         Ok(Value::String(result.into()))
     }
 
+    fn eval_env_var(&mut self, name: &SmolStr) -> RuntimeResult<Value> {
+        let var = std::env::var_os(name.as_str()).unwrap_or_default();
+        let val = var.to_string_lossy();
+        Ok(match val {
+            // We know that if this is the borrwed variant, it's a valid UTF-8 string, so
+            // there's no need for any cloning.
+            Cow::Borrowed(_) => Value::String(var.into_string().unwrap().into()),
+            Cow::Owned(new) => Value::String(new.into()),
+        })
+    }
+
     fn make_pipeline(&mut self, pipeline: &Pipeline) -> RuntimeResult<Option<duct::Expression>> {
         let mut expression = self.make_exec(&pipeline.commands[0])?;
         for cmd in pipeline.commands.iter().skip(1) {
@@ -275,6 +300,12 @@ impl Interpreter {
                 continue;
             };
             expression = expression.map(|expr| expr.pipe(&exec)).or(Some(exec));
+        }
+        if let Some(exec) = expression.clone() {
+            for EnvSet { name, expr } in &pipeline.env {
+                let val = self.eval_expr(expr)?;
+                expression = Some(exec.env(name.as_str(), val.to_string()));
+            }
         }
         if let Some(write) = pipeline.write.as_ref() {
             let write_to = self.eval_expr(&write.expr)?;

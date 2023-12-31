@@ -1,0 +1,32 @@
+---
+source: crates/shwasi-lang/src/parser/mod.rs
+expression: ast
+---
+Ast {
+    statements: [
+        Export(
+            Export {
+                name: "FOO",
+                expr: Infix(
+                    InfixExpr {
+                        lhs: Number(
+                            10.0,
+                        ),
+                        rhs: Number(
+                            10.0,
+                        ),
+                        op: Add,
+                    },
+                ),
+            },
+        ),
+        Export(
+            Export {
+                name: "FOO",
+                expr: String(
+                    "hello",
+                ),
+            },
+        ),
+    ],
+}

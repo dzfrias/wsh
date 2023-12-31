@@ -6,6 +6,7 @@ Ast {
     statements: [
         Pipeline(
             Pipeline {
+                env: [],
                 commands: [
                     Command {
                         name: "echo",
@@ -14,6 +15,7 @@ Ast {
                                 InfixExpr {
                                     lhs: Pipeline(
                                         Pipeline {
+                                            env: [],
                                             commands: [
                                                 Command {
                                                     name: "cat",

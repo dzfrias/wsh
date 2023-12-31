@@ -8,6 +8,7 @@ Ast {
             AliasAssign {
                 name: "foo",
                 pipeline: Pipeline {
+                    env: [],
                     commands: [
                         Command {
                             name: "echo",

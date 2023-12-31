@@ -2,11 +2,9 @@ pub mod ast;
 mod error;
 mod lexer;
 
-use std::collections::HashMap;
-
 pub use self::error::*;
 use crate::{
-    ast::{AliasAssign, Assign, Pipeline, PipelineEnd, PipelineEndKind},
+    ast::{AliasAssign, Assign, EnvSet, Export, Pipeline, PipelineEnd, PipelineEndKind},
     parser::ast::{Ast, Command, Expr, InfixExpr, InfixOp, PrefixExpr, PrefixOp, Stmt},
 };
 pub use lexer::*;
@@ -18,7 +16,6 @@ pub struct Parser<'src> {
     tok_idx: usize,
     current_token: Token,
     in_subcmd: bool,
-    aliases: HashMap<SmolStr, Pipeline>,
 }
 
 impl<'src> Parser<'src> {
@@ -28,7 +25,6 @@ impl<'src> Parser<'src> {
             tok_idx: 0,
             current_token: buf.get(0).unwrap_or(Token::Eof).clone(),
             in_subcmd: false,
-            aliases: HashMap::new(),
         }
     }
 
@@ -46,14 +42,32 @@ impl<'src> Parser<'src> {
 
     fn parse_stmt(&mut self) -> ParseResult<Stmt> {
         Ok(match self.current_token {
-            Token::String(_) | Token::QuotedString(_) => Stmt::Pipeline(self.parse_pipeline()?),
+            Token::String(_) | Token::QuotedString(_) | Token::Dollar => {
+                Stmt::Pipeline(self.parse_pipeline()?)
+            }
             Token::Alias => Stmt::AliasAssign(self.parse_alias_assign()?),
             Token::Ident(_) if self.peek() == Token::Assign => Stmt::Assign(self.parse_assign()?),
+            Token::Export => Stmt::Export(self.parse_export()?),
             _ => Stmt::Expr(self.parse_expr(Precedence::Lowest)?),
         })
     }
 
     fn parse_pipeline(&mut self) -> ParseResult<Pipeline> {
+        let mut env = vec![];
+        // Environment variables being set
+        while self.current_token == Token::Dollar {
+            self.next_token();
+            let name = self
+                .buf
+                .get_string(self.tok_idx)
+                .ok_or_else(|| self.expected("expected a valid environment variable name"))?;
+            self.expect_next(Token::Assign, "expected assign after env name")?;
+            self.next_token();
+            let expr = self.parse_expr(Precedence::Lowest)?;
+            self.next_token();
+            env.push(EnvSet { name, expr });
+        }
+
         let mut cmds = vec![];
         let mut write = None;
         cmds.push(self.parse_cmd()?);
@@ -86,6 +100,7 @@ impl<'src> Parser<'src> {
 
         Ok(Pipeline {
             commands: cmds,
+            env,
             write,
         })
     }
@@ -100,8 +115,25 @@ impl<'src> Parser<'src> {
         self.expect_next(Token::Assign, "expected assign after alias name")?;
         self.next_token();
         let pipeline = self.parse_pipeline()?;
-        self.aliases.insert(name.clone(), pipeline.clone());
         Ok(AliasAssign { name, pipeline })
+    }
+
+    fn parse_export(&mut self) -> ParseResult<Export> {
+        debug_assert_eq!(self.current_token, Token::Export);
+        // Optional dollar sign
+        if self.peek() == Token::Dollar {
+            self.next_token();
+        }
+        self.next_token();
+        let name = self
+            .buf
+            .get_string(self.tok_idx)
+            .ok_or_else(|| self.expected("expected a valid environment variable name"))?;
+        self.expect_next(Token::Assign, "expected assign after export name")?;
+        self.next_token();
+        let expr = self.parse_expr(Precedence::Lowest)?;
+        self.next_token();
+        Ok(Export { name, expr })
     }
 
     fn parse_assign(&mut self) -> ParseResult<Assign> {
@@ -161,6 +193,7 @@ impl<'src> Parser<'src> {
             Token::Bang | Token::Minus | Token::Plus => Expr::Prefix(self.parse_prefix()?),
             Token::Backtick => Expr::Pipeline(self.parse_backtick()?),
             Token::QuestionMark => Expr::LastStatus,
+            Token::Dollar => Expr::Env(self.parse_env_expr()?),
             _ => return Err(self.expected("expected valid expression")),
         };
 
@@ -241,6 +274,13 @@ impl<'src> Parser<'src> {
         };
 
         Ok(prefix)
+    }
+
+    fn parse_env_expr(&mut self) -> ParseResult<SmolStr> {
+        self.next_token();
+        self.buf
+            .get_string(self.tok_idx)
+            .ok_or_else(|| self.expected("expected a valid environment variable name"))
     }
 
     fn next_token(&mut self) {
@@ -488,6 +528,30 @@ mod tests {
     #[test]
     fn redirect_append() {
         let input = "echo hi >> file.txt";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn environment_setting_in_pipelines() {
+        let input = "$FOO=.(10 + 10) $BAR=20 echo hi";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn environment_variable_get() {
+        let input = "echo $FOO";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn export() {
+        let input = "export FOO = .(10 + 10)\nexport $FOO = hello";
         let buf = Lexer::new(input).lex();
         let ast = Parser::new(&buf).parse().unwrap();
         insta::assert_debug_snapshot!(ast);

@@ -6,6 +6,7 @@ Ast {
     statements: [
         Pipeline(
             Pipeline {
+                env: [],
                 commands: [
                     Command {
                         name: "echo",
@@ -28,6 +29,7 @@ Ast {
         ),
         Pipeline(
             Pipeline {
+                env: [],
                 commands: [
                     Command {
                         name: "echo",

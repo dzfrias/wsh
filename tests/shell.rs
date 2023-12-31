@@ -4,10 +4,13 @@ macro_rules! shell_test {
         fn $name() {
             use ::assert_cmd::Command;
             use ::std::{
+                env,
                 fs::{self, File},
                 io::Write,
             };
 
+            // Auxiliary environment variable for test usage.
+            env::set_var("SHWASI_ENV", "test");
             const PATH: &str = concat!(stringify!($name), ".tmp");
             let mut f = File::create(PATH).unwrap();
             f.write_all($input.as_bytes()).unwrap();
@@ -25,10 +28,12 @@ macro_rules! shell_test {
         fn $name() {
             use ::assert_cmd::Command;
             use ::std::{
+                env,
                 fs::{self, File},
                 io::Write,
             };
 
+            env::set_var("SHWASI_ENV", "test");
             const PATH: &str = concat!(stringify!($name), ".tmp");
             let mut f = File::create(PATH).unwrap();
             f.write_all($input.as_bytes()).unwrap();
@@ -80,6 +85,15 @@ shell_test!(
     alias_with_args_and_piping,
     "alias foo = echo\nfoo hi | wc -c | xargs",
     "3"
+);
+// TODO: figure out how to test setting environment variables for processes spawned by the shell
+shell_test!(get_environment_variables, "echo $SHWASI_ENV", "test");
+// Could fail if the user has $FOO_NO_ASSIGN set in their environment.
+shell_test!(environment_variables_default, "echo $FOO_NO_ASSIGN", "");
+shell_test!(
+    environment_variables_export,
+    "export FOO = bar\necho $FOO",
+    "bar"
 );
 
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");
