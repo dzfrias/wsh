@@ -95,10 +95,12 @@ impl<'src> Lexer<'src> {
                     let n_str = self.consume_num();
                     let n = n_str.parse::<f64>().unwrap();
                     let len = n.to_string().len();
+                    if n_str.len() > len {
+                        buf.skip(n_str.len() - len);
+                    }
                     // We need to skip the proper number of characters parsed. Since 1.00000 parses
                     // as 1, we need to skip the difference between the actual token length and the
                     // parsed number length.
-                    buf.skip(n_str.len() - len);
                     push!(Number(n));
                 }
                 '=' => push!(Assign),
@@ -651,5 +653,12 @@ mod tests {
         let buf = lexer.lex();
         let expect = token_buf!(Token::Newline, Token::String("hi".into()), Token::Eof);
         assert_eq!(expect, buf);
+    }
+
+    #[test]
+    fn floats_without_leading_zero_no_crash() {
+        let input = ".(.999999999999999999999999999999";
+        let lexer = Lexer::new(input);
+        lexer.lex();
     }
 }
