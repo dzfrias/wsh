@@ -66,14 +66,14 @@ impl Interpreter {
                 .stdout_capture()
                 .unchecked()
                 .run()
-                .map_err(RuntimeError::CommandFailed)?;
+                .map_err(RuntimeError::from_command_error)?;
             self.set_status(out.status);
             Value::String(String::from_utf8_lossy(&out.stdout).trim().into())
         } else {
             let status = expression
                 .unchecked()
                 .run()
-                .map_err(RuntimeError::CommandFailed)?
+                .map_err(RuntimeError::from_command_error)?
                 .status;
             self.set_status(status);
             Value::Null
