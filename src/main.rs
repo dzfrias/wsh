@@ -55,7 +55,11 @@ fn main() -> Result<()> {
 fn start_repl() -> Result<()> {
     const PROMPT: &str = "$ ";
 
+    let home_dir = dirs::home_dir();
     let mut rl = rustyline::DefaultEditor::new()?;
+    if let Some(home) = &home_dir {
+        let _ = rl.load_history(&home.join(".shwasi_history"));
+    }
     let mut interpreter = Interpreter::new();
 
     let mut dir = std::env::current_dir().context("error getting current directory")?;
@@ -71,6 +75,7 @@ fn start_repl() -> Result<()> {
         'inp: {
             match input {
                 Ok(input) => {
+                    rl.add_history_entry(&input)?;
                     let tokens = Lexer::new(&input).lex();
                     let ast = match Parser::new(&tokens).parse() {
                         Ok(ast) => ast,
@@ -98,6 +103,9 @@ fn start_repl() -> Result<()> {
         println!();
     }
 
+    if let Some(home) = &home_dir {
+        let _ = rl.save_history(&home.join(".shwasi_history"));
+    }
     Ok(())
 }
 
