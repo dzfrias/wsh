@@ -1,6 +1,6 @@
 mod cli;
 
-use std::fs;
+use std::{fs, path::Path};
 
 use anyhow::{bail, Context, Result};
 use ariadne::{Color, Label, Report, ReportKind, Source};
@@ -35,16 +35,8 @@ fn main() -> Result<()> {
 
     let args = Cli::parse();
     if let Some(input) = args.input {
-        let file_input = fs::read_to_string(&input).context("error reading input file")?;
-        let tokens = Lexer::new(&file_input).lex();
-        let ast = match Parser::new(&tokens).parse() {
-            Ok(ast) => ast,
-            Err(err) => {
-                print_parse_error(err, &file_input, Some(&input.as_os_str().to_string_lossy()));
-                bail!("error parsing input");
-            }
-        };
-        Interpreter::new().run(ast)?;
+        let mut interpreter = Interpreter::new();
+        run_file(&mut interpreter, input)?;
     } else {
         start_repl()?;
     }
@@ -52,15 +44,37 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+fn run_file(interpreter: &mut Interpreter, input: impl AsRef<Path>) -> Result<()> {
+    let file_input = fs::read_to_string(&input).context("error reading input file")?;
+    let tokens = Lexer::new(&file_input).lex();
+    let ast = match Parser::new(&tokens).parse() {
+        Ok(ast) => ast,
+        Err(err) => {
+            print_parse_error(
+                err,
+                &file_input,
+                Some(&input.as_ref().as_os_str().to_string_lossy()),
+            );
+            bail!("error parsing input");
+        }
+    };
+    interpreter.run(ast)?;
+    Ok(())
+}
+
 fn start_repl() -> Result<()> {
     const PROMPT: &str = "$ ";
 
     let home_dir = dirs::home_dir();
+    let rc_file = home_dir.as_ref().map(|home| home.join(".wsirc"));
     let mut rl = rustyline::DefaultEditor::new()?;
     if let Some(home) = &home_dir {
-        let _ = rl.load_history(&home.join(".shwasi_history"));
+        let _ = rl.load_history(&home.join(".wsi_history"));
     }
     let mut interpreter = Interpreter::new();
+    if let Some(rc_file) = rc_file {
+        run_file(&mut interpreter, rc_file)?;
+    }
 
     let mut dir = std::env::current_dir().context("error getting current directory")?;
     'main: loop {
@@ -104,7 +118,7 @@ fn start_repl() -> Result<()> {
     }
 
     if let Some(home) = &home_dir {
-        let _ = rl.save_history(&home.join(".shwasi_history"));
+        let _ = rl.save_history(&home.join(".wsi_history"));
     }
     Ok(())
 }
