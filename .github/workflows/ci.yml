@@ -23,6 +23,16 @@ jobs:
           submodules: true
       - name: Install Rust
         uses: dtolnay/rust-toolchain@nightly
+      - name: Set up cargo cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - run: cargo test --workspace
 
   fuzz:
