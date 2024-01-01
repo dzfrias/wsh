@@ -1,7 +1,6 @@
 mod builtins;
 mod env;
 mod error;
-mod os_handle;
 mod value;
 
 use crate::{
@@ -9,10 +8,14 @@ use crate::{
         AliasAssign, Assign, EnvSet, Export, InfixOp, Pipeline, PipelineEnd, PipelineEndKind,
         PrefixOp,
     },
-    interpreter::{builtins::Builtin, env::Env, os_handle::OsHandle},
+    interpreter::{builtins::Builtin, env::Env},
     parser::ast::{Ast, Command, Expr, InfixExpr, PrefixExpr, Stmt},
 };
 pub use error::*;
+use filedescriptor::{
+    AsRawFileDescriptor, FileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor,
+    RawFileDescriptor,
+};
 use smol_str::SmolStr;
 use std::{
     borrow::Cow,
@@ -22,15 +25,21 @@ use std::{
 };
 pub use value::*;
 
-#[derive(Default)]
 pub struct Interpreter {
     env: Env,
+    stdout: RawFileDescriptor,
+    dup_stdout: bool,
     last_status: i32,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            env: Env::new(),
+            stdout: io::stdout().as_raw_file_descriptor(),
+            dup_stdout: true,
+            last_status: 0,
+        }
     }
 
     pub fn run(&mut self, program: Ast) -> RuntimeResult<Option<Value>> {
@@ -38,8 +47,20 @@ impl Interpreter {
         for stmt in program {
             result = self.eval_stmt(&stmt)?;
         }
+        // Reset stdout to the original stdout. This is necessary for operations like `source`,
+        // where the user may have redirected stdout somewhere else temporarily.
+        self.stdout = io::stdout().as_raw_file_descriptor();
+        self.dup_stdout = true;
 
         Ok((!result.is_null()).then_some(result))
+    }
+
+    pub(crate) fn stdout(&mut self, stdout: impl IntoRawFileDescriptor) {
+        self.stdout = stdout.into_raw_file_descriptor();
+    }
+
+    pub(crate) fn dup_stdout(&mut self, dup: bool) {
+        self.dup_stdout = dup;
     }
 
     fn eval_stmt(&mut self, stmt: &Stmt) -> RuntimeResult<Value> {
@@ -98,8 +119,15 @@ impl Interpreter {
                 self.run_pipeline(pipeline, file, None)?;
             }
             None => {
-                let stdout = os_pipe::dup_stdout().map_err(RuntimeError::PipeError)?;
-                self.run_pipeline(pipeline, stdout, None)?;
+                // We duplicate the stdout fd because `run_pipeline` will close whatever's passed
+                // in, which we don't want because we need to use the file descriptor multiple
+                // times.
+                if self.dup_stdout {
+                    let stdout = FileDescriptor::dup(&self.stdout).expect("TODO: error");
+                    self.run_pipeline(pipeline, stdout, None)?;
+                } else {
+                    self.run_pipeline(pipeline, self.stdout, None)?;
+                }
             }
         }
 
@@ -116,13 +144,13 @@ impl Interpreter {
     fn run_pipeline(
         &mut self,
         pipeline: &Pipeline,
-        default_stdout: impl OsHandle + io::Write,
+        default_stdout: impl IntoRawFileDescriptor,
         default_stdin: Option<os_pipe::PipeReader>,
     ) -> RuntimeResult<()> {
         let mut last_result = None;
-        // We essentially downcast our impl OsHandle + io::Write to a raw fd. This is just so we
+        // We essentially downcast our impl IntoRawFileDescriptor into a raw fd. This is just so we
         // can have a unified type for stdout.
-        let default_stdout = default_stdout.into_os_handle();
+        let default_stdout = default_stdout.into_raw_file_descriptor();
         let mut stdin = default_stdin;
         let mut iter = pipeline.commands.iter().peekable();
         while let Some(cmd) = iter.next() {
@@ -132,7 +160,7 @@ impl Interpreter {
                 stdout = in_
                     .try_clone()
                     .map_err(RuntimeError::PipeError)?
-                    .into_os_handle();
+                    .into_raw_file_descriptor();
                 Some((out, in_))
             } else {
                 // Last command in pipeline
@@ -140,10 +168,6 @@ impl Interpreter {
                 None
             };
 
-            // SAFETY: the stdout file descriptor comes from either an open pipe, or the
-            // `default_stdout` argument, which must be a valid file descriptor as a result of it
-            // implementing `OsHandle`.
-            let stdout = unsafe { File::from_os_handle(stdout) };
             let result = self.run_command(cmd, &pipeline.env, stdout, stdin.take())?;
 
             if let Some((out, _)) = pipes {
@@ -166,7 +190,7 @@ impl Interpreter {
         &mut self,
         cmd: &Command,
         env: &[EnvSet],
-        stdout: impl OsHandle + io::Write,
+        stdout: impl IntoRawFileDescriptor,
         stdin: Option<os_pipe::PipeReader>,
     ) -> RuntimeResult<Option<process::ExitStatus>> {
         // TODO: avoid clone here?
@@ -199,16 +223,19 @@ impl Interpreter {
             .map(|arg| self.eval_expr(arg).map(|val| val.to_string()))
             .collect::<RuntimeResult<Vec<_>>>()?;
 
+        // SAFETY: the `stdout` argument comes from something that implements OsHandle, which means
+        // it must be valid.
+        // This is where we take ownership of the file descriptor, which will be closed when
+        // `stdout` is dropped.
+        let stdout = unsafe { File::from_raw_file_descriptor(stdout.into_raw_file_descriptor()) };
+
         if let Some(builtin) = Builtin::from_name(cmd.name.as_str()) {
-            builtin.run(args, stdout)?;
+            builtin.run(self, args, stdout)?;
             return Ok(None);
         }
 
-        // SAFETY: the `stdout` argument comes from something that implements OsHandle, which means
-        // it must be valid.
-        let stdout_file = unsafe { File::from_os_handle(stdout.into_os_handle()) };
         let mut command = process::Command::new(cmd.name.as_str());
-        command.args(args).stdout(stdout_file);
+        command.args(args).stdout(stdout);
 
         for env_set in env {
             let value = self.eval_expr(&env_set.expr)?;
@@ -216,9 +243,7 @@ impl Interpreter {
         }
 
         if let Some(stdin) = stdin {
-            // SAFETY: the `stdin` argument is a PipeReader, which has a vaild file descriptor.
-            let stdin_file = unsafe { File::from_os_handle(stdin.into_os_handle()) };
-            command.stdin(stdin_file);
+            command.stdin(stdin);
         }
 
         let out = command.output().map_err(RuntimeError::from_command_error)?;
@@ -439,5 +464,11 @@ impl Interpreter {
 
     fn set_status(&mut self, exit_status: Option<process::ExitStatus>) {
         self.last_status = exit_status.and_then(|s| s.code()).unwrap_or(0);
+    }
+}
+
+impl Default for Interpreter {
+    fn default() -> Self {
+        Self::new()
     }
 }

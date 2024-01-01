@@ -96,6 +96,11 @@ shell_test!(
     "bar"
 );
 shell_test!(builtins_have_stdout, "cd __BAD_DIR | wc -l | xargs", "1");
+shell_test!(
+    source,
+    "echo \"echo foo\" >> __t_tmp.wsi\nsource __t_tmp.wsi\nrm __t_tmp.wsi",
+    "foo"
+);
 
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");
 shell_test!(@fail unfinished_pipe, "echo hi |");

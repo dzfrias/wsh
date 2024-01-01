@@ -12,6 +12,7 @@ thiserror.workspace = true
 smol_str = "0.2.0"
 dirs = "5.0.1"
 os_pipe = "1.1.5"
+filedescriptor = "0.8.2"
 
 [dev-dependencies]
 insta.workspace = true

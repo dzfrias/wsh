@@ -536,6 +536,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "filedescriptor"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7199d965852c3bac31f779ef99cbb4537f80e952e2d6aa0ffeb30cce00f4f46e"
+dependencies = [
+ "libc",
+ "thiserror",
+ "winapi",
+]
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1395,6 +1406,7 @@ name = "shwasi-lang"
 version = "0.1.0"
 dependencies = [
  "dirs",
+ "filedescriptor",
  "insta",
  "os_pipe",
  "smol_str",
