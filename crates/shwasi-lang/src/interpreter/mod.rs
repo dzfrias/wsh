@@ -1,16 +1,25 @@
 mod builtins;
 mod env;
 mod error;
+mod os_handle;
 mod value;
 
 use crate::{
-    ast::{AliasAssign, Assign, EnvSet, Export, InfixOp, Pipeline, PipelineEndKind, PrefixOp},
-    interpreter::{builtins::Builtin, env::Env},
+    ast::{
+        AliasAssign, Assign, EnvSet, Export, InfixOp, Pipeline, PipelineEnd, PipelineEndKind,
+        PrefixOp,
+    },
+    interpreter::{builtins::Builtin, env::Env, os_handle::OsHandle},
     parser::ast::{Ast, Command, Expr, InfixExpr, PrefixExpr, Stmt},
 };
 pub use error::*;
 use smol_str::SmolStr;
-use std::{borrow::Cow, fs::OpenOptions, process};
+use std::{
+    borrow::Cow,
+    fs::{File, OpenOptions},
+    io::{self, Read},
+    process,
+};
 pub use value::*;
 
 #[derive(Default)]
@@ -53,33 +62,168 @@ impl Interpreter {
     }
 
     fn eval_pipeline(&mut self, pipeline: &Pipeline, capture: bool) -> RuntimeResult<Value> {
-        let expression = self.make_pipeline(pipeline)?;
-        let Some(expression) = expression else {
-            return Ok(if capture {
-                Value::String("".into())
-            } else {
-                Value::Null
-            });
-        };
-        let result = if capture {
-            let out = expression
-                .stdout_capture()
-                .unchecked()
-                .run()
-                .map_err(RuntimeError::from_command_error)?;
-            self.set_status(out.status);
-            Value::String(String::from_utf8_lossy(&out.stdout).trim().into())
-        } else {
-            let status = expression
-                .unchecked()
-                .run()
-                .map_err(RuntimeError::from_command_error)?
-                .status;
-            self.set_status(status);
-            Value::Null
-        };
+        if capture && pipeline.write.is_none() {
+            let (mut read_end, write_end) = os_pipe::pipe().map_err(RuntimeError::PipeError)?;
+            self.run_pipeline(pipeline, write_end, None)?;
+            let mut out = vec![];
+            read_end
+                .read_to_end(&mut out)
+                .map_err(RuntimeError::PipeError)?;
+            let mut out = String::from_utf8_lossy(&out).to_string();
+            while out.ends_with('\n') || out.ends_with('\r') {
+                out.truncate(out.len() - 1);
+            }
+            return Ok(Value::String(out.into()));
+        }
 
-        Ok(result)
+        match pipeline.write.as_deref() {
+            Some(PipelineEnd {
+                expr,
+                kind: PipelineEndKind::Write,
+            }) => {
+                let path = self.eval_expr(expr)?.to_string();
+                let file = File::create(path).map_err(RuntimeError::CommandFailed)?;
+                self.run_pipeline(pipeline, file, None)?;
+            }
+            Some(PipelineEnd {
+                expr,
+                kind: PipelineEndKind::Append,
+            }) => {
+                let path = self.eval_expr(expr)?.to_string();
+                let file = OpenOptions::new()
+                    .append(true)
+                    .create(true)
+                    .open(path)
+                    .map_err(RuntimeError::CommandFailed)?;
+                self.run_pipeline(pipeline, file, None)?;
+            }
+            None => {
+                let stdout = os_pipe::dup_stdout().map_err(RuntimeError::PipeError)?;
+                self.run_pipeline(pipeline, stdout, None)?;
+            }
+        }
+
+        Ok(if !capture {
+            Value::Null
+        } else {
+            // This branch is reachable if `capture` is true, but the user is also redirecting to
+            // a file. This is pretty much nonsensical, but we'll just return an empty string just
+            // in case.
+            Value::String("".into())
+        })
+    }
+
+    fn run_pipeline(
+        &mut self,
+        pipeline: &Pipeline,
+        default_stdout: impl OsHandle + io::Write,
+        default_stdin: Option<os_pipe::PipeReader>,
+    ) -> RuntimeResult<()> {
+        let mut last_result = None;
+        // We essentially downcast our impl OsHandle + io::Write to a raw fd. This is just so we
+        // can have a unified type for stdout.
+        let default_stdout = default_stdout.into_os_handle();
+        let mut stdin = default_stdin;
+        let mut iter = pipeline.commands.iter().peekable();
+        while let Some(cmd) = iter.next() {
+            let stdout;
+            let pipes = if iter.peek().is_some() {
+                let (out, in_) = os_pipe::pipe().map_err(RuntimeError::PipeError)?;
+                stdout = in_
+                    .try_clone()
+                    .map_err(RuntimeError::PipeError)?
+                    .into_os_handle();
+                Some((out, in_))
+            } else {
+                // Last command in pipeline
+                stdout = default_stdout;
+                None
+            };
+
+            // SAFETY: the stdout file descriptor comes from either an open pipe, or the
+            // `default_stdout` argument, which must be a valid file descriptor as a result of it
+            // implementing `OsHandle`.
+            let stdout = unsafe { File::from_os_handle(stdout) };
+            let result = self.run_command(cmd, &pipeline.env, stdout, stdin.take())?;
+
+            if let Some((out, _)) = pipes {
+                stdin = Some(out);
+            }
+
+            last_result = result;
+        }
+
+        self.set_status(last_result);
+
+        Ok(())
+    }
+
+    /// Evaluates a command, returning the exit status of the command.
+    ///
+    /// The exit command is optional, so `None` is returned if the command did not have an exit
+    /// status. This is the case for builtins, for example.
+    fn run_command(
+        &mut self,
+        cmd: &Command,
+        env: &[EnvSet],
+        stdout: impl OsHandle + io::Write,
+        stdin: Option<os_pipe::PipeReader>,
+    ) -> RuntimeResult<Option<process::ExitStatus>> {
+        // TODO: avoid clone here?
+        if let Some(mut alias) = self.env.get_alias(cmd.name.as_str()).cloned() {
+            alias
+                .commands
+                .last_mut()
+                .unwrap()
+                .args
+                .extend_from_slice(&cmd.args);
+            // Recursive alias found
+            if alias
+                .commands
+                .iter()
+                .any(|alias_cmd| alias_cmd.name == cmd.name)
+            {
+                // Remove the alias so that we don't recurse infinitely
+                let pipeline = self.env.remove_alias(&cmd.name).unwrap();
+                self.run_pipeline(&alias, stdout, stdin)?;
+                self.env.set_alias(cmd.name.clone(), pipeline);
+                return Ok(None);
+            }
+            self.run_pipeline(&alias, stdout, stdin)?;
+            return Ok(None);
+        }
+
+        let args = cmd
+            .args
+            .iter()
+            .map(|arg| self.eval_expr(arg).map(|val| val.to_string()))
+            .collect::<RuntimeResult<Vec<_>>>()?;
+
+        if let Some(builtin) = Builtin::from_name(cmd.name.as_str()) {
+            builtin.run(args, stdout)?;
+            return Ok(None);
+        }
+
+        // SAFETY: the `stdout` argument comes from something that implements OsHandle, which means
+        // it must be valid.
+        let stdout_file = unsafe { File::from_os_handle(stdout.into_os_handle()) };
+        let mut command = process::Command::new(cmd.name.as_str());
+        command.args(args).stdout(stdout_file);
+
+        for env_set in env {
+            let value = self.eval_expr(&env_set.expr)?;
+            command.env(env_set.name.as_str(), value.to_string());
+        }
+
+        if let Some(stdin) = stdin {
+            // SAFETY: the `stdin` argument is a PipeReader, which has a vaild file descriptor.
+            let stdin_file = unsafe { File::from_os_handle(stdin.into_os_handle()) };
+            command.stdin(stdin_file);
+        }
+
+        let out = command.output().map_err(RuntimeError::from_command_error)?;
+
+        Ok(Some(out.status))
     }
 
     fn eval_alias_assign(
@@ -293,79 +437,7 @@ impl Interpreter {
         })
     }
 
-    fn make_pipeline(&mut self, pipeline: &Pipeline) -> RuntimeResult<Option<duct::Expression>> {
-        let mut expression = self.make_exec(&pipeline.commands[0])?;
-        for cmd in pipeline.commands.iter().skip(1) {
-            let Some(exec) = self.make_exec(cmd)? else {
-                continue;
-            };
-            expression = expression.map(|expr| expr.pipe(&exec)).or(Some(exec));
-        }
-        if let Some(exec) = expression.clone() {
-            for EnvSet { name, expr } in &pipeline.env {
-                let val = self.eval_expr(expr)?;
-                expression = Some(exec.env(name.as_str(), val.to_string()));
-            }
-        }
-        if let Some(write) = pipeline.write.as_ref() {
-            let write_to = self.eval_expr(&write.expr)?;
-            expression = expression
-                .map(|expr| match write.kind {
-                    PipelineEndKind::Append => {
-                        let file = OpenOptions::new()
-                            .append(true)
-                            .create(true)
-                            .open(write_to.to_string())
-                            .map_err(RuntimeError::CommandFailed)?;
-                        Ok(expr.stdout_file(file))
-                    }
-                    PipelineEndKind::Write => Ok(expr.stdout_path(write_to.to_string())),
-                })
-                .transpose()?;
-        }
-
-        Ok(expression)
-    }
-
-    fn make_exec(
-        &mut self,
-        Command { name, args }: &Command,
-    ) -> RuntimeResult<Option<duct::Expression>> {
-        // TODO: avoid clone here?
-        if let Some(mut alias) = self.env.get_alias(name).cloned() {
-            alias
-                .commands
-                .last_mut()
-                .unwrap()
-                .args
-                .extend_from_slice(args);
-            // Recursive alias found
-            if alias.commands.iter().any(|cmd| &cmd.name == name) {
-                let pipeline = self.env.remove_alias(name).unwrap();
-                let exec = self.make_pipeline(&alias)?;
-                self.env.set_alias(name.clone(), pipeline);
-                return Ok(exec);
-            }
-            let exec = self.make_pipeline(&alias)?;
-            return Ok(exec);
-        }
-
-        let args = args
-            .iter()
-            .map(|arg| self.eval_expr(arg).map(|val| val.to_string()))
-            .collect::<RuntimeResult<Vec<_>>>()?;
-
-        if let Some(builtin) = Builtin::from_name(name.as_str()) {
-            builtin.run(&args)?;
-            return Ok(None);
-        }
-        let exec = duct::cmd(name.as_str(), args);
-        Ok(Some(exec))
-    }
-
-    fn set_status(&mut self, exit_status: process::ExitStatus) {
-        if let Some(code) = exit_status.code() {
-            self.last_status = code;
-        }
+    fn set_status(&mut self, exit_status: Option<process::ExitStatus>) {
+        self.last_status = exit_status.and_then(|s| s.code()).unwrap_or(0);
     }
 }

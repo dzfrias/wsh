@@ -95,6 +95,7 @@ shell_test!(
     "export FOO = bar\necho $FOO",
     "bar"
 );
+shell_test!(builtins_have_stdout, "cd __BAD_DIR | wc -w | xargs", "13");
 
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");
 shell_test!(@fail unfinished_pipe, "echo hi |");

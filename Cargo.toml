@@ -16,7 +16,6 @@ shwasi-parser = { path = "crates/shwasi-parser" }
 shwasi-engine = { path = "crates/shwasi-engine" }
 shwasi-lang = { path = "crates/shwasi-lang" }
 rustyline = "13.0.0"
-ctrlc = "3.4.2"
 ariadne = { version = "0.3.0", features = ["auto-color"] }
 dirs = "5.0.1"
 

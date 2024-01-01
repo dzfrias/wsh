@@ -15,35 +15,36 @@ impl Builtin {
         }
     }
 
-    pub fn run<I, S>(&self, args: I) -> RuntimeResult<()>
+    pub fn run<I, S>(&self, args: I, stdout: impl io::Write) -> RuntimeResult<()>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
     {
         match self {
-            Self::Cd => cd(args),
+            Self::Cd => cd(args, stdout),
         }
     }
 }
 
-fn cd<I, S>(args: I) -> RuntimeResult<()>
+fn cd<I, S>(args: I, mut out: impl io::Write) -> RuntimeResult<()>
 where
     I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
 {
-    let path = args
+    let Some(path) = args
         .into_iter()
         .next()
         .map(|arg| PathBuf::from(arg.as_ref()))
         .map_or_else(dirs::home_dir, Some)
-        .ok_or_else(|| {
-            RuntimeError::CommandFailed(io::Error::new(
-                io::ErrorKind::Other,
-                "home directory not found",
-            ))
-        })?;
+    else {
+        writeln!(out, "cd: no home directory").map_err(RuntimeError::CommandFailed)?;
+        return Ok(());
+    };
 
-    env::set_current_dir(path).map_err(RuntimeError::CommandFailed)?;
+    if let Err(err) = env::set_current_dir(&path) {
+        writeln!(out, "cd: error moving to {}: {err}", path.display())
+            .map_err(RuntimeError::CommandFailed)?;
+    }
 
     Ok(())
 }

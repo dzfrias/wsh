@@ -13,6 +13,8 @@ pub enum RuntimeError {
     CommandFailed(io::Error),
     #[error("command not found")]
     CommandNotFound,
+    #[error("pipe error: {0}")]
+    PipeError(io::Error),
     #[error("type error: `{lhs}` `{op}` `{rhs}`")]
     TypeErrorInfix { lhs: Type, rhs: Type, op: InfixOp },
     #[error("type error: `{op}` `{expr}`")]
