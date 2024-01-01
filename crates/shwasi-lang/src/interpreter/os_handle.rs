@@ -23,7 +23,7 @@ pub trait OsHandle: IntoRawHandle + FromRawHandle + Sized {
         self.into_raw_handle()
     }
     #[inline]
-    fn from_os_handle(handle: RawHandle) -> Self {
+    unsafe fn from_os_handle(handle: RawHandle) -> Self {
         Self::from_raw_handle(handle)
     }
 }
