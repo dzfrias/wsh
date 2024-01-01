@@ -1,6 +1,0 @@
----
-source: tests/shell.rs
-expression: stderr
----
-Error: command not found
-
