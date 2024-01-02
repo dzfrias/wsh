@@ -1,4 +1,4 @@
-use shwasi_lang::{Interpreter, Lexer, Parser, Value};
+use shwasi_lang::{Shell, Value};
 
 macro_rules! shwasi_test {
     ($name:ident, $code:expr, $expected:expr) => {
@@ -6,10 +6,8 @@ macro_rules! shwasi_test {
         fn $name() {
             let input = $code;
             let expected = Some($expected);
-            let buf = Lexer::new(input).lex();
-            let ast = Parser::new(&buf).parse().unwrap();
-            let mut interpreter = Interpreter::new();
-            let result = interpreter.run(ast).unwrap();
+            let mut interpreter = Shell::new();
+            let result = interpreter.run(input).unwrap();
             assert_eq!(expected, result);
         }
     };

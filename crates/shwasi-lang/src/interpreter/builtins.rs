@@ -2,7 +2,7 @@ use std::{env, ffi::OsStr, fs, io, path::PathBuf};
 
 use filedescriptor::IntoRawFileDescriptor;
 
-use crate::{Interpreter, Lexer, Parser, RuntimeError, RuntimeResult};
+use crate::{Shell, ShellError, ShellResult};
 
 #[derive(Debug)]
 pub enum Builtin {
@@ -21,10 +21,10 @@ impl Builtin {
 
     pub fn run<I, S>(
         &self,
-        shell: &mut Interpreter,
+        shell: &mut Shell,
         args: I,
         stdout: impl io::Write + IntoRawFileDescriptor,
-    ) -> RuntimeResult<()>
+    ) -> ShellResult<()>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
@@ -36,7 +36,7 @@ impl Builtin {
     }
 }
 
-fn cd<I, S>(args: I, mut out: impl io::Write + IntoRawFileDescriptor) -> RuntimeResult<()>
+fn cd<I, S>(args: I, mut out: impl io::Write + IntoRawFileDescriptor) -> ShellResult<()>
 where
     I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
@@ -47,23 +47,23 @@ where
         .map(|arg| PathBuf::from(arg.as_ref()))
         .map_or_else(dirs::home_dir, Some)
     else {
-        writeln!(out, "cd: no home directory").map_err(RuntimeError::CommandFailed)?;
+        writeln!(out, "cd: no home directory").map_err(ShellError::CommandFailed)?;
         return Ok(());
     };
 
     if let Err(err) = env::set_current_dir(&path) {
         writeln!(out, "cd: error moving to {}: {err}", path.display())
-            .map_err(RuntimeError::CommandFailed)?;
+            .map_err(ShellError::CommandFailed)?;
     }
 
     Ok(())
 }
 
 fn source<I, S>(
-    shell: &mut Interpreter,
+    shell: &mut Shell,
     args: I,
     mut stdout: impl io::Write + IntoRawFileDescriptor,
-) -> RuntimeResult<()>
+) -> ShellResult<()>
 where
     I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
@@ -71,18 +71,22 @@ where
     let args = args.into_iter().collect::<Vec<_>>();
     // TOOD: support passing args to scripts
     let Some((file, _args)) = args.split_first() else {
-        writeln!(stdout, "source: no file provided").map_err(RuntimeError::CommandFailed)?;
+        writeln!(stdout, "source: no file provided").map_err(ShellError::CommandFailed)?;
         return Ok(());
     };
+    let contents = match fs::read_to_string(file.as_ref()) {
+        Ok(contents) => contents,
+        Err(err) => {
+            writeln!(stdout, "source: error reading file: {err}")
+                .map_err(ShellError::CommandFailed)?;
+            return Ok(());
+        }
+    };
     let fd = stdout.into_raw_file_descriptor();
-    let contents = fs::read_to_string(file.as_ref()).expect("TODO: error");
-    // TODO: this process should be done in the shell. Errors should be unified under a ShellError,
-    // so the exported API can be simplified.
-    let tokens = Lexer::new(&contents).lex();
-    let ast = Parser::new(&tokens).parse().expect("TODO: error");
-    shell.stdout(fd);
-    shell.dup_stdout(false);
-    shell.run(ast).expect("TODO: error");
+    // SAFETY: it is okay to use `fd` here because builtins should take owned file
+    // IntoRawFileDescriptor's
+    unsafe { shell.stdout(fd) };
+    shell.run(&contents)?;
 
     Ok(())
 }

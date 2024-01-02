@@ -4,11 +4,11 @@ use thiserror::Error;
 
 use crate::{
     ast::{InfixOp, PrefixOp},
-    Ident, Type,
+    Ident, ParseError, Type,
 };
 
 #[derive(Debug, Error)]
-pub enum RuntimeError {
+pub enum ShellError {
     #[error("command failed: {0}")]
     CommandFailed(io::Error),
     #[error("command not found")]
@@ -21,9 +21,13 @@ pub enum RuntimeError {
     TypeErrorPrefix { expr: Type, op: PrefixOp },
     #[error("unbound: `{0}`")]
     Unbound(Ident),
+    #[error("parse error: {0}")]
+    ParseError(ParseError),
+    #[error("error duplicating fd {0}: {1}")]
+    FdDupError(i64, io::Error),
 }
 
-impl RuntimeError {
+impl ShellError {
     pub fn from_command_error(err: io::Error) -> Self {
         if err.kind() == io::ErrorKind::NotFound {
             Self::CommandNotFound
@@ -33,4 +37,4 @@ impl RuntimeError {
     }
 }
 
-pub type RuntimeResult<T> = std::result::Result<T, RuntimeError>;
+pub type ShellResult<T> = std::result::Result<T, ShellError>;

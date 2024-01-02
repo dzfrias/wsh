@@ -9,12 +9,12 @@ use crate::{
         PrefixOp,
     },
     interpreter::{builtins::Builtin, env::Env},
-    parser::ast::{Ast, Command, Expr, InfixExpr, PrefixExpr, Stmt},
+    parser::ast::{Command, Expr, InfixExpr, PrefixExpr, Stmt},
+    Lexer, Parser,
 };
 pub use error::*;
 use filedescriptor::{
     AsRawFileDescriptor, FileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor,
-    RawFileDescriptor,
 };
 use smol_str::SmolStr;
 use std::{
@@ -25,45 +25,54 @@ use std::{
 };
 pub use value::*;
 
-pub struct Interpreter {
+pub struct Shell {
     env: Env,
-    stdout: RawFileDescriptor,
-    dup_stdout: bool,
+    stdout: FileDescriptor,
     last_status: i32,
 }
 
-impl Interpreter {
+impl Shell {
     pub fn new() -> Self {
         Self {
             env: Env::new(),
-            stdout: io::stdout().as_raw_file_descriptor(),
-            dup_stdout: true,
+            // TODO: this shouldn't be here
+            stdout: FileDescriptor::dup(&io::stdout().as_raw_file_descriptor()).unwrap(),
             last_status: 0,
         }
     }
 
-    pub fn run(&mut self, program: Ast) -> RuntimeResult<Option<Value>> {
+    pub fn run(&mut self, src: &str) -> ShellResult<Option<Value>> {
+        let buf = Lexer::new(src).lex();
+        let program = Parser::new(&buf).parse().map_err(ShellError::ParseError)?;
+
         let mut result = Value::Null;
         for stmt in program {
             result = self.eval_stmt(&stmt)?;
         }
+
         // Reset stdout to the original stdout. This is necessary for operations like `source`,
         // where the user may have redirected stdout somewhere else temporarily.
-        self.stdout = io::stdout().as_raw_file_descriptor();
-        self.dup_stdout = true;
+        self.stdout = FileDescriptor::dup(&io::stdout().as_raw_file_descriptor()).map_err(
+            |err| match err {
+                filedescriptor::Error::Dup { fd, source } => ShellError::FdDupError(fd, source),
+                _ => unreachable!(),
+            },
+        )?;
 
         Ok((!result.is_null()).then_some(result))
     }
 
-    pub(crate) fn stdout(&mut self, stdout: impl IntoRawFileDescriptor) {
-        self.stdout = stdout.into_raw_file_descriptor();
+    /// Sets the stdout file descriptor to `stdout`.
+    ///
+    /// # Safety
+    /// This takes ownership of the file descriptor. The caller must ensure that the file
+    /// descriptor is not closed while it is still in use, etc.
+    pub(crate) unsafe fn stdout(&mut self, stdout: impl IntoRawFileDescriptor) {
+        self.stdout =
+            unsafe { FileDescriptor::from_raw_file_descriptor(stdout.into_raw_file_descriptor()) };
     }
 
-    pub(crate) fn dup_stdout(&mut self, dup: bool) {
-        self.dup_stdout = dup;
-    }
-
-    fn eval_stmt(&mut self, stmt: &Stmt) -> RuntimeResult<Value> {
+    fn eval_stmt(&mut self, stmt: &Stmt) -> ShellResult<Value> {
         match stmt {
             Stmt::Pipeline(pipeline) => self.eval_pipeline(pipeline, /*capture =*/ false),
             Stmt::Expr(expr) => self.eval_expr(expr),
@@ -82,14 +91,14 @@ impl Interpreter {
         }
     }
 
-    fn eval_pipeline(&mut self, pipeline: &Pipeline, capture: bool) -> RuntimeResult<Value> {
+    fn eval_pipeline(&mut self, pipeline: &Pipeline, capture: bool) -> ShellResult<Value> {
         if capture && pipeline.write.is_none() {
-            let (mut read_end, write_end) = os_pipe::pipe().map_err(RuntimeError::PipeError)?;
+            let (mut read_end, write_end) = os_pipe::pipe().map_err(ShellError::PipeError)?;
             self.run_pipeline(pipeline, write_end, None)?;
             let mut out = vec![];
             read_end
                 .read_to_end(&mut out)
-                .map_err(RuntimeError::PipeError)?;
+                .map_err(ShellError::PipeError)?;
             let mut out = String::from_utf8_lossy(&out).to_string();
             while out.ends_with('\n') || out.ends_with('\r') {
                 out.truncate(out.len() - 1);
@@ -103,7 +112,7 @@ impl Interpreter {
                 kind: PipelineEndKind::Write,
             }) => {
                 let path = self.eval_expr(expr)?.to_string();
-                let file = File::create(path).map_err(RuntimeError::CommandFailed)?;
+                let file = File::create(path).map_err(ShellError::CommandFailed)?;
                 self.run_pipeline(pipeline, file, None)?;
             }
             Some(PipelineEnd {
@@ -115,19 +124,14 @@ impl Interpreter {
                     .append(true)
                     .create(true)
                     .open(path)
-                    .map_err(RuntimeError::CommandFailed)?;
+                    .map_err(ShellError::CommandFailed)?;
                 self.run_pipeline(pipeline, file, None)?;
             }
             None => {
                 // We duplicate the stdout fd because `run_pipeline` will close whatever's passed
                 // in, which we don't want because we need to use the file descriptor multiple
                 // times.
-                if self.dup_stdout {
-                    let stdout = FileDescriptor::dup(&self.stdout).expect("TODO: error");
-                    self.run_pipeline(pipeline, stdout, None)?;
-                } else {
-                    self.run_pipeline(pipeline, self.stdout, None)?;
-                }
+                self.run_pipeline(pipeline, self.stdout.try_clone().unwrap(), None)?;
             }
         }
 
@@ -146,7 +150,7 @@ impl Interpreter {
         pipeline: &Pipeline,
         default_stdout: impl IntoRawFileDescriptor,
         default_stdin: Option<os_pipe::PipeReader>,
-    ) -> RuntimeResult<()> {
+    ) -> ShellResult<()> {
         let mut last_result = None;
         // We essentially downcast our impl IntoRawFileDescriptor into a raw fd. This is just so we
         // can have a unified type for stdout.
@@ -156,10 +160,10 @@ impl Interpreter {
         while let Some(cmd) = iter.next() {
             let stdout;
             let pipes = if iter.peek().is_some() {
-                let (out, in_) = os_pipe::pipe().map_err(RuntimeError::PipeError)?;
+                let (out, in_) = os_pipe::pipe().map_err(ShellError::PipeError)?;
                 stdout = in_
                     .try_clone()
-                    .map_err(RuntimeError::PipeError)?
+                    .map_err(ShellError::PipeError)?
                     .into_raw_file_descriptor();
                 Some((out, in_))
             } else {
@@ -192,7 +196,7 @@ impl Interpreter {
         env: &[EnvSet],
         stdout: impl IntoRawFileDescriptor,
         stdin: Option<os_pipe::PipeReader>,
-    ) -> RuntimeResult<Option<process::ExitStatus>> {
+    ) -> ShellResult<Option<process::ExitStatus>> {
         // TODO: avoid clone here?
         if let Some(mut alias) = self.env.get_alias(cmd.name.as_str()).cloned() {
             alias
@@ -221,10 +225,10 @@ impl Interpreter {
             .args
             .iter()
             .map(|arg| self.eval_expr(arg).map(|val| val.to_string()))
-            .collect::<RuntimeResult<Vec<_>>>()?;
+            .collect::<ShellResult<Vec<_>>>()?;
 
-        // SAFETY: the `stdout` argument comes from something that implements OsHandle, which means
-        // it must be valid.
+        // SAFETY: the `stdout` argument comes from something that implements IntoRawFileDescriptor,
+        // which means it must be valid.
         // This is where we take ownership of the file descriptor, which will be closed when
         // `stdout` is dropped.
         let stdout = unsafe { File::from_raw_file_descriptor(stdout.into_raw_file_descriptor()) };
@@ -235,7 +239,11 @@ impl Interpreter {
         }
 
         let mut command = process::Command::new(cmd.name.as_str());
-        command.args(args).stdout(stdout);
+        // TODO: properly handle stderr
+        command
+            .args(args)
+            .stdout(stdout)
+            .stderr(process::Stdio::inherit());
 
         for env_set in env {
             let value = self.eval_expr(&env_set.expr)?;
@@ -246,7 +254,7 @@ impl Interpreter {
             command.stdin(stdin);
         }
 
-        let out = command.output().map_err(RuntimeError::from_command_error)?;
+        let out = command.output().map_err(ShellError::from_command_error)?;
 
         Ok(Some(out.status))
     }
@@ -254,20 +262,20 @@ impl Interpreter {
     fn eval_alias_assign(
         &mut self,
         AliasAssign { name, pipeline }: &AliasAssign,
-    ) -> RuntimeResult<()> {
+    ) -> ShellResult<()> {
         // TODO: avoid clone here?
         self.env.set_alias(name.clone(), pipeline.clone());
         Ok(())
     }
 
-    fn eval_assign(&mut self, Assign { name, expr }: &Assign) -> RuntimeResult<()> {
+    fn eval_assign(&mut self, Assign { name, expr }: &Assign) -> ShellResult<()> {
         let val = self.eval_expr(expr)?;
         self.env.set(name.clone(), val);
 
         Ok(())
     }
 
-    fn eval_export(&mut self, export: &Export) -> RuntimeResult<()> {
+    fn eval_export(&mut self, export: &Export) -> ShellResult<()> {
         std::env::set_var(
             export.name.as_str(),
             self.eval_expr(&export.expr)?.to_string(),
@@ -276,13 +284,13 @@ impl Interpreter {
         Ok(())
     }
 
-    fn eval_expr(&mut self, expr: &Expr) -> RuntimeResult<Value> {
+    fn eval_expr(&mut self, expr: &Expr) -> ShellResult<Value> {
         Ok(match expr {
             Expr::Ident(name) => self
                 .env
                 .get(name)
                 .cloned()
-                .ok_or_else(|| RuntimeError::Unbound(name.clone()))?,
+                .ok_or_else(|| ShellError::Unbound(name.clone()))?,
             Expr::Infix(infix) => self.eval_infix(infix)?,
             Expr::Prefix(prefix) => self.eval_prefix(prefix)?,
             Expr::String(s) => Value::String(s.clone()),
@@ -294,7 +302,7 @@ impl Interpreter {
         })
     }
 
-    fn eval_infix(&mut self, infix: &InfixExpr) -> RuntimeResult<Value> {
+    fn eval_infix(&mut self, infix: &InfixExpr) -> ShellResult<Value> {
         let lhs = self.eval_expr(&infix.lhs)?;
         let rhs = self.eval_expr(&infix.rhs)?;
         let lhs_type = lhs.type_of();
@@ -316,7 +324,7 @@ impl Interpreter {
             (Value::String(lhs), Value::Bool(rhs)) => {
                 self.eval_string_infix(infix.op, lhs, rhs.to_string().into())
             }
-            _ => Err(RuntimeError::TypeErrorInfix {
+            _ => Err(ShellError::TypeErrorInfix {
                 lhs: lhs_type,
                 rhs: rhs_type,
                 op: infix.op,
@@ -324,7 +332,7 @@ impl Interpreter {
         }
     }
 
-    fn eval_prefix(&mut self, prefix: &PrefixExpr) -> RuntimeResult<Value> {
+    fn eval_prefix(&mut self, prefix: &PrefixExpr) -> ShellResult<Value> {
         let value = self.eval_expr(&prefix.expr)?;
 
         match value {
@@ -332,14 +340,14 @@ impl Interpreter {
             Value::String(s) if s.parse::<f64>().is_ok() => {
                 self.eval_numeric_prefix(prefix.op, s.parse().unwrap())
             }
-            _ => Err(RuntimeError::TypeErrorPrefix {
+            _ => Err(ShellError::TypeErrorPrefix {
                 expr: value.type_of(),
                 op: prefix.op,
             }),
         }
     }
 
-    fn eval_numeric_infix(&mut self, op: InfixOp, lhs: f64, rhs: f64) -> RuntimeResult<Value> {
+    fn eval_numeric_infix(&mut self, op: InfixOp, lhs: f64, rhs: f64) -> ShellResult<Value> {
         Ok(match op {
             InfixOp::Add => Value::Number(lhs + rhs),
             InfixOp::Sub => Value::Number(lhs - rhs),
@@ -354,7 +362,7 @@ impl Interpreter {
         })
     }
 
-    fn eval_bool_infix(&mut self, op: InfixOp, lhs: bool, rhs: bool) -> RuntimeResult<Value> {
+    fn eval_bool_infix(&mut self, op: InfixOp, lhs: bool, rhs: bool) -> ShellResult<Value> {
         let result = match op {
             InfixOp::Eq => Value::Bool(lhs == rhs),
             InfixOp::Ne => Value::Bool(lhs != rhs),
@@ -364,12 +372,12 @@ impl Interpreter {
         Ok(result)
     }
 
-    fn eval_numeric_prefix(&mut self, op: PrefixOp, n: f64) -> RuntimeResult<Value> {
+    fn eval_numeric_prefix(&mut self, op: PrefixOp, n: f64) -> ShellResult<Value> {
         let result = match op {
             PrefixOp::Sign => n,
             PrefixOp::Neg => -n,
             PrefixOp::Bang => {
-                return Err(RuntimeError::TypeErrorPrefix {
+                return Err(ShellError::TypeErrorPrefix {
                     expr: Type::Number,
                     op,
                 })
@@ -379,18 +387,13 @@ impl Interpreter {
         Ok(Value::Number(result))
     }
 
-    fn eval_string_infix(
-        &mut self,
-        op: InfixOp,
-        lhs: SmolStr,
-        rhs: SmolStr,
-    ) -> RuntimeResult<Value> {
+    fn eval_string_infix(&mut self, op: InfixOp, lhs: SmolStr, rhs: SmolStr) -> ShellResult<Value> {
         let result = match op {
             InfixOp::Add => Value::String(format!("{lhs}{rhs}").into()),
             InfixOp::Eq => Value::Bool(lhs == rhs),
             InfixOp::Ne => Value::Bool(lhs != rhs),
             _ => {
-                return Err(RuntimeError::TypeErrorInfix {
+                return Err(ShellError::TypeErrorInfix {
                     lhs: Type::String,
                     rhs: Type::String,
                     op,
@@ -406,7 +409,7 @@ impl Interpreter {
         op: InfixOp,
         lhs: SmolStr,
         rhs: f64,
-    ) -> RuntimeResult<Value> {
+    ) -> ShellResult<Value> {
         if let Ok(lhs) = lhs.parse::<f64>() {
             return self.eval_numeric_infix(op, lhs, rhs);
         }
@@ -415,7 +418,7 @@ impl Interpreter {
             InfixOp::Add => format!("{lhs}{rhs}"),
             InfixOp::Mul => lhs.repeat(rhs as usize),
             _ => {
-                return Err(RuntimeError::TypeErrorInfix {
+                return Err(ShellError::TypeErrorInfix {
                     lhs: Type::String,
                     rhs: Type::Number,
                     op,
@@ -431,7 +434,7 @@ impl Interpreter {
         op: InfixOp,
         lhs: f64,
         rhs: SmolStr,
-    ) -> RuntimeResult<Value> {
+    ) -> ShellResult<Value> {
         if let Ok(rhs) = rhs.parse::<f64>() {
             return self.eval_numeric_infix(op, lhs, rhs);
         }
@@ -440,7 +443,7 @@ impl Interpreter {
             InfixOp::Add => format!("{lhs}{rhs}"),
             InfixOp::Mul => rhs.repeat(lhs as usize),
             _ => {
-                return Err(RuntimeError::TypeErrorInfix {
+                return Err(ShellError::TypeErrorInfix {
                     lhs: Type::Number,
                     rhs: Type::String,
                     op,
@@ -451,7 +454,7 @@ impl Interpreter {
         Ok(Value::String(result.into()))
     }
 
-    fn eval_env_var(&mut self, name: &SmolStr) -> RuntimeResult<Value> {
+    fn eval_env_var(&mut self, name: &SmolStr) -> ShellResult<Value> {
         let var = std::env::var_os(name.as_str()).unwrap_or_default();
         let val = var.to_string_lossy();
         Ok(match val {
@@ -467,7 +470,7 @@ impl Interpreter {
     }
 }
 
-impl Default for Interpreter {
+impl Default for Shell {
     fn default() -> Self {
         Self::new()
     }

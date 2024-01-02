@@ -5,7 +5,7 @@ use std::{fs, path::Path};
 use anyhow::{bail, Context, Result};
 use ariadne::{Color, Label, Report, ReportKind, Source};
 use clap::Parser as CliParser;
-use shwasi_lang::{Interpreter, Lexer, ParseError, Parser};
+use shwasi_lang::{ParseError, Shell, ShellError};
 use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
 
 use crate::cli::Cli;
@@ -32,7 +32,7 @@ fn main() -> Result<()> {
 
     let args = Cli::parse();
     if let Some(input) = args.input {
-        let mut interpreter = Interpreter::new();
+        let mut interpreter = Shell::new();
         run_file(&mut interpreter, input)?;
     } else {
         start_repl()?;
@@ -41,22 +41,20 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn run_file(interpreter: &mut Interpreter, input: impl AsRef<Path>) -> Result<()> {
-    let file_input = fs::read_to_string(&input).context("error reading input file")?;
-    let tokens = Lexer::new(&file_input).lex();
-    let ast = match Parser::new(&tokens).parse() {
-        Ok(ast) => ast,
-        Err(err) => {
+fn run_file(interpreter: &mut Shell, input: impl AsRef<Path>) -> Result<()> {
+    let contents = fs::read_to_string(&input).context("error reading input file")?;
+    match interpreter.run(&contents) {
+        Ok(_) => Ok(()),
+        Err(ShellError::ParseError(parse_error)) => {
             print_parse_error(
-                err,
-                &file_input,
-                Some(&input.as_ref().as_os_str().to_string_lossy()),
+                parse_error,
+                &contents,
+                Some(&input.as_ref().to_string_lossy()),
             );
             bail!("error parsing input");
         }
-    };
-    interpreter.run(ast)?;
-    Ok(())
+        Err(err) => Err(anyhow::anyhow!(err)),
+    }
 }
 
 fn start_repl() -> Result<()> {
@@ -68,9 +66,9 @@ fn start_repl() -> Result<()> {
     if let Some(home) = &home_dir {
         let _ = rl.load_history(&home.join(".wsi_history"));
     }
-    let mut interpreter = Interpreter::new();
+    let mut shell = Shell::new();
     if let Some(rc_file) = rc_file {
-        run_file(&mut interpreter, rc_file)?;
+        run_file(&mut shell, rc_file)?;
     }
 
     let mut dir = std::env::current_dir().context("error getting current directory")?;
@@ -87,17 +85,10 @@ fn start_repl() -> Result<()> {
             match input {
                 Ok(input) => {
                     rl.add_history_entry(&input)?;
-                    let tokens = Lexer::new(&input).lex();
-                    let ast = match Parser::new(&tokens).parse() {
-                        Ok(ast) => ast,
-                        Err(err) => {
-                            print_parse_error(err, &input, None);
-                            break 'inp;
-                        }
-                    };
-                    match interpreter.run(ast) {
+                    match shell.run(&input) {
                         Ok(Some(result)) => println!("{result}"),
                         Ok(None) => break 'inp,
+                        Err(ShellError::ParseError(err)) => print_parse_error(err, &input, None),
                         Err(err) => println!("shwasi: {err}"),
                     }
                 }
