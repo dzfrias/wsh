@@ -1,5 +1,6 @@
 use std::io;
 
+use smol_str::SmolStr;
 use thiserror::Error;
 
 use crate::{
@@ -11,8 +12,8 @@ use crate::{
 pub enum ShellError {
     #[error("command failed: {0}")]
     CommandFailed(io::Error),
-    #[error("command not found")]
-    CommandNotFound,
+    #[error("command not found: {0}")]
+    CommandNotFound(SmolStr),
     #[error("pipe error: {0}")]
     PipeError(io::Error),
     #[error("type error: `{lhs}` `{op}` `{rhs}`")]
@@ -23,18 +24,12 @@ pub enum ShellError {
     Unbound(Ident),
     #[error("parse error: {0}")]
     ParseError(ParseError),
-    #[error("error duplicating fd {0}: {1}")]
-    FdDupError(i64, io::Error),
-}
-
-impl ShellError {
-    pub fn from_command_error(err: io::Error) -> Self {
-        if err.kind() == io::ErrorKind::NotFound {
-            Self::CommandNotFound
-        } else {
-            Self::CommandFailed(err)
-        }
-    }
+    #[error("error duplicating fd: {0}")]
+    DupError(io::Error),
+    #[error("error writing to fd in builtin: {0}")]
+    BuiltinWriteError(io::Error),
+    #[error("error opening fd for redirection: {0}")]
+    RedirectError(io::Error),
 }
 
 pub type ShellResult<T> = std::result::Result<T, ShellError>;

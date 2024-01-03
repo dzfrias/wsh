@@ -18,6 +18,10 @@ use filedescriptor::{
     RawFileDescriptor,
 };
 use smol_str::SmolStr;
+#[cfg(unix)]
+use std::os::unix::process::ExitStatusExt;
+#[cfg(windows)]
+use std::os::windows::process::ExitStatusExt;
 use std::{
     borrow::Cow,
     fs::{File, OpenOptions},
@@ -108,7 +112,10 @@ impl Shell {
                 kind: PipelineEndKind::Write,
             }) => {
                 let path = self.eval_expr(expr)?.to_string();
-                let file = File::create(path).map_err(ShellError::CommandFailed)?;
+                let file = File::create(path).map_err(|err| {
+                    self.set_status(1);
+                    ShellError::RedirectError(err)
+                })?;
                 // SAFETY: stdout here comes from a just-opened file, which is a valid raw fd
                 unsafe { self.run_pipeline(pipeline, file.into_raw_file_descriptor(), None)? };
             }
@@ -121,7 +128,10 @@ impl Shell {
                     .append(true)
                     .create(true)
                     .open(path)
-                    .map_err(ShellError::CommandFailed)?;
+                    .map_err(|err| {
+                        self.set_status(1);
+                        ShellError::RedirectError(err)
+                    })?;
                 // SAFETY: stdout here comes from a just-opened file, which is a valid raw fd
                 unsafe { self.run_pipeline(pipeline, file.into_raw_file_descriptor(), None)? };
             }
@@ -139,8 +149,10 @@ impl Shell {
                 // We duplicate the stdout fd because `run_pipeline` will close whatever's passed
                 // in, which we don't want because we need to use the file descriptor multiple
                 // times.
-                // TODO: error handling
-                let stdout_dup = stdout_fd.try_clone().unwrap();
+                let stdout_dup = stdout_fd.try_clone().map_err(|err| match err {
+                    filedescriptor::Error::Dup { source, .. } => ShellError::DupError(source),
+                    _ => unreachable!(),
+                })?;
                 // Here is where we turn the shim back into a raw fd
                 stdout_fd.into_raw_file_descriptor();
                 // SAFETY: `stdout_dup` is valid because it's just been dupliated from our stdout,
@@ -174,7 +186,7 @@ impl Shell {
         default_stdout: RawFileDescriptor,
         default_stdin: Option<os_pipe::PipeReader>,
     ) -> ShellResult<()> {
-        let mut last_result = None;
+        let mut last_result = 0;
         let mut stdin = default_stdin;
         let mut iter = pipeline.commands.iter().peekable();
         while let Some(cmd) = iter.next() {
@@ -183,7 +195,7 @@ impl Shell {
                 let (out, in_) = os_pipe::pipe().map_err(ShellError::PipeError)?;
                 stdout = in_
                     .try_clone()
-                    .map_err(ShellError::PipeError)?
+                    .map_err(ShellError::DupError)?
                     .into_raw_file_descriptor();
                 Some((out, in_))
             } else {
@@ -198,7 +210,14 @@ impl Shell {
                 stdin = Some(out);
             }
 
-            last_result = result;
+            #[cfg(unix)]
+            {
+                last_result = result;
+            }
+            #[cfg(windows)]
+            {
+                last_result = result as i32;
+            }
         }
 
         self.set_status(last_result);
@@ -208,9 +227,6 @@ impl Shell {
 
     /// Evaluates a command, returning the exit status of the command.
     ///
-    /// The exit command is optional, so `None` is returned if the command did not have an exit
-    /// status. This is the case for builtins, for example.
-    ///
     /// # Safety
     /// This command is safe as long as the provided `stdout` is valid. This will close `stdout`.
     unsafe fn run_command(
@@ -219,7 +235,7 @@ impl Shell {
         env: &[EnvSet],
         stdout: RawFileDescriptor,
         stdin: Option<os_pipe::PipeReader>,
-    ) -> ShellResult<Option<process::ExitStatus>> {
+    ) -> ShellResult<i32> {
         // TODO: avoid clone here?
         if let Some(mut alias) = self.env.get_alias(cmd.name.as_str()).cloned() {
             alias
@@ -238,10 +254,10 @@ impl Shell {
                 let pipeline = self.env.remove_alias(&cmd.name).unwrap();
                 self.run_pipeline(&alias, stdout, stdin)?;
                 self.env.set_alias(cmd.name.clone(), pipeline);
-                return Ok(None);
+                return Ok(self.last_status);
             }
             self.run_pipeline(&alias, stdout, stdin)?;
-            return Ok(None);
+            return Ok(self.last_status);
         }
 
         let args = cmd
@@ -255,8 +271,8 @@ impl Shell {
         let stdout = File::from_raw_file_descriptor(stdout);
 
         if let Some(builtin) = Builtin::from_name(cmd.name.as_str()) {
-            builtin.run(self, args, stdout)?;
-            return Ok(None);
+            let status = builtin.run(self, args, stdout)?;
+            return Ok(status);
         }
 
         let mut command = process::Command::new(cmd.name.as_str());
@@ -275,9 +291,24 @@ impl Shell {
             command.stdin(stdin);
         }
 
-        let out = command.output().map_err(ShellError::from_command_error)?;
+        let out = command.output().map_err(|err| match err.kind() {
+            io::ErrorKind::NotFound => {
+                self.set_status(127);
+                ShellError::CommandNotFound(cmd.name.clone())
+            }
+            _ => ShellError::CommandFailed(err),
+        })?;
 
-        Ok(Some(out.status))
+        #[cfg(unix)]
+        let out = out
+            .status
+            .code()
+            .or_else(|| out.status.signal().map(|s| s + 128))
+            .unwrap_or(0);
+        #[cfg(windows)]
+        let out = out.status.code().unwrap();
+
+        Ok(out)
     }
 
     fn eval_alias_assign(
@@ -486,8 +517,8 @@ impl Shell {
         })
     }
 
-    fn set_status(&mut self, exit_status: Option<process::ExitStatus>) {
-        self.last_status = exit_status.and_then(|s| s.code()).unwrap_or(0);
+    fn set_status(&mut self, exit_status: i32) {
+        self.last_status = exit_status;
     }
 }
 

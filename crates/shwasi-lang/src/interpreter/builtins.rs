@@ -24,7 +24,7 @@ impl Builtin {
         shell: &mut Shell,
         args: I,
         stdout: impl io::Write + IntoRawFileDescriptor,
-    ) -> ShellResult<()>
+    ) -> ShellResult<i32>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
@@ -36,7 +36,7 @@ impl Builtin {
     }
 }
 
-fn cd<I, S>(args: I, mut out: impl io::Write + IntoRawFileDescriptor) -> ShellResult<()>
+fn cd<I, S>(args: I, mut out: impl io::Write + IntoRawFileDescriptor) -> ShellResult<i32>
 where
     I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
@@ -47,23 +47,24 @@ where
         .map(|arg| PathBuf::from(arg.as_ref()))
         .map_or_else(dirs::home_dir, Some)
     else {
-        writeln!(out, "cd: no home directory").map_err(ShellError::CommandFailed)?;
-        return Ok(());
+        writeln!(out, "cd: no home directory").map_err(ShellError::BuiltinWriteError)?;
+        return Ok(1);
     };
 
     if let Err(err) = env::set_current_dir(&path) {
         writeln!(out, "cd: error moving to {}: {err}", path.display())
-            .map_err(ShellError::CommandFailed)?;
+            .map_err(ShellError::BuiltinWriteError)?;
+        return Ok(1);
     }
 
-    Ok(())
+    Ok(0)
 }
 
 fn source<I, S>(
     shell: &mut Shell,
     args: I,
     mut stdout: impl io::Write + IntoRawFileDescriptor,
-) -> ShellResult<()>
+) -> ShellResult<i32>
 where
     I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
@@ -71,15 +72,15 @@ where
     let args = args.into_iter().collect::<Vec<_>>();
     // TOOD: support passing args to scripts
     let Some((file, _args)) = args.split_first() else {
-        writeln!(stdout, "source: no file provided").map_err(ShellError::CommandFailed)?;
-        return Ok(());
+        writeln!(stdout, "source: no file provided").map_err(ShellError::BuiltinWriteError)?;
+        return Ok(1);
     };
     let contents = match fs::read_to_string(file.as_ref()) {
         Ok(contents) => contents,
         Err(err) => {
             writeln!(stdout, "source: error reading file: {err}")
-                .map_err(ShellError::CommandFailed)?;
-            return Ok(());
+                .map_err(ShellError::BuiltinWriteError)?;
+            return Ok(1);
         }
     };
     let fd = stdout.into_raw_file_descriptor();
@@ -92,5 +93,5 @@ where
     // will never close the `stdout` it's given, so we must manually close it here.
     let _ = unsafe { FileDescriptor::from_raw_file_descriptor(fd) };
 
-    Ok(())
+    Ok(1)
 }

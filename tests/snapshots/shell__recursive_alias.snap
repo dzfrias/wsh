@@ -2,5 +2,5 @@
 source: tests/shell.rs
 expression: stderr
 ---
-Error: command not found
+Error: command not found: __should_not_be_defined
 
