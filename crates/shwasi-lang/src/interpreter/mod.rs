@@ -10,7 +10,7 @@ use crate::{
     },
     interpreter::{builtins::Builtin, env::Env},
     parser::ast::{Command, Expr, InfixExpr, PrefixExpr, Stmt},
-    Lexer, Parser,
+    Lexer, ParseResult, Parser,
 };
 pub use error::*;
 use filedescriptor::{
@@ -25,7 +25,7 @@ use std::os::windows::process::ExitStatusExt;
 use std::{
     borrow::Cow,
     fs::{File, OpenOptions},
-    io::{self, Read},
+    io::{self, Read, Write},
     process,
 };
 pub use value::*;
@@ -45,13 +45,28 @@ impl Shell {
         }
     }
 
-    pub fn run(&mut self, src: &str) -> ShellResult<Option<Value>> {
+    pub fn run(&mut self, src: &str) -> ParseResult<Option<Value>> {
         let buf = Lexer::new(src).lex();
-        let program = Parser::new(&buf).parse().map_err(ShellError::ParseError)?;
+        let program = Parser::new(&buf).parse()?;
 
         let mut result = Value::Null;
         for stmt in program {
-            result = self.eval_stmt(&stmt)?;
+            result = match self.eval_stmt(&stmt) {
+                Ok(result) => result,
+                // Propagate parse errors
+                Err(ShellError::ParseError(err)) => return Err(err),
+                // Any other error is just written to stdout
+                // TODO: write to global stderr instead
+                Err(err) => {
+                    // SAFETY: `stdout` must be a valid file descriptor
+                    let mut stdout =
+                        unsafe { FileDescriptor::from_raw_file_descriptor(self.stdout) };
+                    writeln!(stdout, "{err}").expect("write to stdout failed!");
+                    // We consume it into a raw fd so that it isn't closed on drop
+                    stdout.into_raw_file_descriptor();
+                    continue;
+                }
+            }
         }
 
         // Reset stdout to the original stdout. This is necessary for operations like `source`,

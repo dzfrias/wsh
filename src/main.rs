@@ -5,7 +5,7 @@ use std::{fs, path::Path};
 use anyhow::{bail, Context, Result};
 use ariadne::{Color, Label, Report, ReportKind, Source};
 use clap::Parser as CliParser;
-use shwasi_lang::{ParseError, Shell, ShellError};
+use shwasi_lang::{ParseError, Shell};
 use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
 
 use crate::cli::Cli;
@@ -45,7 +45,7 @@ fn run_file(interpreter: &mut Shell, input: impl AsRef<Path>) -> Result<()> {
     let contents = fs::read_to_string(&input).context("error reading input file")?;
     match interpreter.run(&contents) {
         Ok(_) => Ok(()),
-        Err(ShellError::ParseError(parse_error)) => {
+        Err(parse_error) => {
             print_parse_error(
                 parse_error,
                 &contents,
@@ -53,7 +53,6 @@ fn run_file(interpreter: &mut Shell, input: impl AsRef<Path>) -> Result<()> {
             );
             bail!("error parsing input");
         }
-        Err(err) => Err(anyhow::anyhow!(err)),
     }
 }
 
@@ -88,8 +87,7 @@ fn start_repl() -> Result<()> {
                     match shell.run(&input) {
                         Ok(Some(result)) => println!("{result}"),
                         Ok(None) => break 'inp,
-                        Err(ShellError::ParseError(err)) => print_parse_error(err, &input, None),
-                        Err(err) => println!("shwasi: {err}"),
+                        Err(err) => print_parse_error(err, &input, None),
                     }
                 }
                 Err(rustyline::error::ReadlineError::Eof) => {
