@@ -126,12 +126,23 @@ impl Shell {
                 unsafe { self.run_pipeline(pipeline, file.into_raw_file_descriptor(), None)? };
             }
             None => {
+                // We have to do a litle bit of a hack to get Rust to accept this code on Windows.
+                // For some reason, `AsRawFileDescriptor` is not implemented for
+                // `RawFileDescriptor` on Windows (which is caused by the missing corresponding
+                // trait implementation in std). I'm not sure if that's intentional or not. This
+                // makes it impossible to use `FileDescriptor::dup`.
+                //
+                // Either way, we can get around this by turning the `RawFileDescriptor` into a
+                // `FileDescriptor`, calling `try_clone` (a wrapper of `dup`), and then turning our
+                // shim back into a `RawFileDescriptor` so that it isn't closed on drop.
+                let stdout_fd = unsafe { FileDescriptor::from_raw_file_descriptor(self.stdout) };
                 // We duplicate the stdout fd because `run_pipeline` will close whatever's passed
                 // in, which we don't want because we need to use the file descriptor multiple
                 // times.
-                //
                 // TODO: error handling
-                let stdout_dup = FileDescriptor::dup(&self.stdout).unwrap();
+                let stdout_dup = stdout_fd.try_clone().unwrap();
+                // Here is where we turn the shim back into a raw fd
+                stdout_fd.into_raw_file_descriptor();
                 // SAFETY: `stdout_dup` is valid because it's just been dupliated from our stdout,
                 // which must've been valid as a result of the error handling
                 unsafe {
