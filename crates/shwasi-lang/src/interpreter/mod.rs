@@ -15,6 +15,7 @@ use crate::{
 pub use error::*;
 use filedescriptor::{
     AsRawFileDescriptor, FileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor,
+    RawFileDescriptor,
 };
 use smol_str::SmolStr;
 use std::{
@@ -27,7 +28,7 @@ pub use value::*;
 
 pub struct Shell {
     env: Env,
-    stdout: FileDescriptor,
+    stdout: RawFileDescriptor,
     last_status: i32,
 }
 
@@ -35,8 +36,7 @@ impl Shell {
     pub fn new() -> Self {
         Self {
             env: Env::new(),
-            // TODO: this shouldn't be here
-            stdout: FileDescriptor::dup(&io::stdout().as_raw_file_descriptor()).unwrap(),
+            stdout: io::stdout().as_raw_file_descriptor(),
             last_status: 0,
         }
     }
@@ -52,12 +52,7 @@ impl Shell {
 
         // Reset stdout to the original stdout. This is necessary for operations like `source`,
         // where the user may have redirected stdout somewhere else temporarily.
-        self.stdout = FileDescriptor::dup(&io::stdout().as_raw_file_descriptor()).map_err(
-            |err| match err {
-                filedescriptor::Error::Dup { fd, source } => ShellError::FdDupError(fd, source),
-                _ => unreachable!(),
-            },
-        )?;
+        self.stdout = io::stdout().as_raw_file_descriptor();
 
         Ok((!result.is_null()).then_some(result))
     }
@@ -65,11 +60,11 @@ impl Shell {
     /// Sets the stdout file descriptor to `stdout`.
     ///
     /// # Safety
-    /// This takes ownership of the file descriptor. The caller must ensure that the file
-    /// descriptor is not closed while it is still in use, etc.
-    pub(crate) unsafe fn stdout(&mut self, stdout: impl IntoRawFileDescriptor) {
-        self.stdout =
-            unsafe { FileDescriptor::from_raw_file_descriptor(stdout.into_raw_file_descriptor()) };
+    /// The provided file descriptor must be valid. Additionally, the shell **does not** close the
+    /// provided fd, so that **must** be handled after the fd has been fully used up by the calling
+    /// code.
+    pub(self) unsafe fn stdout(&mut self, stdout: RawFileDescriptor) {
+        self.stdout = stdout;
     }
 
     fn eval_stmt(&mut self, stmt: &Stmt) -> ShellResult<Value> {
@@ -94,7 +89,8 @@ impl Shell {
     fn eval_pipeline(&mut self, pipeline: &Pipeline, capture: bool) -> ShellResult<Value> {
         if capture && pipeline.write.is_none() {
             let (mut read_end, write_end) = os_pipe::pipe().map_err(ShellError::PipeError)?;
-            self.run_pipeline(pipeline, write_end, None)?;
+            // SAFETY: write end is a valid file descriptor that has not been closed yet
+            unsafe { self.run_pipeline(pipeline, write_end.into_raw_file_descriptor(), None)? };
             let mut out = vec![];
             read_end
                 .read_to_end(&mut out)
@@ -113,7 +109,8 @@ impl Shell {
             }) => {
                 let path = self.eval_expr(expr)?.to_string();
                 let file = File::create(path).map_err(ShellError::CommandFailed)?;
-                self.run_pipeline(pipeline, file, None)?;
+                // SAFETY: stdout here comes from a just-opened file, which is a valid raw fd
+                unsafe { self.run_pipeline(pipeline, file.into_raw_file_descriptor(), None)? };
             }
             Some(PipelineEnd {
                 expr,
@@ -125,13 +122,21 @@ impl Shell {
                     .create(true)
                     .open(path)
                     .map_err(ShellError::CommandFailed)?;
-                self.run_pipeline(pipeline, file, None)?;
+                // SAFETY: stdout here comes from a just-opened file, which is a valid raw fd
+                unsafe { self.run_pipeline(pipeline, file.into_raw_file_descriptor(), None)? };
             }
             None => {
                 // We duplicate the stdout fd because `run_pipeline` will close whatever's passed
                 // in, which we don't want because we need to use the file descriptor multiple
                 // times.
-                self.run_pipeline(pipeline, self.stdout.try_clone().unwrap(), None)?;
+                //
+                // TODO: error handling
+                let stdout_dup = FileDescriptor::dup(&self.stdout).unwrap();
+                // SAFETY: `stdout_dup` is valid because it's just been dupliated from our stdout,
+                // which must've been valid as a result of the error handling
+                unsafe {
+                    self.run_pipeline(pipeline, stdout_dup.into_raw_file_descriptor(), None)?;
+                }
             }
         }
 
@@ -145,16 +150,20 @@ impl Shell {
         })
     }
 
-    fn run_pipeline(
+    /// Execute a pipeline, writing results to `default_stdout` and reading stdin from
+    /// `default_stdin`.
+    ///
+    /// # Safety
+    /// This method can be called safely as along as `default_stdout` is a valid file descriptor.
+    /// Since this method eventually closes the provided fd, calling code must make sure that the
+    /// file descriptor is not closed again.
+    unsafe fn run_pipeline(
         &mut self,
         pipeline: &Pipeline,
-        default_stdout: impl IntoRawFileDescriptor,
+        default_stdout: RawFileDescriptor,
         default_stdin: Option<os_pipe::PipeReader>,
     ) -> ShellResult<()> {
         let mut last_result = None;
-        // We essentially downcast our impl IntoRawFileDescriptor into a raw fd. This is just so we
-        // can have a unified type for stdout.
-        let default_stdout = default_stdout.into_raw_file_descriptor();
         let mut stdin = default_stdin;
         let mut iter = pipeline.commands.iter().peekable();
         while let Some(cmd) = iter.next() {
@@ -190,11 +199,14 @@ impl Shell {
     ///
     /// The exit command is optional, so `None` is returned if the command did not have an exit
     /// status. This is the case for builtins, for example.
-    fn run_command(
+    ///
+    /// # Safety
+    /// This command is safe as long as the provided `stdout` is valid. This will close `stdout`.
+    unsafe fn run_command(
         &mut self,
         cmd: &Command,
         env: &[EnvSet],
-        stdout: impl IntoRawFileDescriptor,
+        stdout: RawFileDescriptor,
         stdin: Option<os_pipe::PipeReader>,
     ) -> ShellResult<Option<process::ExitStatus>> {
         // TODO: avoid clone here?
@@ -227,11 +239,9 @@ impl Shell {
             .map(|arg| self.eval_expr(arg).map(|val| val.to_string()))
             .collect::<ShellResult<Vec<_>>>()?;
 
-        // SAFETY: the `stdout` argument comes from something that implements IntoRawFileDescriptor,
-        // which means it must be valid.
         // This is where we take ownership of the file descriptor, which will be closed when
         // `stdout` is dropped.
-        let stdout = unsafe { File::from_raw_file_descriptor(stdout.into_raw_file_descriptor()) };
+        let stdout = File::from_raw_file_descriptor(stdout);
 
         if let Some(builtin) = Builtin::from_name(cmd.name.as_str()) {
             builtin.run(self, args, stdout)?;

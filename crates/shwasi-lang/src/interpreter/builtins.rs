@@ -1,6 +1,6 @@
 use std::{env, ffi::OsStr, fs, io, path::PathBuf};
 
-use filedescriptor::IntoRawFileDescriptor;
+use filedescriptor::{FileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor};
 
 use crate::{Shell, ShellError, ShellResult};
 
@@ -83,10 +83,14 @@ where
         }
     };
     let fd = stdout.into_raw_file_descriptor();
-    // SAFETY: it is okay to use `fd` here because builtins should take owned file
-    // IntoRawFileDescriptor's
+    // SAFETY: `fd` is a valid file descriptor on account of it being from an
+    // `IntoRawFileDescriptor`. We later close it, so we don't leak it.
     unsafe { shell.stdout(fd) };
     shell.run(&contents)?;
+    // We need to be careful that the file descriptor is closed, so we don't leak it. This can
+    // cause hangs in the shell if used `source` is used with a pipe. This is because the shell
+    // will never close the `stdout` it's given, so we must manually close it here.
+    let _ = unsafe { FileDescriptor::from_raw_file_descriptor(fd) };
 
     Ok(())
 }
