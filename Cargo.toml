@@ -12,11 +12,8 @@ anyhow.workspace = true
 tracing-subscriber.workspace = true
 clap = { version = "4.4.6", features = ["derive"] }
 dhat = { version = "0.3.2", optional = true }
-shwasi-parser = { path = "crates/shwasi-parser" }
-shwasi-engine = { path = "crates/shwasi-engine" }
 shwasi-lang = { path = "crates/shwasi-lang" }
 rustyline = "13.0.0"
-ariadne = { version = "0.3.0", features = ["auto-color"] }
 dirs = "5.0.1"
 
 [features]
@@ -40,6 +37,8 @@ insta.workspace = true
 paste.workspace = true
 test-log.workspace = true
 tracing.workspace = true
+shwasi-parser = { path = "crates/shwasi-parser" }
+shwasi-engine = { path = "crates/shwasi-engine" }
 wast = "67.0.1"
 
 [workspace.dependencies]
