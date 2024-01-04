@@ -32,4 +32,4 @@ pub enum ShellError {
     RedirectError(io::Error),
 }
 
-pub type ShellResult<T> = std::result::Result<T, ShellError>;
+pub type ShellResult<T> = std::result::Result<T, ()>;

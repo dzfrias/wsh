@@ -47,6 +47,7 @@ impl Shell {
     }
 
     /// Runs the shell on the given source code.
+    #[allow(clippy::result_unit_err)]
     pub fn run(&mut self, src: &str, name: &str) -> ShellResult<Option<Value>> {
         let buf = Lexer::new(src).lex();
         let program = match Parser::new(&buf).parse() {
@@ -56,7 +57,7 @@ impl Shell {
                 let mut stdout = unsafe { OpenFileDescriptor::new(self.stdout) };
                 err.write_to(src, name, &mut stdout);
                 self.set_status(1);
-                return Err(ShellError::ParseError);
+                return Err(());
             }
         };
 
@@ -65,11 +66,7 @@ impl Shell {
             result = match self.eval_stmt(&stmt) {
                 Ok(result) => result,
                 // TODO: write to global stderr instead
-                Err(err) => {
-                    let mut stdout = unsafe { OpenFileDescriptor::new(self.stdout) };
-                    writeln!(stdout, "{err}").expect("write to stdout failed!");
-                    continue;
-                }
+                Err(_) => continue,
             }
         }
 
@@ -111,13 +108,20 @@ impl Shell {
 
     fn eval_pipeline(&mut self, pipeline: &Pipeline, capture: bool) -> ShellResult<Value> {
         if capture && pipeline.write.is_none() {
-            let (mut read_end, write_end) = os_pipe::pipe().map_err(ShellError::PipeError)?;
+            let (mut read_end, write_end) = os_pipe::pipe()
+                .map_err(ShellError::PipeError)
+                .map_err(|err| {
+                    self.print_err(err);
+                })?;
             // SAFETY: write end is a valid file descriptor that has not been closed yet
             unsafe { self.run_pipeline(pipeline, write_end.into_raw_file_descriptor(), None)? };
             let mut out = vec![];
             read_end
                 .read_to_end(&mut out)
-                .map_err(ShellError::PipeError)?;
+                .map_err(ShellError::PipeError)
+                .map_err(|err| {
+                    self.print_err(err);
+                })?;
             let mut out = String::from_utf8_lossy(&out).to_string();
             while out.ends_with('\n') || out.ends_with('\r') {
                 out.truncate(out.len() - 1);
@@ -131,10 +135,14 @@ impl Shell {
                 kind: PipelineEndKind::Write,
             }) => {
                 let path = self.eval_expr(expr)?.to_string();
-                let file = File::create(path).map_err(|err| {
-                    self.set_status(1);
-                    ShellError::RedirectError(err)
-                })?;
+                let file = File::create(path)
+                    .map_err(|err| {
+                        self.set_status(1);
+                        ShellError::RedirectError(err)
+                    })
+                    .map_err(|err| {
+                        self.print_err(err);
+                    })?;
                 // SAFETY: stdout here comes from a just-opened file, which is a valid raw fd
                 unsafe { self.run_pipeline(pipeline, file.into_raw_file_descriptor(), None)? };
             }
@@ -150,6 +158,9 @@ impl Shell {
                     .map_err(|err| {
                         self.set_status(1);
                         ShellError::RedirectError(err)
+                    })
+                    .map_err(|err| {
+                        self.print_err(err);
                     })?;
                 // SAFETY: stdout here comes from a just-opened file, which is a valid raw fd
                 unsafe { self.run_pipeline(pipeline, file.into_raw_file_descriptor(), None)? };
@@ -167,10 +178,15 @@ impl Shell {
                 // We duplicate the stdout fd because `run_pipeline` will close whatever's passed
                 // in, which we don't want because we need to use the file descriptor multiple
                 // times.
-                let stdout_dup = stdout_fd.try_clone().map_err(|err| match err {
-                    filedescriptor::Error::Dup { source, .. } => ShellError::DupError(source),
-                    _ => unreachable!(),
-                })?;
+                let stdout_dup = stdout_fd
+                    .try_clone()
+                    .map_err(|err| match err {
+                        filedescriptor::Error::Dup { source, .. } => ShellError::DupError(source),
+                        _ => unreachable!(),
+                    })
+                    .map_err(|err| {
+                        self.print_err(err);
+                    })?;
                 // SAFETY: `stdout_dup` is valid because it's just been dupliated from our stdout,
                 // which must've been valid as a result of the error handling
                 unsafe {
@@ -202,16 +218,24 @@ impl Shell {
         default_stdout: RawFileDescriptor,
         default_stdin: Option<os_pipe::PipeReader>,
     ) -> ShellResult<()> {
+        let old = self.stdout;
         let mut last_result = 0;
         let mut stdin = default_stdin;
         let mut iter = pipeline.commands.iter().peekable();
         while let Some(cmd) = iter.next() {
             let stdout;
             let pipes = if iter.peek().is_some() {
-                let (out, in_) = os_pipe::pipe().map_err(ShellError::PipeError)?;
+                let (out, in_) = os_pipe::pipe()
+                    .map_err(ShellError::PipeError)
+                    .map_err(|err| {
+                        self.print_err(err);
+                    })?;
                 stdout = in_
                     .try_clone()
-                    .map_err(ShellError::DupError)?
+                    .map_err(ShellError::DupError)
+                    .map_err(|err| {
+                        self.print_err(err);
+                    })?
                     .into_raw_file_descriptor();
                 Some((out, in_))
             } else {
@@ -220,7 +244,19 @@ impl Shell {
                 None
             };
 
-            let result = self.run_command(cmd, &pipeline.env, stdout, stdin.take())?;
+            // We set `stdout` to the new stdout, but we need to make sure that we reset it back to
+            // the old stdout.
+            // This allows us to write directly to the pipe
+            self.stdout = stdout;
+            let Ok(result) = self.run_command(cmd, &pipeline.env, stdout, stdin.take()) else {
+                self.stdout = old;
+                if let Some((out, _)) = pipes {
+                    stdin = Some(out);
+                }
+                last_result = self.last_status;
+                continue;
+            };
+            self.stdout = old;
 
             if let Some((out, _)) = pipes {
                 stdin = Some(out);
@@ -276,15 +312,15 @@ impl Shell {
             return Ok(self.last_status);
         }
 
+        // This is where we take ownership of the file descriptor, which will be closed when
+        // `stdout` is dropped.
+        let stdout = File::from_raw_file_descriptor(stdout);
+
         let args = cmd
             .args
             .iter()
             .map(|arg| self.eval_expr(arg).map(|val| val.to_string()))
             .collect::<ShellResult<Vec<_>>>()?;
-
-        // This is where we take ownership of the file descriptor, which will be closed when
-        // `stdout` is dropped.
-        let stdout = File::from_raw_file_descriptor(stdout);
 
         if let Some(builtin) = Builtin::from_name(cmd.name.as_str()) {
             let status = builtin.run(self, args, stdout)?;
@@ -307,13 +343,18 @@ impl Shell {
             command.stdin(stdin);
         }
 
-        let out = command.output().map_err(|err| match err.kind() {
-            io::ErrorKind::NotFound => {
-                self.set_status(127);
-                ShellError::CommandNotFound(cmd.name.clone())
-            }
-            _ => ShellError::CommandFailed(err),
-        })?;
+        let out = command
+            .output()
+            .map_err(|err| match err.kind() {
+                io::ErrorKind::NotFound => {
+                    self.set_status(127);
+                    ShellError::CommandNotFound(cmd.name.clone())
+                }
+                _ => ShellError::CommandFailed(err),
+            })
+            .map_err(|err| {
+                self.print_err(err);
+            })?;
 
         #[cfg(unix)]
         let out = out
@@ -358,7 +399,10 @@ impl Shell {
                 .env
                 .get(name)
                 .cloned()
-                .ok_or_else(|| ShellError::Unbound(name.clone()))?,
+                .ok_or_else(|| ShellError::Unbound(name.clone()))
+                .map_err(|err| {
+                    self.print_err(err);
+                })?,
             Expr::Infix(infix) => self.eval_infix(infix)?,
             Expr::Prefix(prefix) => self.eval_prefix(prefix)?,
             Expr::String(s) => Value::String(s.clone()),
@@ -392,11 +436,14 @@ impl Shell {
             (Value::String(lhs), Value::Bool(rhs)) => {
                 self.eval_string_infix(infix.op, lhs, rhs.to_string().into())
             }
-            _ => Err(ShellError::TypeErrorInfix {
-                lhs: lhs_type,
-                rhs: rhs_type,
-                op: infix.op,
-            }),
+            _ => {
+                self.print_err(ShellError::TypeErrorInfix {
+                    lhs: lhs_type,
+                    rhs: rhs_type,
+                    op: infix.op,
+                });
+                Err(())
+            }
         }
     }
 
@@ -408,10 +455,13 @@ impl Shell {
             Value::String(s) if s.parse::<f64>().is_ok() => {
                 self.eval_numeric_prefix(prefix.op, s.parse().unwrap())
             }
-            _ => Err(ShellError::TypeErrorPrefix {
-                expr: value.type_of(),
-                op: prefix.op,
-            }),
+            _ => {
+                self.print_err(ShellError::TypeErrorPrefix {
+                    expr: value.type_of(),
+                    op: prefix.op,
+                });
+                Err(())
+            }
         }
     }
 
@@ -445,10 +495,11 @@ impl Shell {
             PrefixOp::Sign => n,
             PrefixOp::Neg => -n,
             PrefixOp::Bang => {
-                return Err(ShellError::TypeErrorPrefix {
+                self.print_err(ShellError::TypeErrorPrefix {
                     expr: Type::Number,
                     op,
-                })
+                });
+                return Err(());
             }
         };
 
@@ -461,11 +512,12 @@ impl Shell {
             InfixOp::Eq => Value::Bool(lhs == rhs),
             InfixOp::Ne => Value::Bool(lhs != rhs),
             _ => {
-                return Err(ShellError::TypeErrorInfix {
+                self.print_err(ShellError::TypeErrorInfix {
                     lhs: Type::String,
                     rhs: Type::String,
                     op,
-                })
+                });
+                return Err(());
             }
         };
 
@@ -486,11 +538,12 @@ impl Shell {
             InfixOp::Add => format!("{lhs}{rhs}"),
             InfixOp::Mul => lhs.repeat(rhs as usize),
             _ => {
-                return Err(ShellError::TypeErrorInfix {
+                self.print_err(ShellError::TypeErrorInfix {
                     lhs: Type::String,
                     rhs: Type::Number,
                     op,
-                })
+                });
+                return Err(());
             }
         };
 
@@ -511,11 +564,12 @@ impl Shell {
             InfixOp::Add => format!("{lhs}{rhs}"),
             InfixOp::Mul => rhs.repeat(lhs as usize),
             _ => {
-                return Err(ShellError::TypeErrorInfix {
+                self.print_err(ShellError::TypeErrorInfix {
                     lhs: Type::Number,
                     rhs: Type::String,
                     op,
-                })
+                });
+                return Err(());
             }
         };
 
@@ -531,6 +585,11 @@ impl Shell {
             Cow::Borrowed(_) => Value::String(var.into_string().unwrap().into()),
             Cow::Owned(new) => Value::String(new.into()),
         })
+    }
+
+    fn print_err(&mut self, err: ShellError) {
+        let mut stdout = unsafe { OpenFileDescriptor::new(self.stdout) };
+        writeln!(stdout, "shwasi: {err}").expect("write to stdout failed!");
     }
 
     fn set_status(&mut self, exit_status: i32) {

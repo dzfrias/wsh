@@ -104,14 +104,19 @@ shell_test!(
 shell_test!(
     no_fail_fast_on_errs,
     "__UNDEFINED\necho .?",
-    "command not found: __UNDEFINED\n127"
+    "shwasi: command not found: __UNDEFINED\n127"
 );
 // Should fail as a result of `__should_not_be_defined` not being a valid command. Note that this
 // CAN possibly fail if the user has a command named `__should_not_be_defined` in their PATH.
 shell_test!(
     recursive_alias,
     "alias __should_not_be_defined = __should_not_be_defined\n__should_not_be_defined",
-    "command not found: __should_not_be_defined"
+    "shwasi: command not found: __should_not_be_defined"
+);
+shell_test!(
+    shell_errors_are_piped_properly,
+    "echo .(!1) | wc -l | xargs",
+    "1"
 );
 
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");

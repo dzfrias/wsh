@@ -9,5 +9,4 @@ Error: unexpected token: newline, expected valid expression
    │        ┬  
    │        ╰── error happened here
 ───╯
-the shell encountered a parse error
 

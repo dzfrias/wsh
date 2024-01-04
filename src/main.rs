@@ -42,7 +42,8 @@ fn main() -> Result<()> {
 
 fn run_file(interpreter: &mut Shell, input: impl AsRef<Path>) -> Result<()> {
     let contents = fs::read_to_string(&input).context("error reading input file")?;
-    interpreter.run(&contents, &input.as_ref().to_string_lossy())?;
+    // TODO: handle
+    let _ = interpreter.run(&contents, &input.as_ref().to_string_lossy());
     Ok(())
 }
 
