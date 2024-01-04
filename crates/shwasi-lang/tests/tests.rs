@@ -7,7 +7,7 @@ macro_rules! shwasi_test {
             let input = $code;
             let expected = Some($expected);
             let mut interpreter = Shell::new();
-            let result = interpreter.run(input).unwrap();
+            let result = interpreter.run(input, "test").unwrap();
             assert_eq!(expected, result);
         }
     };

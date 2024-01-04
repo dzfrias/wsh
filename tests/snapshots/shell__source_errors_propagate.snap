@@ -1,0 +1,13 @@
+---
+source: tests/shell.rs
+expression: stdout
+---
+Error: unexpected token: newline, expected valid expression
+   ╭─[__bad_tmp.wsi:1:8]
+   │
+ 1 │ echo .(
+   │        ┬  
+   │        ╰── error happened here
+───╯
+the shell encountered a parse error
+

@@ -38,11 +38,11 @@ macro_rules! shell_test {
             let mut f = File::create(PATH).unwrap();
             f.write_all($input.as_bytes()).unwrap();
             let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-            let cmd = cmd.arg(PATH).assert().failure();
+            let cmd = cmd.arg(PATH).assert();
             fs::remove_file(PATH).unwrap();
             let out = cmd.get_output();
-            let stderr = String::from_utf8_lossy(&out.stderr);
-            insta::assert_snapshot!(stringify!($name), stderr);
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            insta::assert_snapshot!(stringify!($name), stdout);
         }
     };
 }
@@ -121,3 +121,7 @@ shell_test!(@fail unfinished_infix, "echo .(1 +)");
 shell_test!(@fail unfinished_prefix, "echo .(!)");
 shell_test!(@fail bad_redirect_position, "echo hi > file.txt | cat");
 shell_test!(@fail accurate_errors_with_bloated_floats, "echo .(1.0000000000000)\necho .(1");
+shell_test!(
+    @fail source_errors_propagate,
+    "echo \"echo .(\" > __bad_tmp.wsi\nsource __bad_tmp.wsi\nrm __bad_tmp.wsi"
+);

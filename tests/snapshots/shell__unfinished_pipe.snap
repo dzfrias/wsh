@@ -1,6 +1,6 @@
 ---
 source: tests/shell.rs
-expression: stderr
+expression: stdout
 ---
 Error: unfinished pipeline
    ╭─[unfinished_pipe.tmp:1:9]
@@ -9,5 +9,4 @@ Error: unfinished pipeline
    │         ┬  
    │         ╰── error happened here
 ───╯
-Error: error parsing input
 

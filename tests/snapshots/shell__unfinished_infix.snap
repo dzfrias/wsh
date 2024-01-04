@@ -1,6 +1,6 @@
 ---
 source: tests/shell.rs
-expression: stderr
+expression: stdout
 ---
 Error: unexpected token: rparen, expected valid expression
    ╭─[unfinished_infix.tmp:1:11]
@@ -9,5 +9,4 @@ Error: unexpected token: rparen, expected valid expression
    │           ┬  
    │           ╰── error happened here
 ───╯
-Error: error parsing input
 

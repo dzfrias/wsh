@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use crate::{
     ast::{InfixOp, PrefixOp},
-    Ident, ParseError, Type,
+    Ident, Type,
 };
 
 #[derive(Debug, Error)]
@@ -22,8 +22,8 @@ pub enum ShellError {
     TypeErrorPrefix { expr: Type, op: PrefixOp },
     #[error("unbound: `{0}`")]
     Unbound(Ident),
-    #[error("parse error: {0}")]
-    ParseError(ParseError),
+    #[error("the shell encountered a parse error")]
+    ParseError,
     #[error("error duplicating fd: {0}")]
     DupError(io::Error),
     #[error("error writing to fd in builtin: {0}")]

@@ -1,6 +1,6 @@
 ---
 source: tests/shell.rs
-expression: stderr
+expression: stdout
 ---
 Error: unexpected token: eof, expected rparen to close expression
    ╭─[unclosed_paren.tmp:1:12]
@@ -11,5 +11,4 @@ Error: unexpected token: eof, expected rparen to close expression
    │            │  
    │            ╰── error happened here
 ───╯
-Error: error parsing input
 

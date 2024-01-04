@@ -10,7 +10,7 @@ use crate::{
     },
     interpreter::{builtins::Builtin, env::Env},
     parser::ast::{Command, Expr, InfixExpr, PrefixExpr, Stmt},
-    Lexer, ParseResult, Parser,
+    Lexer, Parser,
 };
 pub use error::*;
 use filedescriptor::{
@@ -26,6 +26,7 @@ use std::{
     borrow::Cow,
     fs::{File, OpenOptions},
     io::{self, Read, Write},
+    mem::ManuallyDrop,
     process,
 };
 pub use value::*;
@@ -45,25 +46,28 @@ impl Shell {
         }
     }
 
-    pub fn run(&mut self, src: &str) -> ParseResult<Option<Value>> {
+    /// Runs the shell on the given source code.
+    pub fn run(&mut self, src: &str, name: &str) -> ShellResult<Option<Value>> {
         let buf = Lexer::new(src).lex();
-        let program = Parser::new(&buf).parse()?;
+        let program = match Parser::new(&buf).parse() {
+            Ok(program) => program,
+            Err(err) => {
+                // SAFETY: `stdout` must be a valid file descriptor
+                let mut stdout = unsafe { OpenFileDescriptor::new(self.stdout) };
+                err.write_to(src, name, &mut stdout);
+                self.set_status(1);
+                return Err(ShellError::ParseError);
+            }
+        };
 
         let mut result = Value::Null;
         for stmt in program {
             result = match self.eval_stmt(&stmt) {
                 Ok(result) => result,
-                // Propagate parse errors
-                Err(ShellError::ParseError(err)) => return Err(err),
-                // Any other error is just written to stdout
                 // TODO: write to global stderr instead
                 Err(err) => {
-                    // SAFETY: `stdout` must be a valid file descriptor
-                    let mut stdout =
-                        unsafe { FileDescriptor::from_raw_file_descriptor(self.stdout) };
+                    let mut stdout = unsafe { OpenFileDescriptor::new(self.stdout) };
                     writeln!(stdout, "{err}").expect("write to stdout failed!");
-                    // We consume it into a raw fd so that it isn't closed on drop
-                    stdout.into_raw_file_descriptor();
                     continue;
                 }
             }
@@ -158,9 +162,8 @@ impl Shell {
                 // makes it impossible to use `FileDescriptor::dup`.
                 //
                 // Either way, we can get around this by turning the `RawFileDescriptor` into a
-                // `FileDescriptor`, calling `try_clone` (a wrapper of `dup`), and then turning our
-                // shim back into a `RawFileDescriptor` so that it isn't closed on drop.
-                let stdout_fd = unsafe { FileDescriptor::from_raw_file_descriptor(self.stdout) };
+                // `FileDescriptor`, calling `try_clone` (a wrapper of `dup`).
+                let stdout_fd = unsafe { OpenFileDescriptor::new(self.stdout) };
                 // We duplicate the stdout fd because `run_pipeline` will close whatever's passed
                 // in, which we don't want because we need to use the file descriptor multiple
                 // times.
@@ -168,8 +171,6 @@ impl Shell {
                     filedescriptor::Error::Dup { source, .. } => ShellError::DupError(source),
                     _ => unreachable!(),
                 })?;
-                // Here is where we turn the shim back into a raw fd
-                stdout_fd.into_raw_file_descriptor();
                 // SAFETY: `stdout_dup` is valid because it's just been dupliated from our stdout,
                 // which must've been valid as a result of the error handling
                 unsafe {
@@ -540,5 +541,40 @@ impl Shell {
 impl Default for Shell {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// A wrapper around a `FileDescriptor` that does not close the underlying file descriptor when
+/// dropped.
+///
+/// This is useful when we want to preserve a file descriptor across multiple calls to a function,
+/// and makes it easier to reason about the lifetime of the file descriptor.
+struct OpenFileDescriptor(ManuallyDrop<FileDescriptor>);
+
+impl OpenFileDescriptor {
+    pub unsafe fn new(fd: RawFileDescriptor) -> Self {
+        Self(ManuallyDrop::new(unsafe {
+            FileDescriptor::from_raw_file_descriptor(fd)
+        }))
+    }
+
+    pub fn try_clone(&self) -> Result<Self, filedescriptor::Error> {
+        Ok(Self(ManuallyDrop::new(self.0.try_clone()?)))
+    }
+}
+
+impl IntoRawFileDescriptor for OpenFileDescriptor {
+    fn into_raw_file_descriptor(self) -> RawFileDescriptor {
+        self.0.as_raw_file_descriptor()
+    }
+}
+
+impl io::Write for OpenFileDescriptor {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.0.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.0.flush()
     }
 }

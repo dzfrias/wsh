@@ -1,4 +1,4 @@
-use std::{borrow::Cow, ops::Range};
+use std::{borrow::Cow, io::Write, ops::Range};
 
 use thiserror::Error;
 
@@ -60,6 +60,33 @@ impl ParseError {
             kind,
             labels,
         }
+    }
+
+    pub fn write_to(self, src: &str, name: &str, writer: impl Write) {
+        use ariadne::{Color, Label, Report, ReportKind, Source};
+
+        let a = Color::Blue;
+        let b = Color::Green;
+        let range = Range {
+            start: self.range.start.min(src.len() - 1),
+            end: self.range.end.min(src.len()),
+        };
+
+        Report::build(ReportKind::Error, name, range.start)
+            .with_message(self.kind.to_string())
+            .with_label(
+                Label::new((name, range))
+                    .with_message("error happened here")
+                    .with_color(a),
+            )
+            .with_labels(self.labels.into_iter().map(|label| {
+                Label::new((name, label.range))
+                    .with_message(label.message)
+                    .with_color(b)
+            }))
+            .finish()
+            .write((name, Source::from(src)), writer)
+            .unwrap();
     }
 }
 

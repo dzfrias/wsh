@@ -2,10 +2,9 @@ mod cli;
 
 use std::{fs, path::Path};
 
-use anyhow::{bail, Context, Result};
-use ariadne::{Color, Label, Report, ReportKind, Source};
+use anyhow::{Context, Result};
 use clap::Parser as CliParser;
-use shwasi_lang::{ParseError, Shell};
+use shwasi_lang::Shell;
 use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
 
 use crate::cli::Cli;
@@ -43,17 +42,8 @@ fn main() -> Result<()> {
 
 fn run_file(interpreter: &mut Shell, input: impl AsRef<Path>) -> Result<()> {
     let contents = fs::read_to_string(&input).context("error reading input file")?;
-    match interpreter.run(&contents) {
-        Ok(_) => Ok(()),
-        Err(parse_error) => {
-            print_parse_error(
-                parse_error,
-                &contents,
-                Some(&input.as_ref().to_string_lossy()),
-            );
-            bail!("error parsing input");
-        }
-    }
+    interpreter.run(&contents, &input.as_ref().to_string_lossy())?;
+    Ok(())
 }
 
 fn start_repl() -> Result<()> {
@@ -84,10 +74,12 @@ fn start_repl() -> Result<()> {
             match input {
                 Ok(input) => {
                     rl.add_history_entry(&input)?;
-                    match shell.run(&input) {
+                    match shell.run(&input, "<prompt>") {
                         Ok(Some(result)) => println!("{result}"),
                         Ok(None) => break 'inp,
-                        Err(err) => print_parse_error(err, &input, None),
+                        // Shell errors are handled by the shell itself, so we don't need to do
+                        // anything here (in the REPL).
+                        Err(_) => {}
                     }
                 }
                 Err(rustyline::error::ReadlineError::Eof) => {
@@ -107,28 +99,4 @@ fn start_repl() -> Result<()> {
         let _ = rl.save_history(&home.join(".wsi_history"));
     }
     Ok(())
-}
-
-fn print_parse_error(mut err: ParseError, input: &str, name: Option<&str>) {
-    let a = Color::Blue;
-    let b = Color::Green;
-    let name = name.unwrap_or("prompt");
-    err.range.start = err.range.start.min(input.len() - 1);
-    err.range.end = err.range.end.min(input.len());
-
-    Report::build(ReportKind::Error, name, err.range.start)
-        .with_message(err.kind.to_string())
-        .with_label(
-            Label::new((name, err.range))
-                .with_message("error happened here")
-                .with_color(a),
-        )
-        .with_labels(err.labels.into_iter().map(|label| {
-            Label::new((name, label.range))
-                .with_message(label.message)
-                .with_color(b)
-        }))
-        .finish()
-        .eprint((name, Source::from(input)))
-        .unwrap();
 }
