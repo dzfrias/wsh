@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, io};
+use std::io;
 
 use filedescriptor::IntoRawFileDescriptor;
 
@@ -11,7 +11,7 @@ pub fn unload<I, S>(
 ) -> ShellResult<i32>
 where
     I: IntoIterator<Item = S>,
-    S: AsRef<OsStr>,
+    S: AsRef<str>,
 {
     if args.into_iter().next().is_some() {
         writeln!(stdout, "unload: expected no arguments").expect("error writing to stdout");

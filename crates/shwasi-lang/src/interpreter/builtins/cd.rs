@@ -1,4 +1,4 @@
-use std::{env, ffi::OsStr, io, path::PathBuf};
+use std::{env, io, path::PathBuf};
 
 use filedescriptor::IntoRawFileDescriptor;
 
@@ -11,7 +11,7 @@ pub fn cd<I, S>(
 ) -> ShellResult<i32>
 where
     I: IntoIterator<Item = S>,
-    S: AsRef<OsStr>,
+    S: AsRef<str>,
 {
     let Some(path) = args
         .into_iter()

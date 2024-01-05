@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, fs, io};
+use std::{fs, io};
 
 use filedescriptor::IntoRawFileDescriptor;
 use shwasi_engine::Instance;
@@ -12,7 +12,7 @@ pub fn load<I, S>(
 ) -> ShellResult<i32>
 where
     I: IntoIterator<Item = S>,
-    S: AsRef<OsStr>,
+    S: AsRef<str>,
 {
     let args = args.into_iter().collect::<Vec<_>>();
     let Some((file, _)) = args.split_first() else {
