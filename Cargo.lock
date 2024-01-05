@@ -1409,6 +1409,8 @@ dependencies = [
  "filedescriptor",
  "insta",
  "os_pipe",
+ "shwasi-engine",
+ "shwasi-parser",
  "smol_str",
  "thiserror",
 ]

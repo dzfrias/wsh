@@ -1,4 +1,4 @@
-use std::mem;
+use std::{fmt, mem};
 
 use shwasi_parser::ValType;
 
@@ -36,6 +36,18 @@ impl Value {
             Value::F32(f) => ValueUntyped(f.to_bits() as u64),
             Value::F64(f) => ValueUntyped(f.to_bits()),
             Value::Ref(r) | Value::ExternRef(r) => ValueUntyped(unsafe { mem::transmute(r) }),
+        }
+    }
+}
+
+impl fmt::Display for Value {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::I32(n) => write!(f, "{n}"),
+            Self::I64(n) => write!(f, "{n}"),
+            Self::F32(n) => write!(f, "{n}"),
+            Self::F64(n) => write!(f, "{n}"),
+            Self::Ref(r) | Self::ExternRef(r) => write!(f, "{r:?}"),
         }
     }
 }

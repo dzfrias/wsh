@@ -50,6 +50,10 @@ impl WasmFuncUntyped {
             .map_err(Error::Trap)?;
         Ok(res)
     }
+
+    pub fn arg_types<'a>(&self, store: &'a Store) -> &'a [ValType] {
+        &store.functions[self.func_addr].ty().0
+    }
 }
 
 /// A typed WebAssembly function.

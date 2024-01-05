@@ -1,6 +1,7 @@
 use std::{env, ffi::OsStr, fs, io, path::PathBuf};
 
 use filedescriptor::{FileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor};
+use shwasi_engine::Instance;
 
 use crate::{Shell, ShellResult};
 
@@ -8,6 +9,8 @@ use crate::{Shell, ShellResult};
 pub enum Builtin {
     Cd,
     Source,
+    Load,
+    Unload,
 }
 
 impl Builtin {
@@ -15,6 +18,8 @@ impl Builtin {
         match name.as_ref().to_str()? {
             "cd" => Some(Self::Cd),
             "source" => Some(Self::Source),
+            "load" => Some(Self::Load),
+            "unload" => Some(Self::Unload),
             _ => None,
         }
     }
@@ -32,6 +37,8 @@ impl Builtin {
         match self {
             Self::Cd => cd(args, stdout),
             Self::Source => source(shell, args, stdout),
+            Self::Load => load(shell, args, stdout),
+            Self::Unload => unload(shell, args, stdout),
         }
     }
 }
@@ -92,5 +99,67 @@ where
     // will never close the `stdout` it's given, so we must manually close it here.
     let _ = unsafe { FileDescriptor::from_raw_file_descriptor(fd) };
 
-    Ok(1)
+    Ok(0)
+}
+
+fn load<I, S>(
+    shell: &mut Shell,
+    args: I,
+    mut stdout: impl io::Write + IntoRawFileDescriptor,
+) -> ShellResult<i32>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+{
+    let args = args.into_iter().collect::<Vec<_>>();
+    let Some((file, _)) = args.split_first() else {
+        writeln!(stdout, "load: no file provided").expect("error writing to stdout");
+        return Ok(1);
+    };
+
+    let contents = match fs::read(file.as_ref()) {
+        Ok(contents) => contents,
+        Err(err) => {
+            writeln!(stdout, "load: error reading input file: {err}")
+                .expect("error writing to stdout");
+            return Ok(1);
+        }
+    };
+    let module = match shwasi_parser::Parser::new(&contents).read_module() {
+        Ok(contents) => contents,
+        Err(err) => {
+            writeln!(stdout, "load: bad wasm module: {err}").expect("error writing to stdout");
+            return Ok(1);
+        }
+    };
+    let instance = match Instance::instantiate(shell.env.store_mut(), module) {
+        Ok(instance) => instance,
+        Err(err) => {
+            writeln!(stdout, "load: error instantiating wasm module: {err}")
+                .expect("error writing to stdout");
+            return Ok(1);
+        }
+    };
+    shell.env.register_module(instance);
+
+    Ok(0)
+}
+
+fn unload<I, S>(
+    shell: &mut Shell,
+    args: I,
+    mut stdout: impl io::Write + IntoRawFileDescriptor,
+) -> ShellResult<i32>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+{
+    if args.into_iter().next().is_some() {
+        writeln!(stdout, "unload: expected no arguments").expect("error writing to stdout");
+        return Ok(1);
+    }
+
+    let unloaded = shell.env.unload_modules();
+    writeln!(stdout, "unloaded {unloaded} modules").expect("error writing to stdout");
+    Ok(0)
 }

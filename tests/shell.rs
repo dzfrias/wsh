@@ -119,6 +119,18 @@ shell_test!(
     "1"
 );
 
+shell_test!(wasm, "load ./tests/wasm/fib.wasm\nfib 10", "55");
+shell_test!(
+    wasm_piping,
+    "load ./tests/wasm/fib.wasm\nfib 10 | wc -l | xargs",
+    "1"
+);
+shell_test!(
+    wasm_bad_args,
+    "load ./tests/wasm/fib.wasm\nfib hello",
+    "shwasi: cannot pass string to wasm function `fib`"
+);
+
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");
 shell_test!(@fail unfinished_pipe, "echo hi |");
 shell_test!(@fail unclosed_backtick, "echo `echo hi");

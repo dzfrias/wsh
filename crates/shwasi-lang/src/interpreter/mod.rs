@@ -17,6 +17,7 @@ use filedescriptor::{
     AsRawFileDescriptor, FileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor,
     RawFileDescriptor,
 };
+use shwasi_parser::ValType;
 use smol_str::SmolStr;
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
@@ -316,6 +317,13 @@ impl Shell {
         // `stdout` is dropped.
         let stdout = File::from_raw_file_descriptor(stdout);
 
+        if let Some(wasm_func) = self.env.get_module_func(&cmd.name) {
+            return match self.run_wasm_func(wasm_func, cmd, stdout) {
+                Ok(_) => Ok(0),
+                Err(_) => Ok(1),
+            };
+        }
+
         let args = cmd
             .args
             .iter()
@@ -585,6 +593,105 @@ impl Shell {
             Cow::Borrowed(_) => Value::String(var.into_string().unwrap().into()),
             Cow::Owned(new) => Value::String(new.into()),
         })
+    }
+
+    fn run_wasm_func(
+        &mut self,
+        wasm_func: shwasi_engine::WasmFuncUntyped,
+        cmd: &Command,
+        mut stdout: File,
+    ) -> ShellResult<()> {
+        let arg_types = wasm_func.arg_types(self.env.store_mut()).to_vec();
+        if arg_types.len() != cmd.args.len() {
+            writeln!(
+                stdout,
+                "shwasi: expected {} args for wasm function",
+                arg_types.len()
+            )
+            .expect("write to stdout failed!");
+            return Err(());
+        }
+
+        // We must convert shwasi values to wasm values
+        let args = cmd
+            .args
+            .iter()
+            .zip(arg_types)
+            .map(|(arg, ty)| -> ShellResult<shwasi_engine::Value> {
+                let mut to_val = |n| match ty {
+                    ValType::I32 => Ok(shwasi_engine::Value::I32(n as u32)),
+                    ValType::I64 => Ok(shwasi_engine::Value::I64(n as u64)),
+                    ValType::F32 => Ok(shwasi_engine::Value::F32(n as f32)),
+                    ValType::F64 => Ok(shwasi_engine::Value::F64(n)),
+                    _ => {
+                        writeln!(
+                            stdout,
+                            "shwasi: could not convert {n} to {ty} for wasm function `{}`",
+                            cmd.name
+                        )
+                        .expect("write to stdout failed!");
+                        Err(())
+                    }
+                };
+                match self.eval_expr(arg)? {
+                    Value::Number(n) => to_val(n),
+                    Value::String(s) if s.parse::<f64>().is_ok() => {
+                        let n = s.parse::<f64>().unwrap();
+                        to_val(n)
+                    }
+                    Value::String(_) => {
+                        writeln!(
+                            stdout,
+                            "shwasi: cannot pass string to wasm function `{}`",
+                            cmd.name
+                        )
+                        .expect("write to stdout failed!");
+                        Err(())
+                    }
+                    Value::Bool(b) => match ty {
+                        ValType::I32 => Ok(shwasi_engine::Value::I32(b as u32)),
+                        ValType::I64 => Ok(shwasi_engine::Value::I64(b as u64)),
+                        _ => {
+                            writeln!(
+                                stdout,
+                                "shwasi: could not convert bool to {ty} for wasm function `{}`",
+                                cmd.name
+                            )
+                            .expect("write to stdout failed!");
+                            Err(())
+                        }
+                    },
+                    Value::Null => {
+                        writeln!(
+                            stdout,
+                            "shwasi: cannot pass null to wasm function `{}`",
+                            cmd.name
+                        )
+                        .expect("write to stdout failed!");
+                        Err(())
+                    }
+                }
+            })
+            .collect::<ShellResult<Vec<_>>>()?;
+
+        let results = match wasm_func.call(self.env.store_mut(), &args) {
+            Ok(results) => results,
+            Err(err) => {
+                writeln!(
+                    stdout,
+                    "shwasi: error calling wasm function `{}`: {err}",
+                    cmd.name
+                )
+                .expect("write to stdout failed!");
+                return Err(());
+            }
+        };
+        for result in results {
+            let mut stdout = unsafe { OpenFileDescriptor::new(self.stdout) };
+            writeln!(stdout, "{result}").expect("write to stdout failed!");
+        }
+
+        Ok(())
     }
 
     fn print_err(&mut self, err: ShellError) {
