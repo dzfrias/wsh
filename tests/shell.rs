@@ -121,6 +121,11 @@ shell_test!(
 
 shell_test!(wasm, "load ./tests/wasm/fib.wasm\nfib 10", "55");
 shell_test!(
+    wasm_unload,
+    "load ./tests/wasm/fib.wasm\nunload\nfib 10",
+    "unloaded 1 modules\nshwasi: command not found: fib"
+);
+shell_test!(
     wasm_piping,
     "load ./tests/wasm/fib.wasm\nfib 10 | wc -l | xargs",
     "1"
