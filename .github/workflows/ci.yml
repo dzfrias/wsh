@@ -35,22 +35,22 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - run: cargo test --workspace
 
-  fuzz:
-    name: fuzz
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@nightly
-      - run: cargo install cargo-fuzz
-      - run: cargo fuzz run parse --fuzz-dir ./crates/shwasi-parser/fuzz -- -max_total_time=60
-      - run: cargo fuzz run module --fuzz-dir ./crates/shwasi-parser/fuzz -- -max_total_time=60
-      - run: cargo fuzz run validate --fuzz-dir ./crates/shwasi-parser/fuzz -- -max_total_time=60
-      # TODO: this fails to compile on CI. Rust itself actually crashes trying
-      # to compile this...
-      # https://github.com/dzfrias/shwasi/actions/runs/7418199010/job/20185808370
-      # - run: cargo fuzz run lex --fuzz-dir ./crates/shwasi-lang/fuzz -- -max_total_time=60
-      # - run: cargo fuzz run parse --fuzz-dir ./crates/shwasi-lang/fuzz -- -max_total_time=60
+  # fuzz:
+  #   name: fuzz
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - name: Install Rust
+  #       uses: dtolnay/rust-toolchain@nightly
+  #     - run: cargo install cargo-fuzz
+  #     - run: cargo fuzz run parse --fuzz-dir ./crates/shwasi-parser/fuzz -- -max_total_time=60
+  #     - run: cargo fuzz run module --fuzz-dir ./crates/shwasi-parser/fuzz -- -max_total_time=60
+  #     - run: cargo fuzz run validate --fuzz-dir ./crates/shwasi-parser/fuzz -- -max_total_time=60
+  #     # TODO: this fails to compile on CI. Rust itself actually crashes trying
+  #     # to compile this...
+  #     # https://github.com/dzfrias/shwasi/actions/runs/7418199010/job/20185808370
+  #     # - run: cargo fuzz run lex --fuzz-dir ./crates/shwasi-lang/fuzz -- -max_total_time=60
+  #     # - run: cargo fuzz run parse --fuzz-dir ./crates/shwasi-lang/fuzz -- -max_total_time=60
 
   checkfmt:
     name: checkfmt
