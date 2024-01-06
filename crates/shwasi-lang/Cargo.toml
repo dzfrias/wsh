@@ -18,6 +18,13 @@ shwasi-parser = { path = "../shwasi-parser" }
 shwasi-engine = { path = "../shwasi-engine" }
 shwasi-wasi = { path = "../wasi" }
 which = "5.0.0"
+cap-std = "2.0.1"
+
+[target.'cfg(unix)'.dependencies]
+rustix = "0.38.28"
+
+[target.'cfg(windows)'.dependencies]
+io-extras = "0.18.1"
 
 [dev-dependencies]
 insta.workspace = true

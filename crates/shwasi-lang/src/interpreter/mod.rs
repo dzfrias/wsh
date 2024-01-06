@@ -73,7 +73,7 @@ impl Shell {
 
         // Reset stdout to the original stdout. This is necessary for operations like `source`,
         // where the user may have redirected stdout somewhere else temporarily.
-        self.stdout = io::stdout().as_raw_file_descriptor();
+        unsafe { self.stdout(io::stdout().as_raw_file_descriptor()) };
 
         Ok((!result.is_null()).then_some(result))
     }
@@ -86,6 +86,7 @@ impl Shell {
     /// code.
     pub(self) unsafe fn stdout(&mut self, stdout: RawFileDescriptor) {
         self.stdout = stdout;
+        self.env.wasi_stdout(stdout);
     }
 
     fn eval_stmt(&mut self, stmt: &Stmt) -> ShellResult<Value> {
@@ -248,16 +249,16 @@ impl Shell {
             // We set `stdout` to the new stdout, but we need to make sure that we reset it back to
             // the old stdout.
             // This allows us to write directly to the pipe
-            self.stdout = stdout;
+            self.stdout(stdout);
             let Ok(result) = self.run_command(cmd, &pipeline.env, stdout, stdin.take()) else {
-                self.stdout = old;
+                self.stdout(old);
                 if let Some((out, _)) = pipes {
                     stdin = Some(out);
                 }
                 last_result = self.last_status;
                 continue;
             };
-            self.stdout = old;
+            self.stdout(old);
 
             if let Some((out, _)) = pipes {
                 stdin = Some(out);

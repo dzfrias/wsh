@@ -1980,10 +1980,13 @@ name = "shwasi-lang"
 version = "0.1.0"
 dependencies = [
  "ariadne",
+ "cap-std",
  "dirs 5.0.1",
  "filedescriptor",
  "insta",
+ "io-extras",
  "os_pipe",
+ "rustix",
  "shwasi-engine",
  "shwasi-parser",
  "shwasi-wasi",
@@ -2017,6 +2020,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "shwasi-engine",
+ "wasi-cap-std-sync",
  "wasi-common",
  "wasmtime-wasi",
  "wiggle",
