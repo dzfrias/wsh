@@ -4,9 +4,37 @@ use thiserror::Error;
 use crate::store::{Extern, ExternType};
 pub use crate::vm::Trap;
 
+#[derive(Debug, Error)]
+#[error(transparent)]
+pub struct Error {
+    inner: Box<ErrorKind>,
+}
+
+impl Error {
+    pub fn kind(&self) -> &ErrorKind {
+        &self.inner
+    }
+}
+
+impl From<ErrorKind> for Error {
+    fn from(kind: ErrorKind) -> Self {
+        Self {
+            inner: Box::new(kind),
+        }
+    }
+}
+
+impl From<Trap> for Error {
+    fn from(trap: Trap) -> Self {
+        Self {
+            inner: Box::new(ErrorKind::Trap(trap)),
+        }
+    }
+}
+
 /// A error that can occur during instantiation or at runtime.
 #[derive(Debug, Error)]
-pub enum Error {
+pub enum ErrorKind {
     // Instantiation errors
     #[error("extern not found: \"{module}\" \"{field}\"")]
     ExternNotFound { module: String, field: String },
@@ -17,7 +45,7 @@ pub enum Error {
 
     // Runtime errors
     #[error("trap: {0}")]
-    Trap(Trap),
+    Trap(#[from] Trap),
     #[error("function not found \"{0}\"")]
     FunctionNotFound(String),
     #[error("attempting to call non-function: \"{0}\"")]
@@ -27,6 +55,9 @@ pub enum Error {
         want: Vec<ValType>,
         got: Vec<ValType>,
     },
+
+    #[error("wasi error: {0}")]
+    WasiError(anyhow::Error),
 }
 
 /// A convenience type alias for `Result<T, Error>`.

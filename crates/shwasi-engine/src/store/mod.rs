@@ -5,6 +5,7 @@ use std::{collections::HashMap, fmt};
 use shwasi_parser::{Code, FuncType, GlobalType, Limit, MemoryType, TableType};
 
 use crate::{
+    error::Error,
     instance::Instance,
     value::{Ref, Value, ValueUntyped},
     vm::Vm,
@@ -90,7 +91,7 @@ pub(crate) enum Func {
 pub struct HostFunc {
     pub(crate) ty: FuncType,
     #[allow(clippy::type_complexity)]
-    pub(crate) code: Box<dyn FnMut(&mut Vm) -> Vec<ValueUntyped> + Send + Sync>,
+    pub(crate) code: Box<dyn FnMut(&mut Vm) -> Result<Vec<ValueUntyped>, Error> + Send + Sync>,
 }
 
 impl HostFunc {

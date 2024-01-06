@@ -2015,6 +2015,7 @@ dependencies = [
 name = "shwasi-wasi"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "shwasi-engine",
  "wasi-common",
  "wasmtime-wasi",

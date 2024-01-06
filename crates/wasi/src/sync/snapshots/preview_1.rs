@@ -1,5 +1,10 @@
+//! This file was largely taken and adapted from https://github.com/paritytech/wasmi/
+//!
+//! See https://github.com/paritytech/wasmi/blob/d80c19fa51f34bcb7aa09a11c3f5017cb90fa2c6/crates/wasi/src/sync/snapshots/preview_1.rs
+//! for the original file.
+
 use crate::ShwasiGuestMemory;
-use shwasi_engine::{HostFunc, Instance, Store};
+use shwasi_engine::{Error, ErrorKind, HostFunc, Instance, Store};
 use std::{
     pin::Pin,
     task::{Context, RawWaker, RawWakerVTable, Waker},
@@ -21,13 +26,15 @@ fn dummy_raw_waker() -> RawWaker {
 
 /// Creates a dummy waker which does *nothing*, as the future itsef polls to ready at first poll
 /// A waker is needed to do any polling at all, as it is the primary constituent of the `Context` for polling
-fn run_in_dummy_executor<F: std::future::Future>(f: F) -> Result<F::Output, ()> {
+fn run_in_dummy_executor<F: std::future::Future>(f: F) -> Result<F::Output, Error> {
     let mut f = Pin::from(Box::new(f));
     let waker = unsafe { Waker::from_raw(dummy_raw_waker()) };
     let mut cx = Context::from_waker(&waker);
     match f.as_mut().poll(&mut cx) {
         std::task::Poll::Ready(val) => Ok(val),
-        std::task::Poll::Pending => todo!("err"),
+        std::task::Poll::Pending => {
+            Err(ErrorKind::WasiError(anyhow::anyhow!("cannot wait on pending future")).into())
+        }
     }
 }
 
@@ -50,9 +57,11 @@ macro_rules! impl_add_to_linker_for_funcs {
                     store.define(
                         "wasi_snapshot_preview1",
                         stringify!($fname),
-                        HostFunc::wrap(move |module: Instance, store: &mut Store, $($arg : $typ,)*| -> $ret {
+                        HostFunc::wrap(move |module: Instance, store: &mut Store, $($arg : $typ,)*| -> Result<$ret, Error> {
                             let result = async {
-                                let memory = module.get_mem(store).expect("TODO: err");
+                                let memory = module.get_mem(store).ok_or_else(|| {
+                                    ErrorKind::WasiError(anyhow::anyhow!("no memory found"))
+                                })?;
                                 let guest_memory = ShwasiGuestMemory::new(&memory.data);
                                 wasi_common::snapshots::preview_1::wasi_snapshot_preview1::$fname(
                                     &mut ctx_clone,
@@ -60,9 +69,9 @@ macro_rules! impl_add_to_linker_for_funcs {
                                     $($arg,)*
                                 )
                                 .await
-                                .expect("TODO: err")
+                                .map_err(|e| ErrorKind::WasiError(e).into())
                             };
-                            run_in_dummy_executor(result).expect("TODO: err")
+                            run_in_dummy_executor(result)?
                         }),
                     );
                 }

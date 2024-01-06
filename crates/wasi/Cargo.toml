@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow.workspace = true
 wasi-common = "16.0.0"
 wasmtime-wasi = "16.0.0"
 wiggle = { version = "16.0.0", default-features = false, features = ["wiggle_metadata"] }

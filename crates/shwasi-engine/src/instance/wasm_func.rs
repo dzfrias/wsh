@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use shwasi_parser::ValType;
 
 use crate::{
-    error::{Error, Result},
+    error::{ErrorKind, Result},
     store::Addr,
     value::{Value, ValueUntyped},
     vm::Vm,
@@ -39,15 +39,14 @@ impl WasmFuncUntyped {
                 .zip(args.iter().map(|v| v.ty()))
                 .all(|(a, b)| a == &b)
         {
-            return Err(Error::FunctionArgsMismatch {
+            return Err(ErrorKind::FunctionArgsMismatch {
                 want: func.ty().0.clone(),
                 got: args.iter().map(|v| v.ty()).collect(),
-            });
+            }
+            .into());
         }
         let mut vm = Vm::new(store, self.inst.clone());
-        let res = vm
-            .call(self.func_addr, args.iter().map(|v| (*v).into()))
-            .map_err(Error::Trap)?;
+        let res = vm.call(self.func_addr, args.iter().map(|v| (*v).into()))?;
         Ok(res)
     }
 
@@ -82,9 +81,7 @@ where
     /// Call the function with the given arguments, returning the results.
     pub fn call(&self, store: &mut Store, args: Params) -> Result<Results> {
         let mut vm = Vm::new(store, self.inst.clone());
-        let res = vm
-            .call(self.func_addr, args.as_values())
-            .map_err(Error::Trap)?;
+        let res = vm.call(self.func_addr, args.as_values())?;
         let values = Results::from_values(res.into_iter().map(Into::into));
         Ok(values)
     }
@@ -123,7 +120,7 @@ pub trait WasmResults {
     where
         I: IntoIterator<Item = ValType>;
     #[doc(hidden)]
-    fn into_values(self) -> Vec<ValueUntyped>;
+    fn into_values(self) -> Result<Vec<ValueUntyped>>;
     #[doc(hidden)]
     fn valtypes() -> impl Iterator<Item = ValType>;
 }
@@ -226,8 +223,8 @@ impl WasmResults for () {
         values.into_iter().next().is_none()
     }
 
-    fn into_values(self) -> Vec<ValueUntyped> {
-        vec![]
+    fn into_values(self) -> Result<Vec<ValueUntyped>> {
+        Ok(vec![])
     }
 
     fn valtypes() -> impl Iterator<Item = ValType> {
@@ -251,8 +248,8 @@ impl<T: WasmType> WasmResults for T {
         iter.next().is_some_and(|v| v == T::ty()) && iter.next().is_none()
     }
 
-    fn into_values(self) -> Vec<ValueUntyped> {
-        vec![self.as_value()]
+    fn into_values(self) -> Result<Vec<ValueUntyped>> {
+        Ok(vec![self.as_value()])
     }
 
     fn valtypes() -> impl Iterator<Item = ValType> {
@@ -368,8 +365,8 @@ macro_rules! impl_wasm_results {
                 iter.next().is_none()
             }
 
-            fn into_values(self) -> Vec<ValueUntyped> {
-                vec![$(self.$T.as_value()),*]
+            fn into_values(self) -> Result<Vec<ValueUntyped>> {
+                Ok(vec![$(self.$T.as_value()),*])
             }
 
             fn valtypes() -> impl Iterator<Item = ValType> {
@@ -381,3 +378,30 @@ macro_rules! impl_wasm_results {
 
 for_each_tuple!(impl_wasm_params);
 for_each_tuple!(impl_wasm_results);
+
+impl<T> WasmResults for Result<T>
+where
+    T: WasmResults,
+{
+    fn from_values<I>(values: I) -> Self
+    where
+        I: IntoIterator<Item = ValueUntyped>,
+    {
+        Ok(T::from_values(values))
+    }
+
+    fn matches<I>(values: I) -> bool
+    where
+        I: IntoIterator<Item = ValType>,
+    {
+        T::matches(values)
+    }
+
+    fn into_values(self) -> Result<Vec<ValueUntyped>> {
+        self.map_or_else(Err, T::into_values)
+    }
+
+    fn valtypes() -> impl Iterator<Item = ValType> {
+        T::valtypes()
+    }
+}

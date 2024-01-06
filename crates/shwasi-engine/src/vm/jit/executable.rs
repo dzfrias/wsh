@@ -4,7 +4,7 @@ use num_enum::TryFromPrimitive;
 use smallvec::{smallvec, SmallVec};
 use thiserror::Error;
 
-use crate::{value::ValueUntyped, vm::Vm, Addr, Func, Trap, Value};
+use crate::{value::ValueUntyped, vm::Vm, Addr, ErrorKind, Func, Trap, Value};
 
 type CallFn = fn(
     *const Vm,
@@ -162,8 +162,12 @@ fn call(
         (*vm).stack.extend_from_slice(args);
         let f = &(*vm).store.functions[addr];
         let bp = (*vm).frame.bp;
-        let trap_code = if let Err(trap) = (*vm).call_raw(addr) {
-            trap as u8
+        let trap_code = if let Err(err) = (*vm).call_raw(addr) {
+            match err.kind() {
+                ErrorKind::Trap(trap) => *trap as u8,
+                // TODO: handle other errors
+                _ => 1,
+            }
         } else {
             0
         };

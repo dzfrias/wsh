@@ -11,7 +11,7 @@ use shwasi_parser::{
 pub use self::into_host_func::IntoHostFunc;
 pub use self::wasm_func::*;
 use crate::{
-    error::{Error, Result},
+    error::{ErrorKind, Result},
     store::{
         Addr, Data, Element, Export, Extern, ExternVal, Func, Global, Memory, ModuleFunc, Store,
         Table,
@@ -52,7 +52,7 @@ impl Instance {
     /// This will allocate the module's imports into the store, and allocate the module's different
     /// sections, and run the module's start function, if present.
     pub fn instantiate(store: &mut Store, mut module: Module) -> Result<Self> {
-        validate(&module).map_err(Error::ValidationError)?;
+        validate(&module).map_err(ErrorKind::ValidationError)?;
 
         let mut inst = InstanceInner::default();
 
@@ -60,7 +60,7 @@ impl Instance {
             // This will give us an an `ExternVal`, which holds data about the address of the
             // extern we're workign with.
             let extern_val = store.resolve(import.module, import.field).ok_or_else(|| {
-                Error::ExternNotFound {
+                ErrorKind::ExternNotFound {
                     module: import.module.to_owned(),
                     field: import.field.to_owned(),
                 }
@@ -86,10 +86,11 @@ impl Instance {
                 ImportKind::Global(global) => Extern::Global(*global),
             };
             if !ty.matches(&import_ty) {
-                return Err(Error::BadExtern {
+                return Err(ErrorKind::BadExtern {
                     want: import_ty,
                     got: ty.clone(),
-                });
+                }
+                .into());
             }
 
             match extern_val {
@@ -215,7 +216,7 @@ impl Instance {
                     let len = store.tables[inst.table_addrs()[tbl_idx as usize]].size();
                     let new_offset = offset.saturating_add(elem_inst.elems.len() as u32);
                     if new_offset > len {
-                        return Err(Error::Trap(Trap::TableGetOutOfBounds));
+                        return Err(ErrorKind::Trap(Trap::TableGetOutOfBounds).into());
                     }
                     for (i, func_idx) in elem_inst.elems.iter().enumerate() {
                         let tbl = &mut store.tables[inst.table_addrs()[tbl_idx as usize]];
@@ -239,7 +240,7 @@ impl Instance {
             .as_u32() as usize;
             let mem = &mut store.memories[inst.mem_addrs()[0]];
             if offset + data.data.len() > mem.data.len() {
-                return Err(Error::Trap(Trap::MemoryAccessOutOfBounds));
+                return Err(ErrorKind::Trap(Trap::MemoryAccessOutOfBounds).into());
             }
             mem.data[offset..offset + data.data.len()].copy_from_slice(data.data);
         }
@@ -247,7 +248,7 @@ impl Instance {
         if let Some(start) = module.start {
             let func_addr = inst.func_addrs()[start as usize];
             let mut vm = Vm::new(store, inst.clone());
-            vm.call(func_addr, []).map_err(Error::Trap)?;
+            vm.call(func_addr, [])?;
         }
 
         Ok(inst)
@@ -277,9 +278,9 @@ impl Instance {
     {
         let func = self
             .find_export(name)
-            .ok_or_else(|| Error::FunctionNotFound(name.to_owned()))?;
+            .ok_or_else(|| ErrorKind::FunctionNotFound(name.to_owned()))?;
         let ExternVal::Func(func_addr) = func.reference else {
-            return Err(Error::AttemptingToCallNonFunction(func.reference.ty()));
+            return Err(ErrorKind::AttemptingToCallNonFunction(func.reference.ty()).into());
         };
         let f = &store.functions[func_addr];
         if !Params::matches(f.ty().0.iter().copied()) {
@@ -298,9 +299,9 @@ impl Instance {
     pub fn get_func_untyped(&self, _store: &Store, name: &str) -> Result<WasmFuncUntyped> {
         let func = self
             .find_export(name)
-            .ok_or_else(|| Error::FunctionNotFound(name.to_owned()))?;
+            .ok_or_else(|| ErrorKind::FunctionNotFound(name.to_owned()))?;
         let ExternVal::Func(func_addr) = func.reference else {
-            return Err(Error::AttemptingToCallNonFunction(func.reference.ty()));
+            return Err(ErrorKind::AttemptingToCallNonFunction(func.reference.ty()).into());
         };
         Ok(WasmFuncUntyped::new(func_addr, self.clone()))
     }

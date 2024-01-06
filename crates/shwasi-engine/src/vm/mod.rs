@@ -18,7 +18,7 @@ use self::ops::*;
 use crate::{
     store::{Addr, Func, Global},
     value::{Value, ValueUntyped},
-    Instance, Ref, Store,
+    Error, Instance, Ref, Store,
 };
 
 /// The WebAssembly virtual machine that this crate uses internally.
@@ -103,7 +103,7 @@ struct Label {
     stack_height: usize,
 }
 
-#[derive(Debug, Error, TryFromPrimitive)]
+#[derive(Debug, Error, TryFromPrimitive, Clone, Copy)]
 #[repr(u8)]
 pub enum Trap {
     #[error("stack overflow")]
@@ -126,7 +126,7 @@ pub enum Trap {
     MemoryAccessOutOfBounds,
 }
 
-pub type Result<T> = std::result::Result<T, Trap>;
+pub type Result<T> = std::result::Result<T, Error>;
 
 impl<'s> Vm<'s> {
     #[allow(private_interfaces)]
@@ -266,7 +266,7 @@ impl<'s> Vm<'s> {
                 self.clear_block(bp, f.ty.1.len());
             }
             Func::Host(host_func) => {
-                let res = (host_func.code)(self);
+                let res = (host_func.code)(self)?;
                 self.stack.extend_from_slice(&res);
             }
         }
@@ -327,7 +327,7 @@ impl<'s> Vm<'s> {
 
             match instr {
                 I::Nop => {}
-                I::Unreachable => return Err(Trap::Unreachable),
+                I::Unreachable => return Err(Trap::Unreachable.into()),
                 I::I32Const(i32) => self.push(i32),
                 I::I32Add => binop!(add for u32),
                 I::I32Sub => binop!(sub for u32),
@@ -580,7 +580,7 @@ impl<'s> Vm<'s> {
                     if src.saturating_add(len) > mem.len() as u32
                         || dst.saturating_add(len) > mem.len() as u32
                     {
-                        return Err(Trap::MemoryAccessOutOfBounds);
+                        return Err(Trap::MemoryAccessOutOfBounds.into());
                     }
 
                     mem.data
@@ -590,7 +590,7 @@ impl<'s> Vm<'s> {
                     let (dst, val, len) = self.pop3::<u32, u8, u32>();
                     let mem = &mut self.store.memories[self.frame.module.mem_addrs()[0]];
                     if dst.saturating_add(len) > mem.len() as u32 {
-                        return Err(Trap::MemoryAccessOutOfBounds);
+                        return Err(Trap::MemoryAccessOutOfBounds.into());
                     }
                     mem.data[dst as usize..(dst + len) as usize].fill(val);
                 }
@@ -700,7 +700,7 @@ impl<'s> Vm<'s> {
                     if src.saturating_add(n) > self.store.datas[data_addr].0.len() as u32
                         || dst.saturating_add(n) > self.store.memories[mem_addr].len() as u32
                     {
-                        return Err(Trap::MemoryAccessOutOfBounds);
+                        return Err(Trap::MemoryAccessOutOfBounds.into());
                     }
 
                     let data = &self.store.datas[data_addr].0[src as usize..(src + n) as usize];
@@ -765,7 +765,7 @@ impl<'s> Vm<'s> {
                     let actual_ty = f.ty();
 
                     if expect_ty != actual_ty {
-                        return Err(Trap::CallIndirectTypeMismatch);
+                        return Err(Trap::CallIndirectTypeMismatch.into());
                     }
 
                     // SAFETY: the pointer is not null because we just coerced it from a reference.
@@ -883,7 +883,7 @@ impl<'s> Vm<'s> {
     fn load<const N: usize>(&self, offset: u32) -> Result<[u8; N]> {
         let mem = &self.store.memories[self.frame.module.mem_addrs()[0]];
         if offset.saturating_add(N as u32) > mem.len() as u32 {
-            return Err(Trap::MemoryAccessOutOfBounds);
+            return Err(Trap::MemoryAccessOutOfBounds.into());
         }
         let val: [u8; N] = mem.data[offset as usize..offset as usize + N]
             .try_into()
@@ -896,7 +896,7 @@ impl<'s> Vm<'s> {
     fn store<const N: usize>(&mut self, offset: u32, val: [u8; N]) -> Result<()> {
         let mem = &mut self.store.memories[self.frame.module.mem_addrs()[0]];
         if offset as usize + N > mem.len() {
-            return Err(Trap::MemoryAccessOutOfBounds);
+            return Err(Trap::MemoryAccessOutOfBounds.into());
         }
         mem.data[offset as usize..(offset + N as u32) as usize].copy_from_slice(&val);
         Ok(())
