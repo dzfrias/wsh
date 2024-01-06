@@ -331,7 +331,7 @@ impl Shell {
             .map(|arg| self.eval_expr(arg).map(|val| val.to_string()))
             .collect::<ShellResult<Vec<_>>>()?;
 
-        if let Some(builtin) = Builtin::from_name(cmd.name.as_str()) {
+        if let Some(builtin) = Builtin::from_name(&cmd.name) {
             let status = builtin.run(self, args, stdout)?;
             return Ok(status);
         }

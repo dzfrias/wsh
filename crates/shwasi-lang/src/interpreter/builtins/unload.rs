@@ -1,24 +1,26 @@
 use std::io;
 
-use filedescriptor::IntoRawFileDescriptor;
+use anyhow::{ensure, Result};
+use filedescriptor::AsRawFileDescriptor;
 
-use crate::{Shell, ShellResult};
+use crate::Shell;
 
 pub fn unload<I, S>(
     shell: &mut Shell,
     args: I,
-    mut stdout: impl io::Write + IntoRawFileDescriptor,
-) -> ShellResult<i32>
+    stdout: &mut (impl io::Write + AsRawFileDescriptor),
+) -> Result<()>
 where
     I: IntoIterator<Item = S>,
     S: AsRef<str>,
 {
-    if args.into_iter().next().is_some() {
-        writeln!(stdout, "unload: expected no arguments").expect("error writing to stdout");
-        return Ok(1);
-    }
+    ensure!(
+        args.into_iter().next().is_none(),
+        "unload: expected no arguments"
+    );
 
     let unloaded = shell.env.unload_modules();
     writeln!(stdout, "unloaded {unloaded} modules").expect("error writing to stdout");
-    Ok(0)
+
+    Ok(())
 }

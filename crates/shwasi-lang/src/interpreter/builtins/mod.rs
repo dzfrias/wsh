@@ -4,9 +4,9 @@ mod source;
 mod unload;
 mod which;
 
-use std::{ffi::OsStr, io};
+use std::io;
 
-use filedescriptor::IntoRawFileDescriptor;
+use filedescriptor::AsRawFileDescriptor;
 
 use self::which::which;
 use crate::{Shell, ShellResult};
@@ -25,8 +25,8 @@ pub enum Builtin {
 }
 
 impl Builtin {
-    pub fn from_name(name: impl AsRef<OsStr>) -> Option<Self> {
-        match name.as_ref().to_str()? {
+    pub fn from_name(name: impl AsRef<str>) -> Option<Self> {
+        match name.as_ref() {
             "cd" => Some(Self::Cd),
             "source" => Some(Self::Source),
             "load" => Some(Self::Load),
@@ -40,18 +40,33 @@ impl Builtin {
         &self,
         shell: &mut Shell,
         args: I,
-        stdout: impl io::Write + IntoRawFileDescriptor,
+        mut stdout: impl io::Write + AsRawFileDescriptor,
     ) -> ShellResult<i32>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<str>,
     {
+        let result = match self {
+            Self::Cd => cd(shell, args, &mut stdout),
+            Self::Source => source(shell, args, &mut stdout),
+            Self::Load => load(shell, args, &mut stdout),
+            Self::Unload => unload(shell, args, &mut stdout),
+            Self::Which => which(shell, args, &mut stdout),
+        };
+        if let Err(err) = result {
+            writeln!(stdout, "{}: {err:#}", self.name()).expect("error writing to stdout");
+        };
+
+        Ok(0)
+    }
+
+    pub fn name(&self) -> &'static str {
         match self {
-            Self::Cd => cd(shell, args, stdout),
-            Self::Source => source(shell, args, stdout),
-            Self::Load => load(shell, args, stdout),
-            Self::Unload => unload(shell, args, stdout),
-            Self::Which => which(shell, args, stdout),
+            Self::Cd => "cd",
+            Self::Source => "source",
+            Self::Load => "load",
+            Self::Unload => "unload",
+            Self::Which => "which",
         }
     }
 }

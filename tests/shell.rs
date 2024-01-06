@@ -135,6 +135,21 @@ shell_test!(
     "load ./tests/wasm/fib.wasm\nfib hello",
     "shwasi: cannot pass string to wasm function `fib`"
 );
+shell_test!(
+    source_wasi,
+    "source ./tests/wasm/hello_wasi.wasm",
+    "Hello, world!"
+);
+shell_test!(
+    source_wasi_piping,
+    "source ./tests/wasm/hello_wasi.wasm | wc -w | xargs",
+    "2"
+);
+shell_test!(
+    source_non_wasi_fails,
+    "source ./tests/wasm/fib.wasm",
+    "source: error running wasm file: function not found \"_start\""
+);
 
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");
 shell_test!(@fail unfinished_pipe, "echo hi |");
