@@ -90,7 +90,7 @@ pub(crate) enum Func {
 pub struct HostFunc {
     pub(crate) ty: FuncType,
     #[allow(clippy::type_complexity)]
-    pub(crate) code: Box<dyn Fn(&mut Vm) -> Vec<ValueUntyped>>,
+    pub(crate) code: Box<dyn FnMut(&mut Vm) -> Vec<ValueUntyped> + Send + Sync>,
 }
 
 impl HostFunc {

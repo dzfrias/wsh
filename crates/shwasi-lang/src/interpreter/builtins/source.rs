@@ -19,12 +19,30 @@ where
         writeln!(stdout, "source: no file provided").expect("error writing to stdout");
         return Ok(1);
     };
-    let contents = match fs::read_to_string(file.as_ref()) {
+    let contents = match fs::read(file.as_ref()) {
         Ok(contents) => contents,
         Err(err) => {
             writeln!(stdout, "source: error reading file: {err}").expect("error writing to stdout");
             return Ok(1);
         }
+    };
+    const MAGIC: &[u8; 4] = b"\0asm";
+    // Automatically detect if the file is a wasm file. If it is, we can run it directly. This
+    // check involves reading the first 4 bytes of the file, so it's not free.
+    if contents.len() >= 4 && &contents[0..4] == MAGIC {
+        // TODO: error handling
+        let module = shwasi_parser::Parser::new(&contents).read_module().unwrap();
+        let instance = shwasi_engine::Instance::instantiate(shell.env.store_mut(), module).unwrap();
+        let start = instance
+            .get_func::<(), ()>(shell.env.store(), "_start")
+            .unwrap();
+        start.call(shell.env.store_mut(), ()).unwrap();
+        return Ok(0);
+    }
+    let Ok(contents) = String::from_utf8(contents) else {
+        writeln!(stdout, "source: error reading file: invalid utf8")
+            .expect("error writing to stdout");
+        return Ok(1);
     };
     let fd = stdout.into_raw_file_descriptor();
     // SAFETY: `fd` is a valid file descriptor on account of it being from an

@@ -1,16 +1,17 @@
-#[cfg(target_arch = "aarch64")]
+#[cfg(all(target_arch = "aarch64", feature = "jit"))]
 mod jit;
 mod ops;
 
 use std::mem;
 
 use num_enum::TryFromPrimitive;
-#[cfg(target_arch = "aarch64")]
+#[cfg(all(target_arch = "aarch64", feature = "jit"))]
 use rustc_hash::FxHashMap;
 use shwasi_parser::{BlockType, InitExpr, InstrBuffer, Instruction, MemArg, NumLocals};
 use thiserror::Error;
 #[cfg(debug_assertions)]
 use tracing::trace;
+#[cfg(all(target_arch = "aarch64", feature = "jit"))]
 use tracing::{info, warn};
 
 use self::ops::*;
@@ -41,7 +42,7 @@ pub struct Vm<'s> {
     /// This is used to cache JIT compiled functions. We use FxHashMap here because it's much
     /// faster for integer keys. This is important so we can call `call_raw` with as little
     /// overhead as possible.
-    #[cfg(target_arch = "aarch64")]
+    #[cfg(all(target_arch = "aarch64", feature = "jit"))]
     compiled: FxHashMap<Addr<Func>, jit::Executable>,
 }
 
@@ -135,7 +136,7 @@ impl<'s> Vm<'s> {
             stack: vec![],
             frame: StackFrame::new(module),
             labels: vec![],
-            #[cfg(target_arch = "aarch64")]
+            #[cfg(all(target_arch = "aarch64", feature = "jit"))]
             compiled: FxHashMap::default(),
         }
     }
@@ -163,6 +164,15 @@ impl<'s> Vm<'s> {
             .collect())
     }
 
+    /// Get a mutable reference to the underlying store of the vm.
+    pub fn get_store(&mut self) -> &mut Store {
+        self.store
+    }
+
+    pub fn get_module(&self) -> Instance {
+        self.frame.module.clone()
+    }
+
     /// Call a raw function pointer.
     ///
     /// # Safety
@@ -175,10 +185,10 @@ impl<'s> Vm<'s> {
     /// upheld diligently throughout the **entire** virtual machine. In WebAssembly, there's no
     /// reason why a function should ever be mutated.
     unsafe fn call_raw(&mut self, f_addr: Addr<Func>) -> Result<()> {
-        let f = (&self.store.functions[f_addr]) as *const Func;
+        let f = (&mut self.store.functions[f_addr]) as *mut Func;
         // This dereference is the only unsafe part of this function. We cast it to a shared
         // reference out of convenience.
-        match &unsafe { &*f } {
+        match &mut unsafe { &mut *f } {
             Func::Module(f) => {
                 // Args should already be on the stack (due to validation), so push locals
                 let mut pushed_locals = 0;
@@ -199,7 +209,7 @@ impl<'s> Vm<'s> {
                 // Keep track of the old frame to replace later. This is what emulates a call stack
                 let old_frame = mem::replace(&mut self.frame, new_frame);
 
-                #[cfg(target_arch = "aarch64")]
+                #[cfg(all(target_arch = "aarch64", feature = "jit"))]
                 if let Some(executable) = self.compiled.get(&f_addr) {
                     let executable = executable as *const jit::Executable;
                     (*executable).run(self)?;
@@ -257,7 +267,6 @@ impl<'s> Vm<'s> {
             }
             Func::Host(host_func) => {
                 let res = (host_func.code)(self);
-                self.clear_block(self.stack.len(), host_func.ty.1.len());
                 self.stack.extend_from_slice(&res);
             }
         }

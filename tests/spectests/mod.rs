@@ -23,49 +23,49 @@ pub fn run_spectest(name: &str) -> Result<()> {
     store.define(
         "spectest",
         "print",
-        HostFunc::wrap(|| {
+        HostFunc::wrap(|_: Instance, _: &mut Store| {
             println!("print");
         }),
     );
     store.define(
         "spectest",
         "print_i32",
-        HostFunc::wrap(|i: i32| {
+        HostFunc::wrap(|_: Instance, _: &mut Store, i: i32| {
             println!("print_i32: {i}");
         }),
     );
     store.define(
         "spectest",
         "print_i64",
-        HostFunc::wrap(|i: i64| {
+        HostFunc::wrap(|_: Instance, _: &mut Store, i: i64| {
             println!("print_i64: {i}");
         }),
     );
     store.define(
         "spectest",
         "print_f32",
-        HostFunc::wrap(|f: f32| {
+        HostFunc::wrap(|_: Instance, _: &mut Store, f: f32| {
             println!("print_f32: {f}");
         }),
     );
     store.define(
         "spectest",
         "print_f64",
-        HostFunc::wrap(|f: f64| {
+        HostFunc::wrap(|_: Instance, _: &mut Store, f: f64| {
             println!("print_f64: {f}");
         }),
     );
     store.define(
         "spectest",
         "print_i32_f32",
-        HostFunc::wrap(|i: i32, f: f32| {
+        HostFunc::wrap(|_: Instance, _: &mut Store, i: i32, f: f32| {
             println!("print_i32_f32: {i} {f}");
         }),
     );
     store.define(
         "spectest",
         "print_f64_f64",
-        HostFunc::wrap(|f1: f64, f2: f64| {
+        HostFunc::wrap(|_: Instance, _: &mut Store, f1: f64, f2: f64| {
             println!("print_f64_f64: {f1} {f2}");
         }),
     );

@@ -1,7 +1,7 @@
 mod into_host_func;
 mod wasm_func;
 
-use std::rc::Rc;
+use std::sync::Arc;
 
 use shwasi_parser::{
     validate, Code, ElementKind, ExternalKind, FuncType, GlobalType, ImportKind, InstrBuffer,
@@ -28,7 +28,7 @@ pub const PAGE_SIZE: usize = 65536;
 /// These are cheap to clone, and should be passed around freely.
 #[derive(Debug, Default, Clone)]
 pub struct Instance {
-    inner: Rc<InstanceInner>,
+    inner: Arc<InstanceInner>,
 }
 
 /// Inner representation of an [`Instance`].
@@ -177,7 +177,7 @@ impl Instance {
         }));
 
         let inst = Instance {
-            inner: Rc::new(inst),
+            inner: Arc::new(inst),
         };
 
         // Allocate functions into store
@@ -313,6 +313,11 @@ impl Instance {
         };
         let global = &store.globals[addr];
         Some(global.value)
+    }
+
+    pub fn get_mem<'a>(&self, store: &'a mut Store) -> Option<&'a mut Memory> {
+        let mem_addr = self.mem_addrs().first()?;
+        Some(&mut store.memories[*mem_addr])
     }
 }
 

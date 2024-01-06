@@ -1,27 +1,32 @@
-#![allow(dead_code)]
-
 use std::collections::HashMap;
 
 use shwasi_engine::{Instance, Store, WasmFuncUntyped};
+use shwasi_wasi::WasiCtx;
 use smol_str::SmolStr;
 
 use crate::{ast::Pipeline, interpreter::value::Value, Ident};
 
-#[derive(Debug, Default)]
 pub struct Env {
     env: HashMap<Ident, Value>,
     aliases: HashMap<SmolStr, Pipeline>,
+    #[allow(dead_code)]
+    wasi_ctx: WasiCtx,
     store: Store,
     modules: Vec<Instance>,
 }
 
 impl Env {
     pub fn new() -> Self {
+        let mut store = Store::default();
+        let mut wasi_ctx = shwasi_wasi::WasiCtxBuilder::new().inherit_stdio().build();
+        // Link the WASI preview 1 snapshot into the store, so we can use it in our modules.
+        shwasi_wasi::sync::snapshots::preview_1::link(&mut store, &mut wasi_ctx);
         Self {
             env: HashMap::new(),
             aliases: HashMap::new(),
             modules: Vec::new(),
-            store: Store::default(),
+            wasi_ctx,
+            store,
         }
     }
 
@@ -68,5 +73,11 @@ impl Env {
 
     pub fn store_mut(&mut self) -> &mut Store {
         &mut self.store
+    }
+}
+
+impl Default for Env {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -1,12 +1,12 @@
 use shwasi_parser::FuncType;
 
-use crate::{store::HostFunc, WasmParams, WasmResults, WasmType};
+use crate::{store::HostFunc, Instance, Store, WasmParams, WasmResults, WasmType};
 
 mod private {
     pub trait Sealed {}
 }
 
-pub trait IntoHostFunc<Params, Results>: Send + Sync + 'static {
+pub trait IntoHostFunc<Params, Results>: Send + Sync {
     #[doc(hidden)]
     type Params: WasmParams;
     #[doc(hidden)]
@@ -18,17 +18,17 @@ pub trait IntoHostFunc<Params, Results>: Send + Sync + 'static {
 
 impl<F, R> IntoHostFunc<(), R> for F
 where
-    F: Fn() -> R + Send + Sync + 'static,
+    F: FnMut(Instance, &mut Store) -> R + Send + Sync + 'static,
     R: WasmResults,
 {
     type Params = ();
     type Results = R;
 
-    fn into_host_func(self) -> HostFunc {
+    fn into_host_func(mut self) -> HostFunc {
         HostFunc {
             ty: FuncType(vec![], vec![]),
-            code: Box::new(move |_| {
-                let res = self();
+            code: Box::new(move |vm| {
+                let res = self(vm.get_module(), vm.get_store());
                 res.into_values()
             }),
         }
@@ -62,7 +62,7 @@ macro_rules! impl_host_func {
         paste::paste! {
             impl<F, $([<T $T>]),*, R> IntoHostFunc<($([<T $T>]),* ,), R> for F
             where
-                F: Fn($([<T $T>]),*) -> R + Send + Sync + 'static,
+                F: FnMut(Instance, &mut Store, $([<T $T>]),*) -> R + Send + Sync + 'static,
                 R: WasmResults,
                 ($([<T $T>],)*): WasmParams,
                 $(
@@ -72,14 +72,18 @@ macro_rules! impl_host_func {
                 type Params = ($([<T $T>]),* ,);
                 type Results = R;
 
-                fn into_host_func(self) -> HostFunc {
+                fn into_host_func(mut self) -> HostFunc {
                     HostFunc {
                         ty: FuncType(<Self::Params as WasmParams>::valtypes().collect(), R::valtypes().collect()),
                         code: Box::new(move |vm| {
+                            let mut args = [$crate::Value::I32(0).untyped(); $n];
+                            for i in 0..$n {
+                                args[i] = vm.stack.pop().unwrap();
+                            }
                             $(
-                                let [<t $T>] = [<T $T>]::from_value(vm.stack.pop().unwrap());
+                                let [<t $T>] = [<T $T>]::from_value(args[$n - $T - 1]);
                              )*
-                            let res = self($([<t $T>]),*);
+                            let res = self(vm.get_module(), vm.get_store(), $([<t $T>]),*);
                             res.into_values()
                         }),
                     }
