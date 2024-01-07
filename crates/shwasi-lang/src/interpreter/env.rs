@@ -18,7 +18,7 @@ pub struct Env {
 impl Env {
     pub fn new() -> Self {
         let mut store = Store::default();
-        let mut wasi_ctx = shwasi_wasi::WasiCtxBuilder::new().build();
+        let mut wasi_ctx = shwasi_wasi::WasiCtxBuilder::new().inherit_stderr().build();
         // Link the WASI preview 1 snapshot into the store, so we can use it in our modules.
         shwasi_wasi::sync::snapshots::preview_1::link(&mut store, &mut wasi_ctx);
         Self {
