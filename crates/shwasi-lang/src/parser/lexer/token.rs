@@ -205,6 +205,16 @@ impl TokenBuffer {
         self.len() == 0
     }
 
+    /// Get the last token in the buffer.
+    pub fn last(&self) -> Option<Token> {
+        self.get(self.len().checked_sub(1)?)
+    }
+
+    /// Get the first token in the buffer.
+    pub fn first(&self) -> Option<Token> {
+        self.get(0)
+    }
+
     /// Incremenent the offset by the given amount. This is used during creation of the buffer.
     ///
     /// Most of the time, the positions of each token are kept track of automatically (using
@@ -407,14 +417,14 @@ impl Token {
     }
 
     /// Return the keyword corresponding to the given string, if it exists.
-    pub(super) fn from_kw(kw: &str) -> Option<Self> {
+    pub(super) fn from_kw(kw: &str, last_newline: bool) -> Option<Self> {
         Some(match kw {
-            "if" => Token::If,
+            "if" if last_newline => Token::If,
             "then" => Token::Then,
             "else" => Token::Else,
             "end" => Token::End,
-            "alias" => Token::Alias,
-            "export" => Token::Export,
+            "alias" if last_newline => Token::Alias,
+            "export" if last_newline => Token::Export,
             _ => return None,
         })
     }

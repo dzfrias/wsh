@@ -184,7 +184,8 @@ impl<'src> Lexer<'src> {
                 // Identifiers in strict mode. Note that they cannot start with a digit
                 c if is_ident_char(c) && !c.is_ascii_digit() && self.strict() => {
                     let s = self.consume_ident();
-                    match Token::from_kw(s) {
+                    let last_is_newline = buf.last() == Some(Token::Newline) || buf.is_empty();
+                    match Token::from_kw(s, last_is_newline) {
                         Some(t) if t.is_mode_switch_kw() => {
                             self.mode = Mode::StrictNoEnd;
                             push!(t);
@@ -195,13 +196,14 @@ impl<'src> Lexer<'src> {
                         }
                         None if s == "true" => push!(BoolTrue),
                         None if s == "false" => push!(BoolFalse),
-                        None => push!(Ident(token::Ident::new(s))),
+                        _ => push!(Ident(token::Ident::new(s))),
                     }
                 }
                 // Everything else in normal mode is a string
                 _ if !self.strict() => {
                     let s = self.consume_str();
-                    match Token::from_kw(s) {
+                    let last_is_newline = buf.last() == Some(Token::Newline) || buf.is_empty();
+                    match Token::from_kw(s, last_is_newline) {
                         Some(t) if t.is_mode_switch_kw() => {
                             self.mode = Mode::StrictNoEnd;
                             push!(t);
@@ -210,7 +212,7 @@ impl<'src> Lexer<'src> {
                             self.mode = Mode::Normal;
                             push!(t);
                         }
-                        None => push!(String(s.into())),
+                        _ => push!(String(s.into())),
                     }
                 }
 
@@ -660,5 +662,20 @@ mod tests {
         let input = ".(.999999999999999999999999999999";
         let lexer = Lexer::new(input);
         lexer.lex();
+    }
+
+    #[test]
+    fn some_keywords_need_newlines_before() {
+        let input = "echo export alias if";
+        let lexer = Lexer::new(input);
+        let buf = lexer.lex();
+        let expect = token_buf!(
+            Token::String("echo".into()),
+            Token::String("export".into()),
+            Token::String("alias".into()),
+            Token::String("if".into()),
+            Token::Eof
+        );
+        assert_eq!(expect, buf);
     }
 }
