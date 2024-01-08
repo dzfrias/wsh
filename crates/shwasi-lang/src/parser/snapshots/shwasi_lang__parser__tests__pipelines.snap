@@ -15,10 +15,12 @@ Ast {
                                 "hi",
                             ),
                         ],
+                        merge_stderr: false,
                     },
                     Command {
                         name: "cat",
                         args: [],
+                        merge_stderr: false,
                     },
                     Command {
                         name: "wc",
@@ -27,6 +29,7 @@ Ast {
                                 "-w",
                             ),
                         ],
+                        merge_stderr: false,
                     },
                 ],
                 write: None,

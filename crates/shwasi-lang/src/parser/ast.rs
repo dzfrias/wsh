@@ -71,6 +71,7 @@ pub enum PipelineEndKind {
 pub struct Command {
     pub name: SmolStr,
     pub args: Vec<Expr>,
+    pub merge_stderr: bool,
 }
 
 #[derive(Debug, Clone)]

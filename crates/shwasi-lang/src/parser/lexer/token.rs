@@ -14,6 +14,7 @@ pub enum Token {
     Backtick,
     Assign,
     Pipe,
+    PercentPipe,
     Write,
     Append,
     Newline,
@@ -150,6 +151,7 @@ impl TokenBuffer {
             TokenKind::Else => Token::Else,
             TokenKind::End => Token::End,
             TokenKind::Pipe => Token::Pipe,
+            TokenKind::PercentPipe => Token::PercentPipe,
             TokenKind::Gt => Token::Gt,
             TokenKind::Lt => Token::Lt,
             TokenKind::Le => Token::Le,
@@ -241,6 +243,7 @@ pub(super) enum TokenKind {
     BoolFalse,
     Assign,
     Pipe,
+    PercentPipe,
     Write,
     Append,
     Newline,
@@ -359,6 +362,7 @@ impl Token {
             Token::Ne => TokenKind::Ne,
             Token::Bang => TokenKind::Bang,
             Token::Pipe => TokenKind::Pipe,
+            Token::PercentPipe => TokenKind::PercentPipe,
 
             Token::If => TokenKind::If,
             Token::Then => TokenKind::Then,
@@ -402,7 +406,13 @@ impl Token {
             | Token::Lt
             | Token::Write
             | Token::Dollar => 1,
-            Token::Eq | Token::Ne | Token::If | Token::Le | Token::Ge | Token::Append => 2,
+            Token::Eq
+            | Token::Ne
+            | Token::If
+            | Token::Le
+            | Token::Ge
+            | Token::Append
+            | Token::PercentPipe => 2,
             Token::Then | Token::Else | Token::BoolTrue => 4,
             Token::Alias | Token::BoolFalse => 5,
             Token::Export => 6,
@@ -471,6 +481,7 @@ impl fmt::Display for Token {
             Token::End => write!(f, "end"),
             Token::Export => write!(f, "export"),
             Token::Pipe => write!(f, "pipe"),
+            Token::PercentPipe => write!(f, "percent pipe"),
             Token::Write => write!(f, "write"),
             Token::Dollar => write!(f, "dollar"),
             Token::Append => write!(f, "append"),

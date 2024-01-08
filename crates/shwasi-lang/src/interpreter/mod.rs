@@ -35,6 +35,7 @@ pub use value::*;
 pub struct Shell {
     env: Env,
     stdout: RawFileDescriptor,
+    stderr: RawFileDescriptor,
     last_status: i32,
 }
 
@@ -43,6 +44,7 @@ impl Shell {
         Self {
             env: Env::new(),
             stdout: io::stdout().as_raw_file_descriptor(),
+            stderr: io::stderr().as_raw_file_descriptor(),
             last_status: 0,
         }
     }
@@ -66,7 +68,6 @@ impl Shell {
         for stmt in program {
             result = match self.eval_stmt(&stmt) {
                 Ok(result) => result,
-                // TODO: write to global stderr instead
                 Err(_) => continue,
             }
         }
@@ -74,6 +75,7 @@ impl Shell {
         // Reset stdout to the original stdout. This is necessary for operations like `source`,
         // where the user may have redirected stdout somewhere else temporarily.
         unsafe { self.stdout(io::stdout().as_raw_file_descriptor()) };
+        unsafe { self.stderr(io::stderr().as_raw_file_descriptor()) };
 
         Ok((!result.is_null()).then_some(result))
     }
@@ -87,6 +89,17 @@ impl Shell {
     pub(self) unsafe fn stdout(&mut self, stdout: RawFileDescriptor) {
         self.stdout = stdout;
         self.env.wasi_stdout(stdout);
+    }
+
+    /// Sets the stderer file descriptor to `stderr`.
+    ///
+    /// # Safety
+    /// The provided file descriptor must be valid. Additionally, the shell **does not** close the
+    /// provided fd, so that **must** be handled after the fd has been fully used up by the calling
+    /// code.
+    pub(self) unsafe fn stderr(&mut self, stderr: RawFileDescriptor) {
+        self.stderr = stderr;
+        self.env.wasi_stderr(stderr);
     }
 
     fn eval_stmt(&mut self, stmt: &Stmt) -> ShellResult<Value> {
@@ -115,8 +128,17 @@ impl Shell {
                 .map_err(|err| {
                     self.print_err(err);
                 })?;
+            let stderr_fd = unsafe { OpenFileDescriptor::new(self.stderr) };
+            let stderr_dup = self.dup_fd(stderr_fd)?;
             // SAFETY: write end is a valid file descriptor that has not been closed yet
-            unsafe { self.run_pipeline(pipeline, write_end.into_raw_file_descriptor(), None)? };
+            unsafe {
+                self.run_pipeline(
+                    pipeline,
+                    write_end.into_raw_file_descriptor(),
+                    stderr_dup.into_raw_file_descriptor(),
+                    None,
+                )?;
+            }
             let mut out = vec![];
             read_end
                 .read_to_end(&mut out)
@@ -145,8 +167,17 @@ impl Shell {
                     .map_err(|err| {
                         self.print_err(err);
                     })?;
+                let stderr_fd = unsafe { OpenFileDescriptor::new(self.stderr) };
+                let stderr_dup = self.dup_fd(stderr_fd)?;
                 // SAFETY: stdout here comes from a just-opened file, which is a valid raw fd
-                unsafe { self.run_pipeline(pipeline, file.into_raw_file_descriptor(), None)? };
+                unsafe {
+                    self.run_pipeline(
+                        pipeline,
+                        file.into_raw_file_descriptor(),
+                        stderr_dup.into_raw_file_descriptor(),
+                        None,
+                    )?;
+                }
             }
             Some(PipelineEnd {
                 expr,
@@ -164,8 +195,17 @@ impl Shell {
                     .map_err(|err| {
                         self.print_err(err);
                     })?;
+                let stderr_fd = unsafe { OpenFileDescriptor::new(self.stderr) };
+                let stderr_dup = self.dup_fd(stderr_fd)?;
                 // SAFETY: stdout here comes from a just-opened file, which is a valid raw fd
-                unsafe { self.run_pipeline(pipeline, file.into_raw_file_descriptor(), None)? };
+                unsafe {
+                    self.run_pipeline(
+                        pipeline,
+                        file.into_raw_file_descriptor(),
+                        stderr_dup.into_raw_file_descriptor(),
+                        None,
+                    )?;
+                }
             }
             None => {
                 // We have to do a litle bit of a hack to get Rust to accept this code on Windows.
@@ -180,19 +220,18 @@ impl Shell {
                 // We duplicate the stdout fd because `run_pipeline` will close whatever's passed
                 // in, which we don't want because we need to use the file descriptor multiple
                 // times.
-                let stdout_dup = stdout_fd
-                    .try_clone()
-                    .map_err(|err| match err {
-                        filedescriptor::Error::Dup { source, .. } => ShellError::DupError(source),
-                        _ => unreachable!(),
-                    })
-                    .map_err(|err| {
-                        self.print_err(err);
-                    })?;
+                let stdout_dup = self.dup_fd(stdout_fd)?;
+                let stderr_fd = unsafe { OpenFileDescriptor::new(self.stderr) };
+                let stderr_dup = self.dup_fd(stderr_fd)?;
                 // SAFETY: `stdout_dup` is valid because it's just been dupliated from our stdout,
                 // which must've been valid as a result of the error handling
                 unsafe {
-                    self.run_pipeline(pipeline, stdout_dup.into_raw_file_descriptor(), None)?;
+                    self.run_pipeline(
+                        pipeline,
+                        stdout_dup.into_raw_file_descriptor(),
+                        stderr_dup.into_raw_file_descriptor(),
+                        None,
+                    )?;
                 }
             }
         }
@@ -218,9 +257,11 @@ impl Shell {
         &mut self,
         pipeline: &Pipeline,
         default_stdout: RawFileDescriptor,
+        stderr: RawFileDescriptor,
         default_stdin: Option<os_pipe::PipeReader>,
     ) -> ShellResult<()> {
-        let old = self.stdout;
+        let old_stdout = self.stdout;
+        let old_stderr = self.stderr;
         let mut last_result = 0;
         let mut stdin = default_stdin;
         let mut iter = pipeline.commands.iter().peekable();
@@ -250,15 +291,30 @@ impl Shell {
             // the old stdout.
             // This allows us to write directly to the pipe
             self.stdout(stdout);
-            let Ok(result) = self.run_command(cmd, &pipeline.env, stdout, stdin.take()) else {
-                self.stdout(old);
+            let stderr = if !cmd.merge_stderr {
+                let stderr = unsafe { OpenFileDescriptor::new(stderr) };
+                self.dup_fd(stderr)?.into_raw_file_descriptor()
+            } else {
+                stdout
+            };
+            self.stderr(stderr);
+            let Ok(result) = self.run_command(
+                cmd,
+                &pipeline.env,
+                stdout,
+                stderr.into_raw_file_descriptor(),
+                stdin.take(),
+            ) else {
+                self.stdout(old_stdout);
+                self.stderr(old_stderr);
                 if let Some((out, _)) = pipes {
                     stdin = Some(out);
                 }
                 last_result = self.last_status;
                 continue;
             };
-            self.stdout(old);
+            self.stdout(old_stdout);
+            self.stderr(old_stderr);
 
             if let Some((out, _)) = pipes {
                 stdin = Some(out);
@@ -288,6 +344,7 @@ impl Shell {
         cmd: &Command,
         env: &[EnvSet],
         stdout: RawFileDescriptor,
+        stderr: RawFileDescriptor,
         stdin: Option<os_pipe::PipeReader>,
     ) -> ShellResult<i32> {
         // TODO: avoid clone here?
@@ -306,20 +363,21 @@ impl Shell {
             {
                 // Remove the alias so that we don't recurse infinitely
                 let pipeline = self.env.remove_alias(&cmd.name).unwrap();
-                self.run_pipeline(&alias, stdout, stdin)?;
+                self.run_pipeline(&alias, stdout, stderr, stdin)?;
                 self.env.set_alias(cmd.name.clone(), pipeline);
                 return Ok(self.last_status);
             }
-            self.run_pipeline(&alias, stdout, stdin)?;
+            self.run_pipeline(&alias, stdout, stderr, stdin)?;
             return Ok(self.last_status);
         }
 
         // This is where we take ownership of the file descriptor, which will be closed when
         // `stdout` is dropped.
         let stdout = File::from_raw_file_descriptor(stdout);
+        let stderr = File::from_raw_file_descriptor(stderr);
 
         if let Some(wasm_func) = self.env.get_module_func(&cmd.name) {
-            return match self.run_wasm_func(wasm_func, cmd, stdout) {
+            return match self.run_wasm_func(wasm_func, cmd, stdout, stderr) {
                 Ok(_) => Ok(0),
                 Err(_) => Ok(1),
             };
@@ -332,16 +390,12 @@ impl Shell {
             .collect::<ShellResult<Vec<_>>>()?;
 
         if let Some(builtin) = Builtin::from_name(&cmd.name) {
-            let status = builtin.run(self, args, stdout)?;
+            let status = builtin.run(self, args, stdout, stderr)?;
             return Ok(status);
         }
 
         let mut command = process::Command::new(cmd.name.as_str());
-        // TODO: properly handle stderr
-        command
-            .args(args)
-            .stdout(stdout)
-            .stderr(process::Stdio::inherit());
+        command.args(args).stdout(stdout).stderr(stderr);
 
         for env_set in env {
             let value = self.eval_expr(&env_set.expr)?;
@@ -601,15 +655,16 @@ impl Shell {
         wasm_func: shwasi_engine::WasmFuncUntyped,
         cmd: &Command,
         mut stdout: File,
+        mut stderr: File,
     ) -> ShellResult<()> {
         let arg_types = wasm_func.arg_types(self.env.store_mut()).to_vec();
         if arg_types.len() != cmd.args.len() {
             writeln!(
-                stdout,
+                stderr,
                 "shwasi: expected {} args for wasm function",
                 arg_types.len()
             )
-            .expect("write to stdout failed!");
+            .expect("write to stderr failed!");
             return Err(());
         }
 
@@ -626,11 +681,11 @@ impl Shell {
                     ValType::F64 => Ok(shwasi_engine::Value::F64(n)),
                     _ => {
                         writeln!(
-                            stdout,
+                            stderr,
                             "shwasi: could not convert {n} to {ty} for wasm function `{}`",
                             cmd.name
                         )
-                        .expect("write to stdout failed!");
+                        .expect("write to stderr failed!");
                         Err(())
                     }
                 };
@@ -642,11 +697,11 @@ impl Shell {
                     }
                     Value::String(_) => {
                         writeln!(
-                            stdout,
+                            stderr,
                             "shwasi: cannot pass string to wasm function `{}`",
                             cmd.name
                         )
-                        .expect("write to stdout failed!");
+                        .expect("write to stderr failed!");
                         Err(())
                     }
                     Value::Bool(b) => match ty {
@@ -654,21 +709,21 @@ impl Shell {
                         ValType::I64 => Ok(shwasi_engine::Value::I64(b as u64)),
                         _ => {
                             writeln!(
-                                stdout,
+                                stderr,
                                 "shwasi: could not convert bool to {ty} for wasm function `{}`",
                                 cmd.name
                             )
-                            .expect("write to stdout failed!");
+                            .expect("write to stderr failed!");
                             Err(())
                         }
                     },
                     Value::Null => {
                         writeln!(
-                            stdout,
+                            stderr,
                             "shwasi: cannot pass null to wasm function `{}`",
                             cmd.name
                         )
-                        .expect("write to stdout failed!");
+                        .expect("write to stderr failed!");
                         Err(())
                     }
                 }
@@ -679,16 +734,15 @@ impl Shell {
             Ok(results) => results,
             Err(err) => {
                 writeln!(
-                    stdout,
+                    stderr,
                     "shwasi: error calling wasm function `{}`: {err}",
                     cmd.name
                 )
-                .expect("write to stdout failed!");
+                .expect("write to stderr failed!");
                 return Err(());
             }
         };
         for result in results {
-            let mut stdout = unsafe { OpenFileDescriptor::new(self.stdout) };
             writeln!(stdout, "{result}").expect("write to stdout failed!");
         }
 
@@ -696,12 +750,23 @@ impl Shell {
     }
 
     fn print_err(&mut self, err: ShellError) {
-        let mut stdout = unsafe { OpenFileDescriptor::new(self.stdout) };
-        writeln!(stdout, "shwasi: {err}").expect("write to stdout failed!");
+        let mut stderr = unsafe { OpenFileDescriptor::new(self.stderr) };
+        writeln!(stderr, "shwasi: {err}").expect("write to stderr failed!");
     }
 
     fn set_status(&mut self, exit_status: i32) {
         self.last_status = exit_status;
+    }
+
+    fn dup_fd(&mut self, fd: OpenFileDescriptor) -> ShellResult<FileDescriptor> {
+        fd.try_clone()
+            .map_err(|err| match err {
+                filedescriptor::Error::Dup { source, .. } => ShellError::DupError(source),
+                _ => unreachable!(),
+            })
+            .map_err(|err| {
+                self.print_err(err);
+            })
     }
 }
 
@@ -725,8 +790,12 @@ impl OpenFileDescriptor {
         }))
     }
 
-    pub fn try_clone(&self) -> Result<Self, filedescriptor::Error> {
-        Ok(Self(ManuallyDrop::new(self.0.try_clone()?)))
+    /// Clones the underlying file descriptor.
+    ///
+    /// This will return an **owned** FileDescriptor, which means that the cloned file descriptor
+    /// will be closed when the returned value is dropped.
+    pub fn try_clone(&self) -> Result<FileDescriptor, filedescriptor::Error> {
+        self.0.try_clone()
     }
 }
 

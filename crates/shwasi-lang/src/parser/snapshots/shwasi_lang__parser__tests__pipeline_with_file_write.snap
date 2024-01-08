@@ -15,6 +15,7 @@ Ast {
                                 "hi",
                             ),
                         ],
+                        merge_stderr: false,
                     },
                 ],
                 write: Some(
@@ -38,6 +39,7 @@ Ast {
                                 "hello world",
                             ),
                         ],
+                        merge_stderr: false,
                     },
                     Command {
                         name: "wc",
@@ -46,10 +48,12 @@ Ast {
                                 "-w",
                             ),
                         ],
+                        merge_stderr: false,
                     },
                     Command {
                         name: "xargs",
                         args: [],
+                        merge_stderr: false,
                     },
                 ],
                 write: Some(

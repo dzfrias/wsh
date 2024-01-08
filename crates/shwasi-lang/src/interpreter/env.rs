@@ -18,7 +18,7 @@ pub struct Env {
 impl Env {
     pub fn new() -> Self {
         let mut store = Store::default();
-        let mut wasi_ctx = shwasi_wasi::WasiCtxBuilder::new().inherit_stderr().build();
+        let mut wasi_ctx = shwasi_wasi::WasiCtxBuilder::new().build();
         // Link the WASI preview 1 snapshot into the store, so we can use it in our modules.
         shwasi_wasi::sync::snapshots::preview_1::link(&mut store, &mut wasi_ctx);
         Self {
@@ -84,6 +84,17 @@ impl Env {
         let wasi_file = File::from_cap_std(file);
         let no_drop = NoDropWasiFile::new(wasi_file);
         self.wasi_ctx.set_stdout(Box::new(no_drop));
+    }
+
+    /// Set the WASI stdout file descriptor.
+    ///
+    /// # Safety
+    /// This function requires a valid file descriptor. It will **not** be taken ownership of.
+    pub unsafe fn wasi_stderr(&mut self, fd: RawFileDescriptor) {
+        let file = cap_std::fs::File::from_raw_file_descriptor(fd);
+        let wasi_file = File::from_cap_std(file);
+        let no_drop = NoDropWasiFile::new(wasi_file);
+        self.wasi_ctx.set_stderr(Box::new(no_drop));
     }
 }
 

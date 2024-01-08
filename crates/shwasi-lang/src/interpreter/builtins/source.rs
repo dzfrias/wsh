@@ -9,6 +9,7 @@ pub fn source<I, S>(
     shell: &mut Shell,
     args: I,
     stdout: &mut (impl io::Write + AsRawFileDescriptor),
+    stderr: &mut (impl io::Write + AsRawFileDescriptor),
 ) -> Result<()>
 where
     I: IntoIterator<Item = S>,
@@ -38,15 +39,18 @@ where
     }
 
     let contents = String::from_utf8(contents).context("error reading file")?;
-    let fd = stdout.as_raw_file_descriptor();
+    let stdout_fd = stdout.as_raw_file_descriptor();
+    let stderr_fd = stderr.as_raw_file_descriptor();
     // SAFETY: `fd` is a valid file descriptor on account of it being from an
     // `IntoRawFileDescriptor`. We later close it, so we don't leak it.
-    unsafe { shell.stdout(fd) };
+    unsafe { shell.stdout(stdout_fd) };
+    unsafe { shell.stderr(stderr_fd) };
     let _ = shell.run(&contents, file.as_ref());
     // We need to be careful that the file descriptor is closed, so we don't leak it. This can
     // cause hangs in the shell if used `source` is used with a pipe. This is because the shell
     // will never close the `stdout` it's given, so we must manually close it here.
-    let _ = unsafe { FileDescriptor::from_raw_file_descriptor(fd) };
+    let _ = unsafe { FileDescriptor::from_raw_file_descriptor(stdout_fd) };
+    let _ = unsafe { FileDescriptor::from_raw_file_descriptor(stderr_fd) };
 
     Ok(())
 }

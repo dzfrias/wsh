@@ -41,6 +41,7 @@ impl Builtin {
         shell: &mut Shell,
         args: I,
         mut stdout: impl io::Write + AsRawFileDescriptor,
+        mut stderr: impl io::Write + AsRawFileDescriptor,
     ) -> ShellResult<i32>
     where
         I: IntoIterator<Item = S>,
@@ -48,13 +49,13 @@ impl Builtin {
     {
         let result = match self {
             Self::Cd => cd(shell, args, &mut stdout),
-            Self::Source => source(shell, args, &mut stdout),
+            Self::Source => source(shell, args, &mut stdout, &mut stderr),
             Self::Load => load(shell, args, &mut stdout),
             Self::Unload => unload(shell, args, &mut stdout),
             Self::Which => which(shell, args, &mut stdout),
         };
         if let Err(err) = result {
-            writeln!(stdout, "{}: {err:#}", self.name()).expect("error writing to stdout");
+            writeln!(stderr, "{}: {err:#}", self.name()).expect("error writing to stderr");
         };
 
         Ok(0)

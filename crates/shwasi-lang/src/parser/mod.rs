@@ -72,7 +72,7 @@ impl<'src> Parser<'src> {
         let mut write = None;
         cmds.push(self.parse_cmd()?);
 
-        while self.current_token == Token::Pipe {
+        while matches!(self.current_token, Token::Pipe | Token::PercentPipe) {
             self.next_token();
             cmds.push(self.parse_cmd()?);
         }
@@ -167,17 +167,31 @@ impl<'src> Parser<'src> {
         let mut args = vec![];
         while !matches!(
             self.peek(),
-            Token::Newline | Token::Eof | Token::Pipe | Token::Write | Token::Append
+            Token::Newline
+                | Token::Eof
+                | Token::Pipe
+                | Token::Write
+                | Token::Append
+                | Token::PercentPipe
         ) {
             if self.peek() == Token::Backtick && self.in_subcmd {
-                return Ok(Command { name, args });
+                return Ok(Command {
+                    name,
+                    args,
+                    merge_stderr: false,
+                });
             }
             self.next_token();
             let arg = self.parse_expr(Precedence::Lowest)?;
             args.push(arg);
         }
+        let merge_stderr = self.peek() == Token::PercentPipe;
         self.next_token();
-        let cmd = Command { name, args };
+        let cmd = Command {
+            name,
+            args,
+            merge_stderr,
+        };
 
         Ok(cmd)
     }
@@ -552,6 +566,14 @@ mod tests {
     #[test]
     fn export() {
         let input = "export FOO = .(10 + 10)\nexport $FOO = hello";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn merge_stderr_pipes() {
+        let input = "echo hi %| cat";
         let buf = Lexer::new(input).lex();
         let ast = Parser::new(&buf).parse().unwrap();
         insta::assert_debug_snapshot!(ast);

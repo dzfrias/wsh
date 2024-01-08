@@ -17,10 +17,12 @@ Ast {
                                     "hi",
                                 ),
                             ],
+                            merge_stderr: false,
                         },
                         Command {
                             name: "cat",
                             args: [],
+                            merge_stderr: false,
                         },
                     ],
                     write: None,

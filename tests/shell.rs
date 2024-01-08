@@ -1,5 +1,5 @@
 macro_rules! shell_test {
-    ($name:ident, $input:expr, $expect:expr) => {
+    ($name:ident, $input:expr, $expect:expr, $expect_stderr:expr) => {
         #[test]
         fn $name() {
             use ::assert_cmd::Command;
@@ -18,10 +18,25 @@ macro_rules! shell_test {
             cmd.arg(PATH)
                 .assert()
                 .success()
-                .stdout(concat!($expect, "\n"));
+                .stdout($expect)
+                .stderr($expect_stderr);
 
             fs::remove_file(PATH).unwrap();
         }
+    };
+    ($name:ident, $input:expr, $expect:expr) => {
+        shell_test!($name, $input, concat!($expect, "\n"), "");
+    };
+    ($name:ident, $input:expr, @stderr $expect:expr) => {
+        shell_test!($name, $input, "", concat!($expect, "\n"));
+    };
+    ($name:ident, $input:expr, @stdout $expect:expr, @stderr $expect_stderr:expr) => {
+        shell_test!(
+            $name,
+            $input,
+            concat!($expect, "\n"),
+            concat!($expect_stderr, "\n")
+        );
     };
     (@fail $name:ident, $input:expr) => {
         #[test]
@@ -95,7 +110,7 @@ shell_test!(
     "export FOO = bar\necho $FOO",
     "bar"
 );
-shell_test!(builtins_have_stdout, "cd __BAD_DIR | wc -l | xargs", "1");
+shell_test!(builtins_have_stdout, "cd __BAD_DIR %| wc -l | xargs", "1");
 shell_test!(
     source,
     "echo \"echo foo\" > __t_tmp.wsi\nsource __t_tmp.wsi\nrm __t_tmp.wsi",
@@ -104,18 +119,19 @@ shell_test!(
 shell_test!(
     no_fail_fast_on_errs,
     "__UNDEFINED\necho .?",
-    "shwasi: command not found: __UNDEFINED\n127"
+    @stdout "127",
+    @stderr "shwasi: command not found: __UNDEFINED"
 );
 // Should fail as a result of `__should_not_be_defined` not being a valid command. Note that this
 // CAN possibly fail if the user has a command named `__should_not_be_defined` in their PATH.
 shell_test!(
     recursive_alias,
     "alias __should_not_be_defined = __should_not_be_defined\n__should_not_be_defined",
-    "shwasi: command not found: __should_not_be_defined"
+    @stderr "shwasi: command not found: __should_not_be_defined"
 );
 shell_test!(
     shell_errors_are_piped_properly,
-    "echo .(!1) | wc -l | xargs",
+    "echo .(!1) %| wc -l | xargs",
     "1"
 );
 
@@ -123,7 +139,8 @@ shell_test!(wasm, "load ./tests/wasm/fib.wasm\nfib 10", "55");
 shell_test!(
     wasm_unload,
     "load ./tests/wasm/fib.wasm\nunload\nfib 10",
-    "unloaded 1 modules\nshwasi: command not found: fib"
+    @stdout "unloaded 1 modules",
+    @stderr "shwasi: command not found: fib"
 );
 shell_test!(
     wasm_piping,
@@ -133,7 +150,7 @@ shell_test!(
 shell_test!(
     wasm_bad_args,
     "load ./tests/wasm/fib.wasm\nfib hello",
-    "shwasi: cannot pass string to wasm function `fib`"
+    @stderr "shwasi: cannot pass string to wasm function `fib`"
 );
 shell_test!(
     source_wasi,
@@ -148,7 +165,7 @@ shell_test!(
 shell_test!(
     source_non_wasi_fails,
     "source ./tests/wasm/fib.wasm",
-    "source: error running wasm file: function not found \"_start\""
+    @stderr "source: error running wasm file: function not found \"_start\""
 );
 
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");

@@ -15,6 +15,7 @@ Ast {
                                 "hi",
                             ),
                         ],
+                        merge_stderr: false,
                     },
                 ],
                 write: Some(

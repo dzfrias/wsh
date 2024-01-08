@@ -105,6 +105,10 @@ impl<'src> Lexer<'src> {
                 }
                 '=' => push!(Assign),
                 '|' => push!(Pipe),
+                '%' if self.peek() == Some('|') => {
+                    self.next();
+                    push!(PercentPipe);
+                }
                 '$' => push!(Dollar),
                 '>' if self.peek() == Some('>') && !self.strict() => {
                     self.next();
@@ -252,7 +256,7 @@ impl<'src> Lexer<'src> {
 
     fn consume_str(&mut self) -> &'src str {
         self.consume_while(|c| {
-            !c.is_whitespace() && !matches!(c, '`' | '|' | '=' | '(' | ')' | '>' | '$')
+            !c.is_whitespace() && !matches!(c, '`' | '|' | '=' | '(' | ')' | '>' | '$' | '%')
         })
     }
 
@@ -674,6 +678,21 @@ mod tests {
             Token::String("export".into()),
             Token::String("alias".into()),
             Token::String("if".into()),
+            Token::Eof
+        );
+        assert_eq!(expect, buf);
+    }
+
+    #[test]
+    fn percent_pipe() {
+        let input = "echo hi %| cat";
+        let lexer = Lexer::new(input);
+        let buf = lexer.lex();
+        let expect = token_buf!(
+            Token::String("echo".into()),
+            Token::String("hi".into()),
+            Token::PercentPipe,
+            Token::String("cat".into()),
             Token::Eof
         );
         assert_eq!(expect, buf);

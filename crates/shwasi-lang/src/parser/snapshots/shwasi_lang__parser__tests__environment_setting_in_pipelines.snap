@@ -36,6 +36,7 @@ Ast {
                                 "hi",
                             ),
                         ],
+                        merge_stderr: false,
                     },
                 ],
                 write: None,
