@@ -298,6 +298,7 @@ impl Shell {
                 stdout
             };
             self.stderr(stderr);
+            let stderr = unsafe { OpenFileDescriptor::new(stderr) };
             let Ok(result) = self.run_command(
                 cmd,
                 &pipeline.env,
