@@ -56,9 +56,9 @@ impl Shell {
         let program = match Parser::new(&buf).parse() {
             Ok(program) => program,
             Err(err) => {
-                // SAFETY: `stdout` must be a valid file descriptor
-                let mut stdout = unsafe { OpenFileDescriptor::new(self.stdout) };
-                err.write_to(src, name, &mut stdout);
+                // SAFETY: `stderr` must be a valid file descriptor
+                let mut stderr = unsafe { OpenFileDescriptor::new(self.stderr) };
+                err.write_to(src, name, &mut stderr);
                 self.set_status(1);
                 return Err(());
             }
