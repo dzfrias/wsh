@@ -56,8 +56,8 @@ macro_rules! shell_test {
             let cmd = cmd.arg(PATH).assert();
             fs::remove_file(PATH).unwrap();
             let out = cmd.get_output();
-            let stdout = String::from_utf8_lossy(&out.stdout);
-            insta::assert_snapshot!(stringify!($name), stdout);
+            let stderr = String::from_utf8_lossy(&out.stderr);
+            insta::assert_snapshot!(stringify!($name), stderr);
         }
     };
 }
@@ -166,6 +166,11 @@ shell_test!(
     source_non_wasi_fails,
     "source ./tests/wasm/fib.wasm",
     @stderr "source: error running wasm file: function not found \"_start\""
+);
+shell_test!(
+    unload_keeps_wasi,
+    "unload\nsource ./tests/wasm/hello_wasi.wasm",
+    "unloaded 0 modules\nHello, world!"
 );
 
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");

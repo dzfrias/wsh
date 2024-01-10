@@ -58,6 +58,7 @@ impl Env {
         let len = self.modules.len();
         self.modules.clear();
         self.store.clear();
+        shwasi_wasi::sync::snapshots::preview_1::link(&mut self.store, &mut self.wasi_ctx);
         len
     }
 
