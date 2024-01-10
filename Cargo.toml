@@ -26,6 +26,7 @@ members = [
     "crates/shwasi-parser",
     "crates/shwasi-engine",
     "crates/shwasi-lang",
+    "crates/shwasi-cmp",
     "crates/dumbwasm",
     "crates/wasm-leb128",
     "crates/wasi",
