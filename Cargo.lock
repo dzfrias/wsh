@@ -1955,6 +1955,9 @@ dependencies = [
 [[package]]
 name = "shwasi-cmp"
 version = "0.1.0"
+dependencies = [
+ "criterion",
+]
 
 [[package]]
 name = "shwasi-engine"
