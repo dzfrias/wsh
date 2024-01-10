@@ -3,22 +3,17 @@ use std::{fs, io};
 use anyhow::{Context, Result};
 use filedescriptor::{AsRawFileDescriptor, FileDescriptor, FromRawFileDescriptor};
 
-use crate::Shell;
+use crate::{interpreter::builtins::Args, Shell};
 
-pub fn source<I, S>(
+pub fn source(
     shell: &mut Shell,
-    args: I,
+    args: Args,
     stdout: &mut (impl io::Write + AsRawFileDescriptor),
     stderr: &mut (impl io::Write + AsRawFileDescriptor),
-) -> Result<()>
-where
-    I: IntoIterator<Item = S>,
-    S: AsRef<str>,
-{
-    let args = args.into_iter().collect::<Vec<_>>();
+) -> Result<()> {
     // TOOD: support passing args to scripts
-    let (file, _args) = args.split_first().context("no file provided")?;
-    let contents = fs::read(file.as_ref()).context("error reading file")?;
+    let (file, _args) = args.positional.split_first().context("no file provided")?;
+    let contents = fs::read(file).context("error reading file")?;
 
     const MAGIC: &[u8; 4] = b"\0asm";
     // Automatically detect if the file is a wasm file. If it is, we can run it directly. This

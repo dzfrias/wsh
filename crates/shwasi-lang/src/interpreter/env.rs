@@ -1,8 +1,11 @@
-use std::{any::Any, collections::HashMap, mem::ManuallyDrop, pin::Pin};
+use std::{any::Any, collections::HashMap, mem::ManuallyDrop, path::Path, pin::Pin};
 
 use filedescriptor::{FromRawFileDescriptor, RawFileDescriptor};
 use shwasi_engine::{Instance, Store, WasmFuncUntyped};
-use shwasi_wasi::{sync::file::File, WasiCtx, WasiFile};
+use shwasi_wasi::{
+    sync::{dir::Dir, file::File},
+    WasiCtx, WasiError, WasiFile,
+};
 use smol_str::SmolStr;
 
 use crate::{ast::Pipeline, interpreter::value::Value, Ident};
@@ -96,6 +99,15 @@ impl Env {
         let wasi_file = File::from_cap_std(file);
         let no_drop = NoDropWasiFile::new(wasi_file);
         self.wasi_ctx.set_stderr(Box::new(no_drop));
+    }
+
+    /// Allow both read and write access to the given directory for WASI modules.
+    pub fn allow_dir(&mut self, path: impl AsRef<Path>) -> Result<(), WasiError> {
+        let owned_path = path.as_ref().to_owned();
+        let dir = cap_std::fs::Dir::open_ambient_dir(&owned_path, cap_std::ambient_authority())?;
+        let wasi_dir = Dir::from_cap_std(dir);
+        self.wasi_ctx.push_dir(Box::new(wasi_dir), owned_path)?;
+        Ok(())
     }
 }
 

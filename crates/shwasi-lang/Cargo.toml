@@ -20,6 +20,7 @@ shwasi-engine = { path = "../shwasi-engine" }
 shwasi-wasi = { path = "../wasi" }
 which = "5.0.0"
 cap-std = "2.0.1"
+argmap = "1.1.2"
 
 [target.'cfg(unix)'.dependencies]
 rustix = "0.38.28"

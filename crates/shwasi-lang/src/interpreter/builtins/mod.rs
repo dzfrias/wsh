@@ -1,19 +1,37 @@
+mod allow;
 mod cd;
 mod load;
 mod source;
 mod unload;
 mod which;
 
-use std::io;
+use std::{collections::HashMap, io};
 
 use filedescriptor::AsRawFileDescriptor;
 
-use self::which::which;
 use crate::{Shell, ShellResult};
+use allow::allow;
 use cd::cd;
 use load::load;
 use source::source;
 use unload::unload;
+use which::which;
+
+#[derive(Debug)]
+struct Args {
+    positional: Vec<String>,
+    argv: HashMap<String, Vec<String>>,
+}
+
+impl Args {
+    pub fn is_empty(&self) -> bool {
+        self.positional.is_empty() && self.argv.is_empty()
+    }
+
+    pub fn get_argv1(&self, name: impl AsRef<str>) -> Option<&String> {
+        self.argv.get(name.as_ref()).and_then(|v| v.first())
+    }
+}
 
 #[derive(Debug)]
 pub enum Builtin {
@@ -22,6 +40,7 @@ pub enum Builtin {
     Load,
     Unload,
     Which,
+    Allow,
 }
 
 impl Builtin {
@@ -32,6 +51,7 @@ impl Builtin {
             "load" => Some(Self::Load),
             "unload" => Some(Self::Unload),
             "which" => Some(Self::Which),
+            "allow" => Some(Self::Allow),
             _ => None,
         }
     }
@@ -47,12 +67,15 @@ impl Builtin {
         I: IntoIterator<Item = S>,
         S: AsRef<str>,
     {
+        let (positional, argv) = argmap::parse(args.into_iter().map(|s| s.as_ref().to_owned()));
+        let args = Args { positional, argv };
         let result = match self {
             Self::Cd => cd(shell, args, &mut stdout),
             Self::Source => source(shell, args, &mut stdout, &mut stderr),
             Self::Load => load(shell, args, &mut stdout),
             Self::Unload => unload(shell, args, &mut stdout),
             Self::Which => which(shell, args, &mut stdout),
+            Self::Allow => allow(shell, args, &mut stdout),
         };
         if let Err(err) = result {
             writeln!(stderr, "{}: {err:#}", self.name()).expect("error writing to stderr");
@@ -68,6 +91,7 @@ impl Builtin {
             Self::Load => "load",
             Self::Unload => "unload",
             Self::Which => "which",
+            Self::Allow => "allow",
         }
     }
 }
