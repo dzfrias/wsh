@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use std::collections::HashMap;
 
 #[derive(Debug, Default)]
@@ -24,6 +22,10 @@ impl Trie {
             node = node.children.entry(c).or_default();
         }
         node.terminal = true;
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.root.children.is_empty()
     }
 
     pub fn prefix_list(&self, prefix: &str) -> Vec<String> {
@@ -52,6 +54,16 @@ impl Trie {
         words.sort();
 
         words
+    }
+}
+
+impl FromIterator<String> for Trie {
+    fn from_iter<T: IntoIterator<Item = String>>(iter: T) -> Self {
+        let mut trie = Self::new();
+        for word in iter {
+            trie.insert(&word);
+        }
+        trie
     }
 }
 
