@@ -188,6 +188,19 @@ shell_test!(
     "unload\nsource .($WASM_PATH + \"/hello_wasi.wasm\")",
     "unloaded 0 modules\nHello, world!"
 );
+shell_test!(
+    wasi_sandboxing,
+    "source .($WASM_PATH + \"/new_file.wasm\")",
+    @stderr "thread \'main\' panicked at src/main.rs:4:31:
+called `Result::unwrap()` on an `Err` value: Custom { kind: Uncategorized, error: \"failed to find a pre-opened file descriptor through which \\\"hello.txt\\\" could be opened\" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+source: error running wasm file: trap: unreachable encountered: unreachable encountered"
+);
+shell_test!(
+    wasi_sandboxing_allow,
+    "allow\nsource .($WASM_PATH + \"/new_file.wasm\")\ncat hello.txt\necho works!",
+    "works!"
+);
 
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");
 shell_test!(@fail unfinished_pipe, "echo hi |");

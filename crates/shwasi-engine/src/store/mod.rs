@@ -49,9 +49,23 @@ impl Store {
     }
 
     pub fn define(&mut self, module: &str, field: &str, val: impl HostValue) {
+        let path = (module.to_owned(), field.to_owned());
+        // Re-use store space for "module" "field". This behavior can cause issues for modules
+        // already instantiated, as they can now point to different things.
+        if let Some(extern_val) = self.hosts.get(&path) {
+            let new_addr = match *extern_val {
+                ExternVal::Func(f) => val.store_at(self, f.as_usize()),
+                ExternVal::Table(t) => val.store_at(self, t.as_usize()),
+                ExternVal::Mem(m) => val.store_at(self, m.as_usize()),
+                ExternVal::Global(g) => val.store_at(self, g.as_usize()),
+            };
+            let extern_val = self.hosts.get_mut(&path).unwrap();
+            *extern_val = new_addr;
+            return;
+        }
+
         let extern_val = val.store(self);
-        self.hosts
-            .insert((module.to_owned(), field.to_owned()), extern_val);
+        self.hosts.insert(path, extern_val);
     }
 
     pub(crate) fn resolve(&self, module: &str, field: &str) -> Option<ExternVal> {
@@ -82,7 +96,7 @@ impl Store {
 
 /// An instance of a WebAssembly function.
 #[derive(Debug)]
-pub(crate) enum Func {
+pub enum Func {
     Host(HostFunc),
     Module(ModuleFunc),
 }
@@ -106,10 +120,10 @@ impl HostFunc {
 
 /// A function defined inside of the WebAssembly module.
 #[derive(Debug)]
-pub(crate) struct ModuleFunc {
-    pub ty: FuncType,
-    pub code: Code,
-    pub inst: Instance,
+pub struct ModuleFunc {
+    pub(crate) ty: FuncType,
+    pub(crate) code: Code,
+    pub(crate) inst: Instance,
 }
 
 /// An instance of a WebAssembly table.
@@ -328,15 +342,24 @@ pub enum Extern {
 }
 
 pub trait HostValue {
+    /// Allocate the given HostValue into the store.
     #[doc(hidden)]
     #[allow(private_interfaces)]
     fn store(self, store: &mut Store) -> ExternVal;
+    /// Allocate the given HostValue into the store, at an address.
+    #[doc(hidden)]
+    #[allow(private_interfaces)]
+    fn store_at(self, store: &mut Store, at: usize) -> ExternVal;
 }
 
 impl HostValue for HostFunc {
     #[allow(private_interfaces)]
     fn store(self, store: &mut Store) -> ExternVal {
         ExternVal::Func(store.functions.alloc(Func::Host(self)))
+    }
+    #[allow(private_interfaces)]
+    fn store_at(self, store: &mut Store, at: usize) -> ExternVal {
+        ExternVal::Func(store.functions.alloc_at(Func::Host(self), Addr::new(at)))
     }
 }
 
@@ -349,6 +372,17 @@ impl HostValue for Global {
         });
         ExternVal::Global(addr)
     }
+    #[allow(private_interfaces)]
+    fn store_at(self, store: &mut Store, at: usize) -> ExternVal {
+        let addr = store.globals.alloc_at(
+            Global {
+                mutable: self.mutable,
+                value: self.value,
+            },
+            Addr::new(at),
+        );
+        ExternVal::Global(addr)
+    }
 }
 
 impl HostValue for Memory {
@@ -356,12 +390,20 @@ impl HostValue for Memory {
     fn store(self, store: &mut Store) -> ExternVal {
         ExternVal::Mem(store.memories.alloc(self))
     }
+    #[allow(private_interfaces)]
+    fn store_at(self, store: &mut Store, at: usize) -> ExternVal {
+        ExternVal::Mem(store.memories.alloc_at(self, Addr::new(at)))
+    }
 }
 
 impl HostValue for Table {
     #[allow(private_interfaces)]
     fn store(self, store: &mut Store) -> ExternVal {
         ExternVal::Table(store.tables.alloc(self))
+    }
+    #[allow(private_interfaces)]
+    fn store_at(self, store: &mut Store, at: usize) -> ExternVal {
+        ExternVal::Table(store.tables.alloc_at(self, Addr::new(at)))
     }
 }
 

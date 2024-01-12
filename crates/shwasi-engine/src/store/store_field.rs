@@ -26,6 +26,11 @@ impl<T> StoreField<T> {
         Addr::new(self.inner.len() - 1)
     }
 
+    pub fn alloc_at(&mut self, val: T, at: Addr<T>) -> Addr<T> {
+        *self.inner.get_mut(at.as_usize()).unwrap() = val;
+        at
+    }
+
     pub fn clear(&mut self) {
         self.inner.clear();
     }

@@ -658,6 +658,11 @@ impl Shell {
         mut stdout: File,
         mut stderr: File,
     ) -> ShellResult<()> {
+        if let Err(err) = self.env.prepare_wasi() {
+            writeln!(stderr, "shwasi: error prepare WASI: {err}").expect("write to stderr failed!");
+            return Err(());
+        }
+
         let arg_types = wasm_func.arg_types(self.env.store_mut()).to_vec();
         if arg_types.len() != cmd.args.len() {
             writeln!(

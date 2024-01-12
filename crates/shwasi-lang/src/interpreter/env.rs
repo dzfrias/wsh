@@ -1,11 +1,16 @@
-use std::{any::Any, collections::HashMap, mem::ManuallyDrop, path::Path, pin::Pin};
-
-use filedescriptor::{FromRawFileDescriptor, RawFileDescriptor};
-use shwasi_engine::{Instance, Store, WasmFuncUntyped};
-use shwasi_wasi::{
-    sync::{dir::Dir, file::File},
-    WasiCtx, WasiError, WasiFile,
+use std::{
+    any::Any,
+    collections::HashMap,
+    fs, io,
+    mem::ManuallyDrop,
+    path::{Path, PathBuf},
+    pin::Pin,
 };
+
+use cap_std::fs::Dir;
+use filedescriptor::{AsRawFileDescriptor, FromRawFileDescriptor, RawFileDescriptor};
+use shwasi_engine::{Instance, Store, WasmFuncUntyped};
+use shwasi_wasi::{sync::file::File, WasiCtxBuilder, WasiError, WasiFile};
 use smol_str::SmolStr;
 
 use crate::{ast::Pipeline, interpreter::value::Value, Ident};
@@ -13,23 +18,33 @@ use crate::{ast::Pipeline, interpreter::value::Value, Ident};
 pub struct Env {
     env: HashMap<Ident, Value>,
     aliases: HashMap<SmolStr, Pipeline>,
-    wasi_ctx: WasiCtx,
     store: Store,
     modules: Vec<Instance>,
+    allowed: Vec<PathBuf>,
+    wasi_stdout: RawFileDescriptor,
+    wasi_stderr: RawFileDescriptor,
 }
 
 impl Env {
     pub fn new() -> Self {
         let mut store = Store::default();
         let mut wasi_ctx = shwasi_wasi::WasiCtxBuilder::new().build();
-        // Link the WASI preview 1 snapshot into the store, so we can use it in our modules.
+        // Link the WASI preview 1 snapshot into the store. This is actually just a stand-in. This
+        // is only here so that module instantiation doesn't fail. All host functions linked by
+        // this function call are replaced every time `prepare_wasi` is called. This is because
+        // WasCtx is not designed to work over multiple WASM module's lifetimes, so there are **a
+        // lot** of problems when trying to maintain a global refernce counted instance of WasiCtx.
+        // Perhaps if a new WASI implementation is designed from scratch, this wouldn't be
+        // necessary.
         shwasi_wasi::sync::snapshots::preview_1::link(&mut store, &mut wasi_ctx);
         Self {
             env: HashMap::new(),
             aliases: HashMap::new(),
             modules: Vec::new(),
-            wasi_ctx,
             store,
+            allowed: vec![],
+            wasi_stderr: io::stderr().as_raw_file_descriptor(),
+            wasi_stdout: io::stdout().as_raw_file_descriptor(),
         }
     }
 
@@ -61,11 +76,12 @@ impl Env {
         let len = self.modules.len();
         self.modules.clear();
         self.store.clear();
-        shwasi_wasi::sync::snapshots::preview_1::link(&mut self.store, &mut self.wasi_ctx);
+        let mut wasi_ctx = shwasi_wasi::WasiCtxBuilder::new().build();
+        shwasi_wasi::sync::snapshots::preview_1::link(&mut self.store, &mut wasi_ctx);
         len
     }
 
-    pub fn get_module_func(&self, name: &str) -> Option<WasmFuncUntyped> {
+    pub fn get_module_func(&mut self, name: &str) -> Option<WasmFuncUntyped> {
         self.modules
             .iter()
             .find_map(|m| m.get_func_untyped(&self.store, name).ok())
@@ -84,10 +100,35 @@ impl Env {
     /// # Safety
     /// This function requires a valid file descriptor. It will **not** be taken ownership of.
     pub unsafe fn wasi_stdout(&mut self, fd: RawFileDescriptor) {
-        let file = cap_std::fs::File::from_raw_file_descriptor(fd);
-        let wasi_file = File::from_cap_std(file);
-        let no_drop = NoDropWasiFile::new(wasi_file);
-        self.wasi_ctx.set_stdout(Box::new(no_drop));
+        self.wasi_stdout = fd;
+    }
+
+    /// Link the WASI API to the store. This should be called before the store is used.
+    pub fn prepare_wasi(&mut self) -> Result<(), WasiError> {
+        let stdout = unsafe { wasi_file(self.wasi_stdout) };
+        let stderr = unsafe { wasi_file(self.wasi_stderr) };
+        let mut builder = WasiCtxBuilder::new();
+        builder.stdout(Box::new(stdout)).stderr(Box::new(stderr));
+        for path in &self.allowed {
+            let dir = Dir::open_ambient_dir(path, cap_std::ambient_authority())?;
+            builder.preopened_dir(dir, path)?;
+            // Both the relative and absolute paths will have to be pushed here. This WASI
+            // implementation makes a distinguishment between the two.
+            let Ok(current_dir) = std::env::current_dir() else {
+                continue;
+            };
+            let Some(mut relative) = pathdiff::diff_paths(path, current_dir) else {
+                continue;
+            };
+            if relative == Path::new("") {
+                relative = PathBuf::from(".");
+            }
+            let dir = Dir::open_ambient_dir(&relative, cap_std::ambient_authority())?;
+            builder.preopened_dir(dir, relative)?;
+        }
+        shwasi_wasi::sync::snapshots::preview_1::link(self.store_mut(), &mut builder.build());
+
+        Ok(())
     }
 
     /// Set the WASI stdout file descriptor.
@@ -95,18 +136,14 @@ impl Env {
     /// # Safety
     /// This function requires a valid file descriptor. It will **not** be taken ownership of.
     pub unsafe fn wasi_stderr(&mut self, fd: RawFileDescriptor) {
-        let file = cap_std::fs::File::from_raw_file_descriptor(fd);
-        let wasi_file = File::from_cap_std(file);
-        let no_drop = NoDropWasiFile::new(wasi_file);
-        self.wasi_ctx.set_stderr(Box::new(no_drop));
+        self.wasi_stderr = fd;
     }
 
     /// Allow both read and write access to the given directory for WASI modules.
     pub fn allow_dir(&mut self, path: impl AsRef<Path>) -> Result<(), WasiError> {
-        let owned_path = path.as_ref().to_owned();
-        let dir = cap_std::fs::Dir::open_ambient_dir(&owned_path, cap_std::ambient_authority())?;
-        let wasi_dir = Dir::from_cap_std(dir);
-        self.wasi_ctx.push_dir(Box::new(wasi_dir), owned_path)?;
+        // Make sure all paths allowed are stored internally as absolute paths
+        let abs_path = fs::canonicalize(path).unwrap();
+        self.allowed.push(abs_path);
         Ok(())
     }
 }
@@ -115,6 +152,12 @@ impl Default for Env {
     fn default() -> Self {
         Self::new()
     }
+}
+
+unsafe fn wasi_file(fd: RawFileDescriptor) -> NoDropWasiFile<File> {
+    let file = cap_std::fs::File::from_raw_file_descriptor(fd);
+    let wasi_file = File::from_cap_std(file);
+    NoDropWasiFile::new(wasi_file)
 }
 
 /// A wrapper implementing `WasiFile` that prevents the inner file from being dropped.
