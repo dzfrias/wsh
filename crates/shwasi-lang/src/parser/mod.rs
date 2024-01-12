@@ -8,7 +8,6 @@ use crate::{
     parser::ast::{Ast, Command, Expr, InfixExpr, InfixOp, PrefixExpr, PrefixOp, Stmt},
 };
 pub use lexer::*;
-use smol_str::SmolStr;
 
 #[derive(Debug)]
 pub struct Parser<'src> {
@@ -59,7 +58,8 @@ impl<'src> Parser<'src> {
             self.next_token();
             let name = self
                 .buf
-                .get_string(self.tok_idx)
+                .get_ident(self.tok_idx)
+                .or_else(|| Some(Ident::new(&self.buf.get_string(self.tok_idx)?)))
                 .ok_or_else(|| self.expected("expected a valid environment variable name"))?;
             self.expect_next(Token::Assign, "expected assign after env name")?;
             self.next_token();
@@ -136,7 +136,8 @@ impl<'src> Parser<'src> {
         self.next_token();
         let name = self
             .buf
-            .get_string(self.tok_idx)
+            .get_ident(self.tok_idx)
+            .or_else(|| Some(Ident::new(&self.buf.get_string(self.tok_idx)?)))
             .ok_or_else(|| self.expected("expected a valid environment variable name"))?;
         self.expect_next(Token::Assign, "expected assign after export name")?;
         self.next_token();
@@ -301,10 +302,12 @@ impl<'src> Parser<'src> {
         Ok(prefix)
     }
 
-    fn parse_env_expr(&mut self) -> ParseResult<SmolStr> {
+    fn parse_env_expr(&mut self) -> ParseResult<Ident> {
         self.next_token();
         self.buf
             .get_string(self.tok_idx)
+            .map(|s| Ident::new(s.as_ref()))
+            .or_else(|| self.buf.get_ident(self.tok_idx))
             .ok_or_else(|| self.expected("expected a valid environment variable name"))
     }
 

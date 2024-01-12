@@ -32,7 +32,7 @@ pub struct Assign {
 
 #[derive(Debug, Clone)]
 pub struct Export {
-    pub name: SmolStr,
+    pub name: Ident,
     pub expr: Expr,
 }
 
@@ -51,7 +51,7 @@ pub struct Pipeline {
 
 #[derive(Debug, Clone)]
 pub struct EnvSet {
-    pub name: SmolStr,
+    pub name: Ident,
     pub expr: Expr,
 }
 
@@ -77,7 +77,7 @@ pub struct Command {
 #[derive(Debug, Clone)]
 pub enum Expr {
     Ident(Ident),
-    Env(SmolStr),
+    Env(Ident),
     String(SmolStr),
     Number(f64),
     Pipeline(Pipeline),

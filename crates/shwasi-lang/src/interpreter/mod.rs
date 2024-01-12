@@ -10,7 +10,7 @@ use crate::{
     },
     interpreter::{builtins::Builtin, env::Env},
     parser::ast::{Command, Expr, InfixExpr, PrefixExpr, Stmt},
-    Lexer, Parser,
+    Ident, Lexer, Parser,
 };
 pub use error::*;
 use filedescriptor::{
@@ -400,7 +400,8 @@ impl Shell {
 
         for env_set in env {
             let value = self.eval_expr(&env_set.expr)?;
-            command.env(env_set.name.as_str(), value.to_string());
+            let name_str: &str = &env_set.name;
+            command.env(name_str, value.to_string());
         }
 
         if let Some(stdin) = stdin {
@@ -449,10 +450,8 @@ impl Shell {
     }
 
     fn eval_export(&mut self, export: &Export) -> ShellResult<()> {
-        std::env::set_var(
-            export.name.as_str(),
-            self.eval_expr(&export.expr)?.to_string(),
-        );
+        let name_str: &str = &export.name;
+        std::env::set_var(name_str, self.eval_expr(&export.expr)?.to_string());
 
         Ok(())
     }
@@ -640,8 +639,9 @@ impl Shell {
         Ok(Value::String(result.into()))
     }
 
-    fn eval_env_var(&mut self, name: &SmolStr) -> ShellResult<Value> {
-        let var = std::env::var_os(name.as_str()).unwrap_or_default();
+    fn eval_env_var(&mut self, name: &Ident) -> ShellResult<Value> {
+        let name_str: &str = name;
+        let var = std::env::var_os(name_str).unwrap_or_default();
         let val = var.to_string_lossy();
         Ok(match val {
             // We know that if this is the borrwed variant, it's a valid UTF-8 string, so

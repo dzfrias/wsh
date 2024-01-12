@@ -12,7 +12,9 @@ Ast {
                         name: "echo",
                         args: [
                             Env(
-                                "FOO",
+                                Ident(
+                                    "FOO",
+                                ),
                             ),
                         ],
                         merge_stderr: false,

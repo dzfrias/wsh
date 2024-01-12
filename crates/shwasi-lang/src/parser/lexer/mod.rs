@@ -118,7 +118,16 @@ impl<'src> Lexer<'src> {
                         push!(PercentWrite);
                     }
                 }
-                '$' => push!(Dollar),
+                '$' => {
+                    push!(Dollar);
+                    if self
+                        .peek()
+                        .is_some_and(|c| is_ident_char(c) && !c.is_ascii_digit())
+                    {
+                        self.next();
+                        push!(Ident(token::Ident::new(self.consume_ident())));
+                    }
+                }
                 '>' if self.peek() == Some('>') && !self.strict() => {
                     self.next();
                     push!(Append);
