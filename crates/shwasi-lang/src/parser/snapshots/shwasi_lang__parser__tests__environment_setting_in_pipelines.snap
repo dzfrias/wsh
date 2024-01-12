@@ -8,7 +8,9 @@ Ast {
             Pipeline {
                 env: [
                     EnvSet {
-                        name: "FOO",
+                        name: Ident(
+                            "FOO",
+                        ),
                         expr: Infix(
                             InfixExpr {
                                 lhs: Number(
@@ -22,7 +24,9 @@ Ast {
                         ),
                     },
                     EnvSet {
-                        name: "BAR",
+                        name: Ident(
+                            "BAR",
+                        ),
                         expr: String(
                             "20",
                         ),

@@ -8,7 +8,6 @@ use crate::{
     parser::ast::{Ast, Command, Expr, InfixExpr, InfixOp, PrefixExpr, PrefixOp, Stmt},
 };
 pub use lexer::*;
-use smol_str::SmolStr;
 
 #[derive(Debug)]
 pub struct Parser<'src> {
@@ -59,7 +58,8 @@ impl<'src> Parser<'src> {
             self.next_token();
             let name = self
                 .buf
-                .get_string(self.tok_idx)
+                .get_ident(self.tok_idx)
+                .or_else(|| Some(Ident::new(&self.buf.get_string(self.tok_idx)?)))
                 .ok_or_else(|| self.expected("expected a valid environment variable name"))?;
             self.expect_next(Token::Assign, "expected assign after env name")?;
             self.next_token();
@@ -76,12 +76,21 @@ impl<'src> Parser<'src> {
             self.next_token();
             cmds.push(self.parse_cmd()?);
         }
-        if matches!(self.current_token, Token::Write | Token::Append) {
+        if matches!(
+            self.current_token,
+            Token::Write | Token::Append | Token::PercentAppend | Token::PercentWrite
+        ) {
             let kind = match self.current_token {
-                Token::Write => PipelineEndKind::Write,
-                Token::Append => PipelineEndKind::Append,
+                Token::Write | Token::PercentWrite => PipelineEndKind::Write,
+                Token::Append | Token::PercentAppend => PipelineEndKind::Append,
                 _ => unreachable!(),
             };
+            if matches!(
+                self.current_token,
+                Token::PercentAppend | Token::PercentWrite
+            ) {
+                cmds.last_mut().unwrap().merge_stderr = true;
+            }
             self.next_token();
             let pipeline_end = PipelineEnd {
                 kind,
@@ -127,7 +136,8 @@ impl<'src> Parser<'src> {
         self.next_token();
         let name = self
             .buf
-            .get_string(self.tok_idx)
+            .get_ident(self.tok_idx)
+            .or_else(|| Some(Ident::new(&self.buf.get_string(self.tok_idx)?)))
             .ok_or_else(|| self.expected("expected a valid environment variable name"))?;
         self.expect_next(Token::Assign, "expected assign after export name")?;
         self.next_token();
@@ -173,6 +183,8 @@ impl<'src> Parser<'src> {
                 | Token::Write
                 | Token::Append
                 | Token::PercentPipe
+                | Token::PercentWrite
+                | Token::PercentAppend
         ) {
             if self.peek() == Token::Backtick && self.in_subcmd {
                 return Ok(Command {
@@ -290,10 +302,12 @@ impl<'src> Parser<'src> {
         Ok(prefix)
     }
 
-    fn parse_env_expr(&mut self) -> ParseResult<SmolStr> {
+    fn parse_env_expr(&mut self) -> ParseResult<Ident> {
         self.next_token();
         self.buf
             .get_string(self.tok_idx)
+            .map(|s| Ident::new(s.as_ref()))
+            .or_else(|| self.buf.get_ident(self.tok_idx))
             .ok_or_else(|| self.expected("expected a valid environment variable name"))
     }
 
@@ -574,6 +588,22 @@ mod tests {
     #[test]
     fn merge_stderr_pipes() {
         let input = "echo hi %| cat";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn merge_stderr_redirect() {
+        let input = "echo hi %> file.txt";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn merge_stderr_redirect_append() {
+        let input = "echo hi %>> file.txt";
         let buf = Lexer::new(input).lex();
         let ast = Parser::new(&buf).parse().unwrap();
         insta::assert_debug_snapshot!(ast);

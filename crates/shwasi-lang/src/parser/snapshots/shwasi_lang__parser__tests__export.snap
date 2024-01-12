@@ -6,7 +6,9 @@ Ast {
     statements: [
         Export(
             Export {
-                name: "FOO",
+                name: Ident(
+                    "FOO",
+                ),
                 expr: Infix(
                     InfixExpr {
                         lhs: Number(
@@ -22,7 +24,9 @@ Ast {
         ),
         Export(
             Export {
-                name: "FOO",
+                name: Ident(
+                    "FOO",
+                ),
                 expr: String(
                     "hello",
                 ),

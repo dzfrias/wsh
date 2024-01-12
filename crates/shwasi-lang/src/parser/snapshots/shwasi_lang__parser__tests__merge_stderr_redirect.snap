@@ -11,16 +11,21 @@ Ast {
                     Command {
                         name: "echo",
                         args: [
-                            Env(
-                                Ident(
-                                    "FOO",
-                                ),
+                            String(
+                                "hi",
                             ),
                         ],
-                        merge_stderr: false,
+                        merge_stderr: true,
                     },
                 ],
-                write: None,
+                write: Some(
+                    PipelineEnd {
+                        kind: Write,
+                        expr: String(
+                            "file.txt",
+                        ),
+                    },
+                ),
             },
         ),
     ],

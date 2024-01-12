@@ -44,6 +44,7 @@ tracing.workspace = true
 shwasi-parser = { path = "crates/shwasi-parser" }
 shwasi-engine = { path = "crates/shwasi-engine" }
 wast = "67.0.1"
+tempdir = "0.3.7"
 
 [workspace.dependencies]
 anyhow = "1.0.75"

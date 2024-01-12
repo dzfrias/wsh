@@ -109,7 +109,25 @@ impl<'src> Lexer<'src> {
                     self.next();
                     push!(PercentPipe);
                 }
-                '$' => push!(Dollar),
+                '%' if self.peek() == Some('>') => {
+                    self.next();
+                    if self.peek() == Some('>') {
+                        self.next();
+                        push!(PercentAppend);
+                    } else {
+                        push!(PercentWrite);
+                    }
+                }
+                '$' => {
+                    push!(Dollar);
+                    if self
+                        .peek()
+                        .is_some_and(|c| is_ident_char(c) && !c.is_ascii_digit())
+                    {
+                        self.next();
+                        push!(Ident(token::Ident::new(self.consume_ident())));
+                    }
+                }
                 '>' if self.peek() == Some('>') && !self.strict() => {
                     self.next();
                     push!(Append);
@@ -684,8 +702,8 @@ mod tests {
     }
 
     #[test]
-    fn percent_pipe() {
-        let input = "echo hi %| cat";
+    fn percent_redirects() {
+        let input = "echo hi %| cat %> file.txt %>> hi.txt";
         let lexer = Lexer::new(input);
         let buf = lexer.lex();
         let expect = token_buf!(
@@ -693,6 +711,10 @@ mod tests {
             Token::String("hi".into()),
             Token::PercentPipe,
             Token::String("cat".into()),
+            Token::PercentWrite,
+            Token::String("file.txt".into()),
+            Token::PercentAppend,
+            Token::String("hi.txt".into()),
             Token::Eof
         );
         assert_eq!(expect, buf);

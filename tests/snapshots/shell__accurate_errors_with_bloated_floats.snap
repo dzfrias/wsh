@@ -1,6 +1,6 @@
 ---
 source: tests/shell.rs
-expression: stdout
+expression: stderr
 ---
 Error: unexpected token: eof, expected rparen to close expression
    ╭─[accurate_errors_with_bloated_floats.tmp:2:8]

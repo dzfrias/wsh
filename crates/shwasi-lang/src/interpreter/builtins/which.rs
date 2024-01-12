@@ -2,20 +2,19 @@ use std::io;
 
 use filedescriptor::AsRawFileDescriptor;
 
-use crate::{interpreter::builtins::Builtin, Shell};
+use crate::{
+    interpreter::builtins::{Args, Builtin},
+    Shell,
+};
 use anyhow::Result;
 use which::which as which_bin;
 
-pub fn which<I, S>(
+pub fn which(
     shell: &mut Shell,
-    args: I,
+    args: Args,
     stdout: &mut (impl io::Write + AsRawFileDescriptor),
-) -> Result<()>
-where
-    I: IntoIterator<Item = S>,
-    S: AsRef<str>,
-{
-    for arg in args {
+) -> Result<()> {
+    for arg in args.positional {
         let arg = arg.as_ref();
         // TODO: print alias itself
         if shell.env.get_alias(arg).is_some() {

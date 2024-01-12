@@ -3,25 +3,27 @@ macro_rules! shell_test {
         #[test]
         fn $name() {
             use ::assert_cmd::Command;
-            use ::std::{
-                env,
-                fs::{self, File},
-                io::Write,
-            };
+            use ::std::{env, fs::File, io::Write};
+            use ::tempdir::TempDir;
 
             // Auxiliary environment variable for test usage.
             env::set_var("SHWASI_ENV", "test");
-            const PATH: &str = concat!(stringify!($name), ".tmp");
-            let mut f = File::create(PATH).unwrap();
+            env::set_var("WASM_PATH", env::current_dir().unwrap().join("tests/wasm"));
+            let tmp_dir =
+                TempDir::new(stringify!($name)).expect("error creating temporary directory");
+            let file_path = tmp_dir.path().join(concat!(stringify!($name), ".tmp"));
+            let mut f = File::create(&file_path).unwrap();
             f.write_all($input.as_bytes()).unwrap();
             let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-            cmd.arg(PATH)
+            cmd.arg(&file_path)
+                .current_dir(tmp_dir.path())
                 .assert()
                 .success()
                 .stdout($expect)
                 .stderr($expect_stderr);
 
-            fs::remove_file(PATH).unwrap();
+            drop(f);
+            tmp_dir.close().expect("error closing temporary directory");
         }
     };
     ($name:ident, $input:expr, $expect:expr) => {
@@ -42,22 +44,25 @@ macro_rules! shell_test {
         #[test]
         fn $name() {
             use ::assert_cmd::Command;
-            use ::std::{
-                env,
-                fs::{self, File},
-                io::Write,
-            };
+            use ::std::{env, fs::File, io::Write};
+            use ::tempdir::TempDir;
 
             env::set_var("SHWASI_ENV", "test");
-            const PATH: &str = concat!(stringify!($name), ".tmp");
-            let mut f = File::create(PATH).unwrap();
+            env::set_var("WASM_PATH", env::current_dir().unwrap().join("tests/wasm"));
+
+            let tmp_dir =
+                TempDir::new(stringify!($name)).expect("error creating temporary directory");
+            let file_path = tmp_dir.path().join(concat!(stringify!($name), ".tmp"));
+            let mut f = File::create(&file_path).unwrap();
             f.write_all($input.as_bytes()).unwrap();
             let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-            let cmd = cmd.arg(PATH).assert();
-            fs::remove_file(PATH).unwrap();
+            let cmd = cmd.current_dir(tmp_dir.path()).arg(&file_path).assert();
             let out = cmd.get_output();
-            let stdout = String::from_utf8_lossy(&out.stdout);
-            insta::assert_snapshot!(stringify!($name), stdout);
+            let stderr = String::from_utf8_lossy(&out.stderr);
+            insta::assert_snapshot!(stringify!($name), stderr);
+
+            drop(f);
+            tmp_dir.close().expect("error closing temporary directory");
         }
     };
 }
@@ -79,6 +84,11 @@ shell_test!(
     "echo hi > .(\"file\" + \".txt\")\n.x = `cat file.txt`\nrm file.txt\necho .x",
     "hi"
 );
+shell_test!(
+    merge_file_redirects,
+    "echo .(!1) %> merge_file.txt\n.x = `cat merge_file.txt`\nrm merge_file.txt\necho .x",
+    "shwasi: type error: `!` `number`"
+);
 // Disabling this test on Windows because I'm not sure what to do. In the CI, the test fails as a
 // result of:
 //   echo: write error: Bad file descriptor
@@ -94,6 +104,12 @@ shell_test!(
     append_file_redirects,
     "echo hi >> .(\"t\" + \".txt\")\necho hi >> t.txt\n.x = `cat t.txt`\nrm t.txt\necho .x",
     "hi\nhi"
+);
+#[cfg(not(windows))]
+shell_test!(
+    merge_append_file_redirects,
+    "echo .(!1) %>> merge_t.txt\necho .(!1) %>> merge_t.txt\n.x = `cat merge_t.txt`\nrm merge_t.txt\necho .x",
+    "shwasi: type error: `!` `number`\nshwasi: type error: `!` `number`"
 );
 shell_test!(alias_with_args, "alias foo = echo\nfoo hi", "hi");
 shell_test!(
@@ -135,37 +151,42 @@ shell_test!(
     "1"
 );
 
-shell_test!(wasm, "load ./tests/wasm/fib.wasm\nfib 10", "55");
+shell_test!(wasm, "load .($WASM_PATH + \"/fib.wasm\")\nfib 10", "55");
 shell_test!(
     wasm_unload,
-    "load ./tests/wasm/fib.wasm\nunload\nfib 10",
+    "load .($WASM_PATH + \"/fib.wasm\")\nunload\nfib 10",
     @stdout "unloaded 1 modules",
     @stderr "shwasi: command not found: fib"
 );
 shell_test!(
     wasm_piping,
-    "load ./tests/wasm/fib.wasm\nfib 10 | wc -l | xargs",
+    "load .($WASM_PATH + \"/fib.wasm\")\nfib 10 | wc -l | xargs",
     "1"
 );
 shell_test!(
     wasm_bad_args,
-    "load ./tests/wasm/fib.wasm\nfib hello",
+    "load .($WASM_PATH + \"/fib.wasm\")\nfib hello",
     @stderr "shwasi: cannot pass string to wasm function `fib`"
 );
 shell_test!(
     source_wasi,
-    "source ./tests/wasm/hello_wasi.wasm",
+    "source .($WASM_PATH + \"/hello_wasi.wasm\")",
     "Hello, world!"
 );
 shell_test!(
     source_wasi_piping,
-    "source ./tests/wasm/hello_wasi.wasm | wc -w | xargs",
+    "source .($WASM_PATH + \"/hello_wasi.wasm\") | wc -w | xargs",
     "2"
 );
 shell_test!(
     source_non_wasi_fails,
-    "source ./tests/wasm/fib.wasm",
+    "source .($WASM_PATH + \"/fib.wasm\")",
     @stderr "source: error running wasm file: function not found \"_start\""
+);
+shell_test!(
+    unload_keeps_wasi,
+    "unload\nsource .($WASM_PATH + \"/hello_wasi.wasm\")",
+    "unloaded 0 modules\nHello, world!"
 );
 
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");

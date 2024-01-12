@@ -16,7 +16,9 @@ pub enum Token {
     Pipe,
     PercentPipe,
     Write,
+    PercentWrite,
     Append,
+    PercentAppend,
     Newline,
     QuestionMark,
     Dollar,
@@ -162,6 +164,8 @@ impl TokenBuffer {
             TokenKind::Append => Token::Append,
             TokenKind::Dollar => Token::Dollar,
             TokenKind::Export => Token::Export,
+            TokenKind::PercentWrite => Token::PercentWrite,
+            TokenKind::PercentAppend => Token::PercentAppend,
             TokenKind::Invalid => Token::Invalid(*payload as u8 as char),
             TokenKind::Eof => Token::Eof,
         };
@@ -245,7 +249,9 @@ pub(super) enum TokenKind {
     Pipe,
     PercentPipe,
     Write,
+    PercentWrite,
     Append,
+    PercentAppend,
     Newline,
     Backtick,
     QuestionMark,
@@ -380,6 +386,8 @@ impl Token {
             Token::Ge => TokenKind::Ge,
             Token::Eof => TokenKind::Eof,
             Token::Write => TokenKind::Write,
+            Token::PercentWrite => TokenKind::PercentWrite,
+            Token::PercentAppend => TokenKind::PercentAppend,
             Token::Append => TokenKind::Append,
             Token::Dollar => TokenKind::Dollar,
             Token::Alias => TokenKind::Alias,
@@ -412,7 +420,9 @@ impl Token {
             | Token::Le
             | Token::Ge
             | Token::Append
-            | Token::PercentPipe => 2,
+            | Token::PercentPipe
+            | Token::PercentWrite
+            | Token::PercentAppend => 2,
             Token::Then | Token::Else | Token::BoolTrue => 4,
             Token::Alias | Token::BoolFalse => 5,
             Token::Export => 6,
@@ -483,8 +493,10 @@ impl fmt::Display for Token {
             Token::Pipe => write!(f, "pipe"),
             Token::PercentPipe => write!(f, "percent pipe"),
             Token::Write => write!(f, "write"),
+            Token::PercentWrite => write!(f, "percent write"),
             Token::Dollar => write!(f, "dollar"),
             Token::Append => write!(f, "append"),
+            Token::PercentAppend => write!(f, "percent append"),
             Token::Backtick => write!(f, "backtick"),
             Token::Invalid(c) => write!(f, "invalid `{c}`"),
             Token::Eof => write!(f, "eof"),

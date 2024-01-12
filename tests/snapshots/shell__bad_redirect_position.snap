@@ -1,6 +1,6 @@
 ---
 source: tests/shell.rs
-expression: stdout
+expression: stderr
 ---
 Error: unexpected token: pipe, expected newline after file write redirection
    ╭─[bad_redirect_position.tmp:1:20]
