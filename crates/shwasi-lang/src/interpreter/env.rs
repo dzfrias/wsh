@@ -104,7 +104,11 @@ impl Env {
     }
 
     /// Link the WASI API to the store. This should be called before the store is used.
-    pub fn prepare_wasi(&mut self) -> Result<(), WasiError> {
+    pub fn prepare_wasi<I, S>(&mut self, args: I) -> Result<(), WasiError>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<str>,
+    {
         let stdout = unsafe { wasi_file(self.wasi_stdout) };
         let stderr = unsafe { wasi_file(self.wasi_stderr) };
         let mut builder = WasiCtxBuilder::new();
@@ -125,6 +129,11 @@ impl Env {
             }
             let dir = Dir::open_ambient_dir(&relative, cap_std::ambient_authority())?;
             builder.preopened_dir(dir, relative)?;
+        }
+        for arg in args {
+            builder
+                .arg(arg.as_ref())
+                .expect("should not overflow on args");
         }
         shwasi_wasi::sync::snapshots::preview_1::link(self.store_mut(), &mut builder.build());
 

@@ -12,14 +12,14 @@ pub fn source(
     stderr: &mut (impl io::Write + AsRawFileDescriptor),
 ) -> Result<()> {
     // TOOD: support passing args to scripts
-    let (file, _args) = args.positional.split_first().context("no file provided")?;
+    let (file, args) = args.positional.split_first().context("no file provided")?;
     let contents = fs::read(file).context("error reading file")?;
 
     const MAGIC: &[u8; 4] = b"\0asm";
     // Automatically detect if the file is a wasm file. If it is, we can run it directly. This
     // check involves reading the first 4 bytes of the file for the special wasm magic number.
     if contents.len() >= 4 && &contents[0..4] == MAGIC {
-        shell.env.prepare_wasi()?;
+        shell.env.prepare_wasi(args)?;
         let module = shwasi_parser::Parser::new(&contents)
             .read_module()
             .context("error parsing wasm file")?;

@@ -201,6 +201,11 @@ shell_test!(
     "allow\nsource .($WASM_PATH + \"/new_file.wasm\")\ncat hello.txt\necho works!",
     "works!"
 );
+shell_test!(
+    wasi_sandboxing_args,
+    "source .($WASM_PATH + \"/args.wasm\") hello world",
+    "hello\nworld"
+);
 
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");
 shell_test!(@fail unfinished_pipe, "echo hi |");

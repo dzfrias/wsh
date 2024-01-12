@@ -658,7 +658,7 @@ impl Shell {
         mut stdout: File,
         mut stderr: File,
     ) -> ShellResult<()> {
-        if let Err(err) = self.env.prepare_wasi() {
+        if let Err(err) = self.env.prepare_wasi(std::iter::empty::<String>()) {
             writeln!(stderr, "shwasi: error prepare WASI: {err}").expect("write to stderr failed!");
             return Err(());
         }
