@@ -9,6 +9,7 @@ harness = false
 
 [dependencies]
 itertools.workspace = true
+reedline.workspace = true
 
 [dev-dependencies]
 criterion.workspace = true

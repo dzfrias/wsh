@@ -1,14 +1,23 @@
 mod cli;
+mod file_suggest;
 
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{Context, Result};
 use clap::Parser as CliParser;
-use reedline::{DefaultPrompt, FileBackedHistory, Reedline, Signal};
+use reedline::{
+    ColumnarMenu, DefaultPrompt, Emacs, FileBackedHistory, KeyCode, KeyModifiers, Reedline,
+    ReedlineEvent, ReedlineMenu, Signal,
+};
+use shwasi_cmp::completer::Completer;
 use shwasi_lang::Shell;
 use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
 
 use crate::cli::Cli;
+use file_suggest::FileSuggest;
 
 #[cfg(feature = "dhat-heap")]
 #[global_allocator]
@@ -54,13 +63,8 @@ fn run_file(interpreter: &mut Shell, input: impl AsRef<Path>) -> Result<()> {
 fn start_repl() -> Result<()> {
     let mut shell = Shell::new();
     let home_dir = dirs::home_dir();
-    let mut line_editor = Reedline::create();
-    if let Some(home) = &home_dir {
-        let hist = FileBackedHistory::with_file(100, home.join(".wsi_history"))?;
-        line_editor = line_editor.with_history(Box::new(hist));
-    }
-    let rc_file = home_dir.as_ref().map(|home| home.join(".wsirc"));
-    if let Some(rc_file) = rc_file {
+    let mut line_editor = line_editor(home_dir.as_ref().map(|home| home.join(".wsi_history")))?;
+    if let Some(rc_file) = home_dir.as_ref().map(|home| home.join(".wsirc")) {
         run_file(&mut shell, rc_file)?;
     }
 
@@ -82,4 +86,30 @@ fn start_repl() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn line_editor(history_file: Option<PathBuf>) -> Result<Reedline> {
+    let completion_menu = Box::new(ColumnarMenu::default().with_name("completion_menu"));
+    let mut keybindings = reedline::default_emacs_keybindings();
+    keybindings.add_binding(
+        KeyModifiers::NONE,
+        KeyCode::Tab,
+        ReedlineEvent::UntilFound(vec![
+            ReedlineEvent::Menu("completion_menu".to_string()),
+            ReedlineEvent::MenuNext,
+        ]),
+    );
+    let edit_mode = Box::new(Emacs::new(keybindings));
+
+    let completer = Completer::new(Box::new(FileSuggest));
+    let mut line_editor = Reedline::create()
+        .with_completer(Box::new(completer))
+        .with_menu(ReedlineMenu::EngineCompleter(completion_menu))
+        .with_edit_mode(edit_mode);
+    if let Some(file) = history_file {
+        let hist = FileBackedHistory::with_file(100, file)?;
+        line_editor = line_editor.with_history(Box::new(hist));
+    }
+
+    Ok(line_editor)
 }

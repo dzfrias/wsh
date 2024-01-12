@@ -1980,6 +1980,7 @@ dependencies = [
  "insta",
  "paste",
  "reedline",
+ "shwasi-cmp",
  "shwasi-engine",
  "shwasi-lang",
  "shwasi-parser",
@@ -1996,6 +1997,7 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "itertools 0.12.0",
+ "reedline",
 ]
 
 [[package]]
