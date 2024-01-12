@@ -14,8 +14,8 @@ clap = { version = "4.4.6", features = ["derive"] }
 dhat = { version = "0.3.2", optional = true }
 shwasi-lang = { path = "crates/shwasi-lang" }
 shwasi-engine = { path = "crates/shwasi-engine", default-features = false }
-rustyline = "13.0.0"
 dirs = "5.0.1"
+reedline = "0.28.0"
 
 [features]
 dhat-heap = ["dhat"]
