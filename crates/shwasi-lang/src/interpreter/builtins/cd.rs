@@ -1,7 +1,7 @@
 use std::{env, io, path::PathBuf};
 
 use anyhow::{Context, Result};
-use filedescriptor::AsRawFileDescriptor;
+use filedescriptor::{AsRawFileDescriptor, IntoRawFileDescriptor};
 
 use crate::{interpreter::builtins::Args, Shell};
 
@@ -9,6 +9,7 @@ pub fn cd(
     _shell: &mut Shell,
     args: Args,
     _stdout: &mut (impl io::Write + AsRawFileDescriptor),
+    _stdin: Option<impl io::Read + IntoRawFileDescriptor>,
 ) -> Result<()> {
     let path = args
         .positional

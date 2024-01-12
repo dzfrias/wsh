@@ -1,7 +1,7 @@
 use std::io;
 
 use anyhow::{ensure, Result};
-use filedescriptor::AsRawFileDescriptor;
+use filedescriptor::{AsRawFileDescriptor, IntoRawFileDescriptor};
 
 use crate::{interpreter::builtins::Args, Shell};
 
@@ -9,6 +9,7 @@ pub fn unload(
     shell: &mut Shell,
     args: Args,
     stdout: &mut (impl io::Write + AsRawFileDescriptor),
+    _stdin: Option<impl io::Read + IntoRawFileDescriptor>,
 ) -> Result<()> {
     ensure!(args.is_empty(), "unload: expected no arguments");
 

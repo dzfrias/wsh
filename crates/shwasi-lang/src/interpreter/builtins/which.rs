@@ -1,6 +1,6 @@
 use std::io;
 
-use filedescriptor::AsRawFileDescriptor;
+use filedescriptor::{AsRawFileDescriptor, IntoRawFileDescriptor};
 
 use crate::{
     interpreter::builtins::{Args, Builtin},
@@ -13,6 +13,7 @@ pub fn which(
     shell: &mut Shell,
     args: Args,
     stdout: &mut (impl io::Write + AsRawFileDescriptor),
+    _stdin: Option<impl io::Read + IntoRawFileDescriptor>,
 ) -> Result<()> {
     for arg in args.positional {
         let arg = arg.as_ref();

@@ -1,7 +1,7 @@
 use std::{fs, io};
 
 use anyhow::{Context, Result};
-use filedescriptor::AsRawFileDescriptor;
+use filedescriptor::{AsRawFileDescriptor, IntoRawFileDescriptor};
 use shwasi_engine::Instance;
 
 use crate::{interpreter::builtins::Args, Shell};
@@ -10,6 +10,7 @@ pub fn load(
     shell: &mut Shell,
     args: Args,
     _stdout: &mut (impl io::Write + AsRawFileDescriptor),
+    _stdin: Option<impl io::Read + IntoRawFileDescriptor>,
 ) -> Result<()> {
     let (file, _) = args.positional.split_first().context("no file provided")?;
 

@@ -7,7 +7,7 @@ mod which;
 
 use std::{collections::HashMap, io};
 
-use filedescriptor::AsRawFileDescriptor;
+use filedescriptor::{AsRawFileDescriptor, IntoRawFileDescriptor};
 
 use crate::{Shell, ShellResult};
 use allow::allow;
@@ -62,6 +62,7 @@ impl Builtin {
         args: I,
         mut stdout: impl io::Write + AsRawFileDescriptor,
         mut stderr: impl io::Write + AsRawFileDescriptor,
+        stdin: Option<impl io::Read + IntoRawFileDescriptor>,
     ) -> ShellResult<i32>
     where
         I: IntoIterator<Item = S>,
@@ -70,12 +71,12 @@ impl Builtin {
         let (positional, argv) = argmap::parse(args.into_iter().map(|s| s.as_ref().to_owned()));
         let args = Args { positional, argv };
         let result = match self {
-            Self::Cd => cd(shell, args, &mut stdout),
-            Self::Source => source(shell, args, &mut stdout, &mut stderr),
-            Self::Load => load(shell, args, &mut stdout),
-            Self::Unload => unload(shell, args, &mut stdout),
-            Self::Which => which(shell, args, &mut stdout),
-            Self::Allow => allow(shell, args, &mut stdout),
+            Self::Cd => cd(shell, args, &mut stdout, stdin),
+            Self::Source => source(shell, args, &mut stdout, &mut stderr, stdin),
+            Self::Load => load(shell, args, &mut stdout, stdin),
+            Self::Unload => unload(shell, args, &mut stdout, stdin),
+            Self::Which => which(shell, args, &mut stdout, stdin),
+            Self::Allow => allow(shell, args, &mut stdout, stdin),
         };
         if let Err(err) = result {
             writeln!(stderr, "{}: {err:#}", self.name()).expect("error writing to stderr");

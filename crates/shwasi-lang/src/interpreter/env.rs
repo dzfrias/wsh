@@ -81,7 +81,7 @@ impl Env {
         len
     }
 
-    pub fn get_module_func(&mut self, name: &str) -> Option<WasmFuncUntyped> {
+    pub fn get_module_func(&self, name: &str) -> Option<WasmFuncUntyped> {
         self.modules
             .iter()
             .find_map(|m| m.get_func_untyped(&self.store, name).ok())
@@ -104,7 +104,14 @@ impl Env {
     }
 
     /// Link the WASI API to the store. This should be called before the store is used.
-    pub fn prepare_wasi<I, S>(&mut self, args: I) -> Result<(), WasiError>
+    ///
+    /// # Safety
+    /// If passed, `stdin` must be a valid file descriptor. It **will** be taken ownership of.
+    pub unsafe fn prepare_wasi<I, S>(
+        &mut self,
+        args: I,
+        stdin: Option<RawFileDescriptor>,
+    ) -> Result<(), WasiError>
     where
         I: IntoIterator<Item = S>,
         S: AsRef<str>,
@@ -112,6 +119,11 @@ impl Env {
         let stdout = unsafe { wasi_file(self.wasi_stdout) };
         let stderr = unsafe { wasi_file(self.wasi_stderr) };
         let mut builder = WasiCtxBuilder::new();
+        if let Some(stdin) = stdin {
+            let file = unsafe { cap_std::fs::File::from_raw_file_descriptor(stdin) };
+            let stdin = File::from_cap_std(file);
+            builder.stdin(Box::new(stdin));
+        }
         builder.stdout(Box::new(stdout)).stderr(Box::new(stderr));
         for path in &self.allowed {
             let dir = Dir::open_ambient_dir(path, cap_std::ambient_authority())?;

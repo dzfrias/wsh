@@ -378,7 +378,7 @@ impl Shell {
         let stderr = File::from_raw_file_descriptor(stderr);
 
         if let Some(wasm_func) = self.env.get_module_func(&cmd.name) {
-            return match self.run_wasm_func(wasm_func, cmd, stdout, stderr) {
+            return match self.run_wasm_func(wasm_func, cmd, stdout, stderr, stdin) {
                 Ok(_) => Ok(0),
                 Err(_) => Ok(1),
             };
@@ -391,7 +391,7 @@ impl Shell {
             .collect::<ShellResult<Vec<_>>>()?;
 
         if let Some(builtin) = Builtin::from_name(&cmd.name) {
-            let status = builtin.run(self, args, stdout, stderr)?;
+            let status = builtin.run(self, args, stdout, stderr, stdin)?;
             return Ok(status);
         }
 
@@ -657,8 +657,14 @@ impl Shell {
         cmd: &Command,
         mut stdout: File,
         mut stderr: File,
+        stdin: Option<os_pipe::PipeReader>,
     ) -> ShellResult<()> {
-        if let Err(err) = self.env.prepare_wasi(std::iter::empty::<String>()) {
+        if let Err(err) = unsafe {
+            self.env.prepare_wasi(
+                std::iter::empty::<String>(),
+                stdin.map(|s| s.into_raw_file_descriptor()),
+            )
+        } {
             writeln!(stderr, "shwasi: error prepare WASI: {err}").expect("write to stderr failed!");
             return Err(());
         }

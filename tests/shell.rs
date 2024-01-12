@@ -206,6 +206,16 @@ shell_test!(
     "source .($WASM_PATH + \"/args.wasm\") hello world",
     "hello\nworld"
 );
+shell_test!(
+    wasi_stdin,
+    "echo hello | source .($WASM_PATH + \"/stdin.wasm\")",
+    "Got: hello\n"
+);
+shell_test!(
+    wasi_stdin_merge,
+    "echo .(!1) %| source .($WASM_PATH + \"/stdin.wasm\")",
+    "Got: shwasi: type error: `!` `number`\n"
+);
 
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");
 shell_test!(@fail unfinished_pipe, "echo hi |");

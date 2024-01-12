@@ -1,7 +1,9 @@
 use std::{fs, io};
 
 use anyhow::{Context, Result};
-use filedescriptor::{AsRawFileDescriptor, FileDescriptor, FromRawFileDescriptor};
+use filedescriptor::{
+    AsRawFileDescriptor, FileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor,
+};
 
 use crate::{interpreter::builtins::Args, Shell};
 
@@ -10,6 +12,7 @@ pub fn source(
     args: Args,
     stdout: &mut (impl io::Write + AsRawFileDescriptor),
     stderr: &mut (impl io::Write + AsRawFileDescriptor),
+    stdin: Option<impl io::Read + IntoRawFileDescriptor>,
 ) -> Result<()> {
     // TOOD: support passing args to scripts
     let (file, args) = args.positional.split_first().context("no file provided")?;
@@ -19,7 +22,12 @@ pub fn source(
     // Automatically detect if the file is a wasm file. If it is, we can run it directly. This
     // check involves reading the first 4 bytes of the file for the special wasm magic number.
     if contents.len() >= 4 && &contents[0..4] == MAGIC {
-        shell.env.prepare_wasi(args)?;
+        // SAFETY: `stdin` is a valid raw fd because it can from IntoRawFileDescriptor
+        unsafe {
+            shell
+                .env
+                .prepare_wasi(args, stdin.map(|s| s.into_raw_file_descriptor()))?;
+        }
         let module = shwasi_parser::Parser::new(&contents)
             .read_module()
             .context("error parsing wasm file")?;
