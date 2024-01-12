@@ -79,6 +79,11 @@ shell_test!(
     "echo hi > .(\"file\" + \".txt\")\n.x = `cat file.txt`\nrm file.txt\necho .x",
     "hi"
 );
+shell_test!(
+    merge_file_redirects,
+    "echo .(!1) %> merge_file.txt\n.x = `cat merge_file.txt`\nrm merge_file.txt\necho .x",
+    "shwasi: type error: `!` `number`"
+);
 // Disabling this test on Windows because I'm not sure what to do. In the CI, the test fails as a
 // result of:
 //   echo: write error: Bad file descriptor
@@ -94,6 +99,12 @@ shell_test!(
     append_file_redirects,
     "echo hi >> .(\"t\" + \".txt\")\necho hi >> t.txt\n.x = `cat t.txt`\nrm t.txt\necho .x",
     "hi\nhi"
+);
+#[cfg(not(windows))]
+shell_test!(
+    merge_append_file_redirects,
+    "echo .(!1) %>> merge_t.txt\necho .(!1) %>> merge_t.txt\n.x = `cat merge_t.txt`\nrm merge_t.txt\necho .x",
+    "shwasi: type error: `!` `number`\nshwasi: type error: `!` `number`"
 );
 shell_test!(alias_with_args, "alias foo = echo\nfoo hi", "hi");
 shell_test!(

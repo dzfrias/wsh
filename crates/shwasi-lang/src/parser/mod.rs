@@ -76,12 +76,21 @@ impl<'src> Parser<'src> {
             self.next_token();
             cmds.push(self.parse_cmd()?);
         }
-        if matches!(self.current_token, Token::Write | Token::Append) {
+        if matches!(
+            self.current_token,
+            Token::Write | Token::Append | Token::PercentAppend | Token::PercentWrite
+        ) {
             let kind = match self.current_token {
-                Token::Write => PipelineEndKind::Write,
-                Token::Append => PipelineEndKind::Append,
+                Token::Write | Token::PercentWrite => PipelineEndKind::Write,
+                Token::Append | Token::PercentAppend => PipelineEndKind::Append,
                 _ => unreachable!(),
             };
+            if matches!(
+                self.current_token,
+                Token::PercentAppend | Token::PercentWrite
+            ) {
+                cmds.last_mut().unwrap().merge_stderr = true;
+            }
             self.next_token();
             let pipeline_end = PipelineEnd {
                 kind,
@@ -173,6 +182,8 @@ impl<'src> Parser<'src> {
                 | Token::Write
                 | Token::Append
                 | Token::PercentPipe
+                | Token::PercentWrite
+                | Token::PercentAppend
         ) {
             if self.peek() == Token::Backtick && self.in_subcmd {
                 return Ok(Command {
@@ -574,6 +585,22 @@ mod tests {
     #[test]
     fn merge_stderr_pipes() {
         let input = "echo hi %| cat";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn merge_stderr_redirect() {
+        let input = "echo hi %> file.txt";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn merge_stderr_redirect_append() {
+        let input = "echo hi %>> file.txt";
         let buf = Lexer::new(input).lex();
         let ast = Parser::new(&buf).parse().unwrap();
         insta::assert_debug_snapshot!(ast);
