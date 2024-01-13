@@ -376,9 +376,18 @@ impl Shell {
         // `stdout` is dropped.
         let stdout = File::from_raw_file_descriptor(stdout);
         let stderr = File::from_raw_file_descriptor(stderr);
+        let env = env
+            .iter()
+            .map(|env_set| -> ShellResult<(String, String)> {
+                Ok((
+                    env_set.name.to_string(),
+                    self.eval_expr(&env_set.expr)?.to_string(),
+                ))
+            })
+            .collect::<ShellResult<Vec<(String, String)>>>()?;
 
         if let Some(wasm_func) = self.env.get_module_func(&cmd.name) {
-            return match self.run_wasm_func(wasm_func, cmd, stdout, stderr, stdin) {
+            return match self.run_wasm_func(wasm_func, cmd, stdout, stderr, stdin, &env) {
                 Ok(_) => Ok(0),
                 Err(_) => Ok(1),
             };
@@ -391,18 +400,12 @@ impl Shell {
             .collect::<ShellResult<Vec<_>>>()?;
 
         if let Some(builtin) = Builtin::from_name(&cmd.name) {
-            let status = builtin.run(self, args, stdout, stderr, stdin)?;
+            let status = builtin.run(self, args, stdout, stderr, stdin, &env)?;
             return Ok(status);
         }
 
         let mut command = process::Command::new(cmd.name.as_str());
-        command.args(args).stdout(stdout).stderr(stderr);
-
-        for env_set in env {
-            let value = self.eval_expr(&env_set.expr)?;
-            let name_str: &str = &env_set.name;
-            command.env(name_str, value.to_string());
-        }
+        command.args(args).stdout(stdout).stderr(stderr).envs(env);
 
         if let Some(stdin) = stdin {
             command.stdin(stdin);
@@ -658,11 +661,13 @@ impl Shell {
         mut stdout: File,
         mut stderr: File,
         stdin: Option<os_pipe::PipeReader>,
+        env: &[(String, String)],
     ) -> ShellResult<()> {
         if let Err(err) = unsafe {
             self.env.prepare_wasi(
                 std::iter::empty::<String>(),
                 stdin.map(|s| s.into_raw_file_descriptor()),
+                env,
             )
         } {
             writeln!(stderr, "shwasi: error prepare WASI: {err}").expect("write to stderr failed!");

@@ -111,6 +111,7 @@ impl Env {
         &mut self,
         args: I,
         stdin: Option<RawFileDescriptor>,
+        env: &[(String, String)],
     ) -> Result<(), WasiError>
     where
         I: IntoIterator<Item = S>,
@@ -124,7 +125,11 @@ impl Env {
             let stdin = File::from_cap_std(file);
             builder.stdin(Box::new(stdin));
         }
-        builder.stdout(Box::new(stdout)).stderr(Box::new(stderr));
+        builder
+            .stdout(Box::new(stdout))
+            .stderr(Box::new(stderr))
+            .envs(env)
+            .expect("should not overflow on environment vars");
         for path in &self.allowed {
             let dir = Dir::open_ambient_dir(path, cap_std::ambient_authority())?;
             builder.preopened_dir(dir, path)?;

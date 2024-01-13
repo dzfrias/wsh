@@ -10,12 +10,13 @@ WASI modules should export a `_start` function (as is standard). In the shell,
 these files are run using the `source` command. No default permissions are
 provided to the modules.
 
-| File              | Description                                  |
-| ----------------- | -------------------------------------------- |
-| `args.wasm`       | Writes each argument to stdout.              |
-| `hello_wasi.wasm` | Writes "Hello, World!" to stdout.            |
-| `new_file.wasm`   | Attempts to create a file named `hello.txt`. |
-| `stdin.wasm`      | Writes `Got: {STDIN}` to stdout.             |
+| File              | Description                                          |
+| ----------------- | ---------------------------------------------------- |
+| `args.wasm`       | Writes each argument to stdout.                      |
+| `hello_wasi.wasm` | Writes "Hello, World!" to stdout.                    |
+| `new_file.wasm`   | Attempts to create a file named `hello.txt`.         |
+| `stdin.wasm`      | Writes "Got: {STDIN}" to stdout.                     |
+| `env.wasm`        | Writes "{$HELLO}" to stdout, or "NOT HERE" if unset. |
 
 ## Non-WASI Inputs
 

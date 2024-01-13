@@ -63,6 +63,7 @@ impl Builtin {
         mut stdout: impl io::Write + AsRawFileDescriptor,
         mut stderr: impl io::Write + AsRawFileDescriptor,
         stdin: Option<impl io::Read + IntoRawFileDescriptor>,
+        env: &[(String, String)],
     ) -> ShellResult<i32>
     where
         I: IntoIterator<Item = S>,
@@ -72,7 +73,7 @@ impl Builtin {
         let args = Args { positional, argv };
         let result = match self {
             Self::Cd => cd(shell, args, &mut stdout, stdin),
-            Self::Source => source(shell, args, &mut stdout, &mut stderr, stdin),
+            Self::Source => source(shell, args, &mut stdout, &mut stderr, stdin, env),
             Self::Load => load(shell, args, &mut stdout, stdin),
             Self::Unload => unload(shell, args, &mut stdout, stdin),
             Self::Which => which(shell, args, &mut stdout, stdin),

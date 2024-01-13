@@ -13,6 +13,7 @@ pub fn source(
     stdout: &mut (impl io::Write + AsRawFileDescriptor),
     stderr: &mut (impl io::Write + AsRawFileDescriptor),
     stdin: Option<impl io::Read + IntoRawFileDescriptor>,
+    env: &[(String, String)],
 ) -> Result<()> {
     // TOOD: support passing args to scripts
     let (file, args) = args.positional.split_first().context("no file provided")?;
@@ -26,7 +27,7 @@ pub fn source(
         unsafe {
             shell
                 .env
-                .prepare_wasi(args, stdin.map(|s| s.into_raw_file_descriptor()))?;
+                .prepare_wasi(args, stdin.map(|s| s.into_raw_file_descriptor()), env)?;
         }
         let module = shwasi_parser::Parser::new(&contents)
             .read_module()

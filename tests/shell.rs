@@ -216,6 +216,16 @@ shell_test!(
     "echo .(!1) %| source .($WASM_PATH + \"/stdin.wasm\")",
     "Got: shwasi: type error: `!` `number`\n"
 );
+shell_test!(
+    wasi_env_vars,
+    "source .($WASM_PATH + \"/env.wasm\")\n$HELLO=nice source .($WASM_PATH + \"/env.wasm\")",
+    "NOT HERE\nnice"
+);
+shell_test!(
+    wasi_env_vars_cannot_access_from_parent,
+    "export HELLO = nice\nsource .($WASM_PATH + \"/env.wasm\")",
+    "NOT HERE"
+);
 
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");
 shell_test!(@fail unfinished_pipe, "echo hi |");
