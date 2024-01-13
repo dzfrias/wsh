@@ -3,7 +3,10 @@ use std::{env, io, path::PathBuf};
 use anyhow::{Context, Result};
 use filedescriptor::{AsRawFileDescriptor, IntoRawFileDescriptor};
 
-use crate::{interpreter::builtins::Args, Shell};
+use crate::{
+    interpreter::builtins::{Args, ArgsValidator, Positionals},
+    Shell,
+};
 
 pub fn cd(
     _shell: &mut Shell,
@@ -11,6 +14,10 @@ pub fn cd(
     _stdout: &mut (impl io::Write + AsRawFileDescriptor),
     _stdin: Option<impl io::Read + IntoRawFileDescriptor>,
 ) -> Result<()> {
+    ArgsValidator::default()
+        .positionals(Positionals::Max(1))
+        .validate(&args)?;
+
     let path = args
         .positional
         .first()

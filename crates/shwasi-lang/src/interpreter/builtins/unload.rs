@@ -1,9 +1,12 @@
 use std::io;
 
-use anyhow::{ensure, Result};
+use anyhow::Result;
 use filedescriptor::{AsRawFileDescriptor, IntoRawFileDescriptor};
 
-use crate::{interpreter::builtins::Args, Shell};
+use crate::{
+    interpreter::builtins::{Args, ArgsValidator, Positionals},
+    Shell,
+};
 
 pub fn unload(
     shell: &mut Shell,
@@ -11,7 +14,9 @@ pub fn unload(
     stdout: &mut (impl io::Write + AsRawFileDescriptor),
     _stdin: Option<impl io::Read + IntoRawFileDescriptor>,
 ) -> Result<()> {
-    ensure!(args.is_empty(), "unload: expected no arguments");
+    ArgsValidator::default()
+        .positionals(Positionals::None)
+        .validate(&args)?;
 
     let unloaded = shell.env.unload_modules();
     writeln!(stdout, "unloaded {unloaded} modules").expect("error writing to stdout");

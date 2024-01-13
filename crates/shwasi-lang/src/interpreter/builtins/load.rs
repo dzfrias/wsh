@@ -4,7 +4,10 @@ use anyhow::{Context, Result};
 use filedescriptor::{AsRawFileDescriptor, IntoRawFileDescriptor};
 use shwasi_engine::Instance;
 
-use crate::{interpreter::builtins::Args, Shell};
+use crate::{
+    interpreter::builtins::{Args, ArgsValidator, Positionals},
+    Shell,
+};
 
 pub fn load(
     shell: &mut Shell,
@@ -12,9 +15,12 @@ pub fn load(
     _stdout: &mut (impl io::Write + AsRawFileDescriptor),
     _stdin: Option<impl io::Read + IntoRawFileDescriptor>,
 ) -> Result<()> {
-    let (file, _) = args.positional.split_first().context("no file provided")?;
+    ArgsValidator::default()
+        .positionals(Positionals::Exact(1))
+        .single("as")
+        .validate(&args)?;
 
-    let contents = fs::read(file).context("error reading input file")?;
+    let contents = fs::read(&args.positional[0]).context("error reading input file")?;
     let module = shwasi_parser::Parser::new(&contents)
         .read_module()
         .context("bad wasm module")?;

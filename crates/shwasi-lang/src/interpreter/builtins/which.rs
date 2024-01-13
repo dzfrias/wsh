@@ -3,7 +3,7 @@ use std::io;
 use filedescriptor::{AsRawFileDescriptor, IntoRawFileDescriptor};
 
 use crate::{
-    interpreter::builtins::{Args, Builtin},
+    interpreter::builtins::{Args, ArgsValidator, Builtin, Positionals},
     Shell,
 };
 use anyhow::Result;
@@ -15,6 +15,10 @@ pub fn which(
     stdout: &mut (impl io::Write + AsRawFileDescriptor),
     _stdin: Option<impl io::Read + IntoRawFileDescriptor>,
 ) -> Result<()> {
+    ArgsValidator::default()
+        .positionals(Positionals::Min(1))
+        .validate(&args)?;
+
     for arg in args.positional {
         let arg = arg.as_ref();
         // TODO: print alias itself

@@ -5,7 +5,10 @@ use filedescriptor::{
     AsRawFileDescriptor, FileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor,
 };
 
-use crate::{interpreter::builtins::Args, Shell};
+use crate::{
+    interpreter::builtins::{Args, ArgsValidator, Positionals},
+    Shell,
+};
 
 pub fn source(
     shell: &mut Shell,
@@ -15,8 +18,12 @@ pub fn source(
     stdin: Option<impl io::Read + IntoRawFileDescriptor>,
     env: &[(String, String)],
 ) -> Result<()> {
+    ArgsValidator::default()
+        .positionals(Positionals::Min(1))
+        .validate(&args)?;
+
     // TOOD: support passing args to scripts
-    let (file, args) = args.positional.split_first().context("no file provided")?;
+    let (file, args) = args.positional.split_first().unwrap();
     let contents = fs::read(file).context("error reading file")?;
 
     const MAGIC: &[u8; 4] = b"\0asm";
