@@ -32,6 +32,7 @@ use std::{
 };
 pub use value::*;
 
+/// The executor of shwasi programs.
 pub struct Shell {
     env: Env,
     stdout: RawFileDescriptor,
@@ -39,6 +40,9 @@ pub struct Shell {
     last_status: i32,
 }
 
+// TODO: right now, there's quite a bit of unsafe code in the implemenation. This is mostly a
+// result of raw file descriptors being used pretty much everywhere. Perhaps better usages of
+// OwnedFd and BorrowedFd would reduce the risk of a fd leak or use-after-close bug.
 impl Shell {
     pub fn new() -> Self {
         Self {
@@ -123,90 +127,28 @@ impl Shell {
 
     fn eval_pipeline(&mut self, pipeline: &Pipeline, capture: bool) -> ShellResult<Value> {
         if capture && pipeline.write.is_none() {
-            let (mut read_end, write_end) = os_pipe::pipe()
-                .map_err(ShellError::PipeError)
-                .map_err(|err| {
-                    self.print_err(err);
-                })?;
-            let stderr_fd = unsafe { OpenFileDescriptor::new(self.stderr) };
-            let stderr_dup = self.dup_fd(stderr_fd)?;
-            // SAFETY: write end is a valid file descriptor that has not been closed yet
-            unsafe {
-                self.run_pipeline(
-                    pipeline,
-                    write_end.into_raw_file_descriptor(),
-                    stderr_dup.into_raw_file_descriptor(),
-                    None,
-                )?;
-            }
-            let mut out = vec![];
-            read_end
-                .read_to_end(&mut out)
-                .map_err(ShellError::PipeError)
-                .map_err(|err| {
-                    self.print_err(err);
-                })?;
-            let mut out = String::from_utf8_lossy(&out).to_string();
-            while out.ends_with('\n') || out.ends_with('\r') {
-                out.truncate(out.len() - 1);
-            }
+            let out = self.run_pipeline_capture(pipeline)?;
             return Ok(Value::String(out.into()));
         }
 
         match pipeline.write.as_deref() {
+            // `>` redirect
             Some(PipelineEnd {
                 expr,
                 kind: PipelineEndKind::Write,
             }) => {
-                let path = self.eval_expr(expr)?.to_string();
-                let file = File::create(path)
-                    .map_err(|err| {
-                        self.set_status(1);
-                        ShellError::RedirectError(err)
-                    })
-                    .map_err(|err| {
-                        self.print_err(err);
-                    })?;
-                let stderr_fd = unsafe { OpenFileDescriptor::new(self.stderr) };
-                let stderr_dup = self.dup_fd(stderr_fd)?;
-                // SAFETY: stdout here comes from a just-opened file, which is a valid raw fd
-                unsafe {
-                    self.run_pipeline(
-                        pipeline,
-                        file.into_raw_file_descriptor(),
-                        stderr_dup.into_raw_file_descriptor(),
-                        None,
-                    )?;
-                }
+                let mut opts = OpenOptions::new();
+                self.run_pipeline_redirect(expr, pipeline, opts.write(true).create(true))?;
             }
+            // `>>` redirect
             Some(PipelineEnd {
                 expr,
                 kind: PipelineEndKind::Append,
             }) => {
-                let path = self.eval_expr(expr)?.to_string();
-                let file = OpenOptions::new()
-                    .append(true)
-                    .create(true)
-                    .open(path)
-                    .map_err(|err| {
-                        self.set_status(1);
-                        ShellError::RedirectError(err)
-                    })
-                    .map_err(|err| {
-                        self.print_err(err);
-                    })?;
-                let stderr_fd = unsafe { OpenFileDescriptor::new(self.stderr) };
-                let stderr_dup = self.dup_fd(stderr_fd)?;
-                // SAFETY: stdout here comes from a just-opened file, which is a valid raw fd
-                unsafe {
-                    self.run_pipeline(
-                        pipeline,
-                        file.into_raw_file_descriptor(),
-                        stderr_dup.into_raw_file_descriptor(),
-                        None,
-                    )?;
-                }
+                let mut opts = OpenOptions::new();
+                self.run_pipeline_redirect(expr, pipeline, opts.append(true).create(true))?;
             }
+            // No redirect case
             None => {
                 // We have to do a litle bit of a hack to get Rust to accept this code on Windows.
                 // For some reason, `AsRawFileDescriptor` is not implemented for
@@ -246,8 +188,79 @@ impl Shell {
         })
     }
 
+    /// Runs a pipeline, redircting into a file that will be opened with the given options (`opts`).
+    fn run_pipeline_redirect(
+        &mut self,
+        expr: &Expr,
+        pipeline: &Pipeline,
+        opts: &mut OpenOptions,
+    ) -> ShellResult<()> {
+        let path = self.eval_expr(expr)?.to_string();
+        // Open the file using the given path
+        let file = opts
+            .open(path)
+            .map_err(|err| {
+                self.set_status(1);
+                ShellError::RedirectError(err)
+            })
+            .map_err(|err| {
+                self.print_err(err);
+            })?;
+        let stderr_fd = unsafe { OpenFileDescriptor::new(self.stderr) };
+        let stderr_dup = self.dup_fd(stderr_fd)?;
+        // SAEFTY: `file` is a valid raw fd because it has opened successfully at this pointt
+        unsafe {
+            self.run_pipeline(
+                pipeline,
+                file.into_raw_file_descriptor(),
+                stderr_dup.into_raw_file_descriptor(),
+                None,
+            )?;
+        }
+        Ok(())
+    }
+
+    /// Runs a pipeline, capturing its output into a `String`.
+    fn run_pipeline_capture(&mut self, pipeline: &Pipeline) -> ShellResult<String> {
+        // The stdout of the pipeline will be written to the `write_end`
+        let (mut read_end, write_end) =
+            os_pipe::pipe()
+                .map_err(ShellError::PipeError)
+                .map_err(|err| {
+                    self.print_err(err);
+                })?;
+        let stderr_fd = unsafe { OpenFileDescriptor::new(self.stderr) };
+        let stderr_dup = self.dup_fd(stderr_fd)?;
+        // SAFETY: `write_end` is a newly created pipe, so this shold be fine. `run_pipeline`
+        // should also drop `write_end` so we won't hang when reading from `read_end`.
+        unsafe {
+            self.run_pipeline(
+                pipeline,
+                write_end.into_raw_file_descriptor(),
+                stderr_dup.into_raw_file_descriptor(),
+                None,
+            )?;
+        }
+        let mut out = vec![];
+        // This should not block as long as `run_pipeline` closes `write_end`
+        read_end
+            .read_to_end(&mut out)
+            .map_err(ShellError::PipeError)
+            .map_err(|err| {
+                self.print_err(err);
+            })?;
+        let mut out = String::from_utf8_lossy(&out).to_string();
+        while out.ends_with('\n') || out.ends_with('\r') {
+            out.truncate(out.len() - 1);
+        }
+        Ok(out)
+    }
+
     /// Execute a pipeline, writing results to `default_stdout` and reading stdin from
     /// `default_stdin`.
+    ///
+    /// Any file descriptors can be passed for io streams, so different output ends (pipes, files,
+    /// etc.) can be written to easily.
     ///
     /// # Safety
     /// This method can be called safely as along as `default_stdout` is a valid file descriptor.
@@ -295,6 +308,8 @@ impl Shell {
                 let stderr = unsafe { OpenFileDescriptor::new(stderr) };
                 self.dup_fd(stderr)?.into_raw_file_descriptor()
             } else {
+                // If the command should merge stderr, simply make the stderr fd the same as the stdout
+                // fd
                 stdout
             };
             self.stderr(stderr);
@@ -348,6 +363,7 @@ impl Shell {
         stderr: RawFileDescriptor,
         stdin: Option<os_pipe::PipeReader>,
     ) -> ShellResult<i32> {
+        // Priority one is aliases for commands
         // TODO: avoid clone here?
         if let Some(mut alias) = self.env.get_alias(cmd.name.as_str()).cloned() {
             alias
@@ -386,6 +402,7 @@ impl Shell {
             })
             .collect::<ShellResult<Vec<(String, String)>>>()?;
 
+        // Priority two is wasm functions in the environment (via the `load` built-in)
         if let Some(wasm_func) = self.env.get_module_func(&cmd.name) {
             return match self.run_wasm_func(wasm_func, cmd, stdout, stderr, stdin, &env) {
                 Ok(_) => Ok(0),
@@ -399,11 +416,13 @@ impl Shell {
             .map(|arg| self.eval_expr(arg).map(|val| val.to_string()))
             .collect::<ShellResult<Vec<_>>>()?;
 
+        // Priority three is built-ins
         if let Some(builtin) = Builtin::from_name(&cmd.name) {
             let status = builtin.run(self, args, stdout, stderr, stdin, &env)?;
             return Ok(status);
         }
 
+        // If the command name is not an alias, wasm function, or built-in, it must be a Command
         let mut command = process::Command::new(cmd.name.as_str());
         command.args(args).stdout(stdout).stderr(stderr).envs(env);
 
