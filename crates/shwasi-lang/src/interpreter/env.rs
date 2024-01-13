@@ -21,6 +21,7 @@ pub struct Env {
     store: Store,
     modules: Vec<Instance>,
     allowed: Vec<PathBuf>,
+    env_vars: Vec<String>,
     wasi_stdout: RawFileDescriptor,
     wasi_stderr: RawFileDescriptor,
 }
@@ -43,6 +44,7 @@ impl Env {
             modules: Vec::new(),
             store,
             allowed: vec![],
+            env_vars: vec![],
             wasi_stderr: io::stderr().as_raw_file_descriptor(),
             wasi_stdout: io::stdout().as_raw_file_descriptor(),
         }
@@ -111,7 +113,7 @@ impl Env {
         &mut self,
         args: I,
         stdin: Option<RawFileDescriptor>,
-        env: &[(String, String)],
+        other_env: &[(String, String)],
     ) -> Result<(), WasiError>
     where
         I: IntoIterator<Item = S>,
@@ -125,10 +127,19 @@ impl Env {
             let stdin = File::from_cap_std(file);
             builder.stdin(Box::new(stdin));
         }
+        let mut env = self
+            .env_vars
+            .iter()
+            .filter_map(|var| {
+                let value = std::env::var(var).ok()?;
+                Some((var.clone(), value))
+            })
+            .collect::<Vec<_>>();
+        env.extend_from_slice(other_env);
         builder
             .stdout(Box::new(stdout))
             .stderr(Box::new(stderr))
-            .envs(env)
+            .envs(&env)
             .expect("should not overflow on environment vars");
         for path in &self.allowed {
             let dir = Dir::open_ambient_dir(path, cap_std::ambient_authority())?;
@@ -166,11 +177,14 @@ impl Env {
     }
 
     /// Allow both read and write access to the given directory for WASI modules.
-    pub fn allow_dir(&mut self, path: impl AsRef<Path>) -> Result<(), WasiError> {
+    pub fn allow_dir(&mut self, path: impl AsRef<Path>) {
         // Make sure all paths allowed are stored internally as absolute paths
         let abs_path = fs::canonicalize(path).unwrap();
         self.allowed.push(abs_path);
-        Ok(())
+    }
+
+    pub fn allow_env(&mut self, env_var: impl AsRef<str>) {
+        self.env_vars.push(env_var.as_ref().to_owned());
     }
 }
 

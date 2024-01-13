@@ -28,8 +28,22 @@ impl Args {
         self.positional.is_empty() && self.argv.is_empty()
     }
 
-    pub fn get_argv1(&self, name: impl AsRef<str>) -> Option<&String> {
-        self.argv.get(name.as_ref()).and_then(|v| v.first())
+    pub fn get_argv1(&self, name: impl AsRef<str>) -> Option<&str> {
+        self.argv
+            .get(name.as_ref())
+            .and_then(|v| v.first())
+            .map(|s| s.as_str())
+    }
+
+    pub fn get_argv(
+        &self,
+        name: impl AsRef<str>,
+        or: Option<impl AsRef<str>>,
+    ) -> Option<&[String]> {
+        self.argv
+            .get(name.as_ref())
+            .or_else(|| or.and_then(|or| self.argv.get(or.as_ref())))
+            .map(|v| v.as_slice())
     }
 }
 

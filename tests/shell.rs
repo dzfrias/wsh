@@ -226,6 +226,11 @@ shell_test!(
     "export HELLO = nice\nsource .($WASM_PATH + \"/env.wasm\")",
     "NOT HERE"
 );
+shell_test!(
+    allow_env_vars_from_parent,
+    "export HELLO = nice\nallow --env HELLO\nsource .($WASM_PATH + \"/env.wasm\")",
+    "nice"
+);
 
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");
 shell_test!(@fail unfinished_pipe, "echo hi |");
