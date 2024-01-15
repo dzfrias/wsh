@@ -1,6 +1,7 @@
 mod allow;
 mod cd;
 mod load;
+mod memfs;
 mod source;
 mod unload;
 mod which;
@@ -14,6 +15,7 @@ use crate::{Shell, ShellResult};
 use allow::allow;
 use cd::cd;
 use load::load;
+use memfs::memfs;
 use source::source;
 use unload::unload;
 use which::which;
@@ -26,6 +28,7 @@ pub enum Builtin {
     Unload,
     Which,
     Allow,
+    Memfs,
 }
 
 impl Builtin {
@@ -37,6 +40,7 @@ impl Builtin {
             "unload" => Some(Self::Unload),
             "which" => Some(Self::Which),
             "allow" => Some(Self::Allow),
+            "memfs" => Some(Self::Memfs),
             _ => None,
         }
     }
@@ -63,6 +67,7 @@ impl Builtin {
             Self::Unload => unload(shell, args, &mut stdout, stdin),
             Self::Which => which(shell, args, &mut stdout, stdin),
             Self::Allow => allow(shell, args, &mut stdout, stdin),
+            Self::Memfs => memfs(shell, args, &mut stdout, stdin),
         };
         if let Err(err) = result {
             writeln!(stderr, "{}: {err:#}", self.name()).expect("error writing to stderr");
@@ -79,6 +84,7 @@ impl Builtin {
             Self::Unload => "unload",
             Self::Which => "which",
             Self::Allow => "allow",
+            Self::Memfs => "memfs",
         }
     }
 }
@@ -95,6 +101,10 @@ impl Args {
             .get(name.as_ref())
             .and_then(|v| v.first())
             .map(|s| s.as_str())
+    }
+
+    pub fn get_bool(&self, name: impl AsRef<str>) -> bool {
+        self.argv.get(name.as_ref()).is_some()
     }
 
     pub fn get_argv(
@@ -119,6 +129,7 @@ impl Args {
 struct ArgsValidator {
     singles: Vec<String>,
     multis: Vec<String>,
+    bools: Vec<String>,
     positionals: Positionals,
 }
 
@@ -132,6 +143,12 @@ impl ArgsValidator {
     #[must_use]
     pub fn multi(&mut self, name: impl AsRef<str>) -> &mut Self {
         self.multis.push(name.as_ref().to_owned());
+        self
+    }
+
+    #[must_use]
+    pub fn bool(&mut self, name: impl AsRef<str>) -> &mut Self {
+        self.bools.push(name.as_ref().to_owned());
         self
     }
 
@@ -164,7 +181,9 @@ impl ArgsValidator {
         ensure!(
             args.argv.iter().all(|(name, vals)| {
                 if self.singles.contains(name) {
-                    vals.len() == 1
+                    vals.len() <= 1
+                } else if self.bools.contains(name) {
+                    vals.is_empty()
                 } else {
                     self.multis.contains(name)
                 }

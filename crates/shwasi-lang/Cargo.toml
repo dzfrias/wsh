@@ -22,6 +22,8 @@ which = "5.0.0"
 cap-std = "2.0.1"
 argmap = "1.1.2"
 pathdiff = "0.2.1"
+wiggle = "16.0.0"
+system-interface = "0.27.0"
 
 [target.'cfg(unix)'.dependencies]
 rustix = "0.38.28"

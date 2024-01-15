@@ -231,6 +231,21 @@ shell_test!(
     "export HELLO = nice\nallow --env HELLO\nsource .($WASM_PATH + \"/env.wasm\")",
     "nice"
 );
+shell_test!(
+    wasi_remove,
+    "allow\necho \"stuff\" > hello.txt\nsource .($WASM_PATH + \"/rm.wasm\")\nls | wc -l | xargs",
+    "1"
+);
+shell_test!(
+    memfs,
+    "allow --virtual\nsource .($WASM_PATH + \"/new_file.wasm\")\nmemfs\nls | wc -l | xargs",
+    "+ hello.txt\n1"
+);
+shell_test!(
+    memfs_rm,
+    "allow --virtual\necho \"stuff\" > hello.txt\nsource .($WASM_PATH + \"/rm.wasm\")\nmemfs",
+    "- hello.txt"
+);
 
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");
 shell_test!(@fail unfinished_pipe, "echo hi |");

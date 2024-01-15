@@ -1,26 +1,38 @@
 use std::{
     any::Any,
     collections::HashMap,
-    fs, io,
+    fs,
+    hash::Hash,
+    io,
     mem::ManuallyDrop,
     path::{Path, PathBuf},
     pin::Pin,
 };
 
-use cap_std::fs::Dir;
 use filedescriptor::{AsRawFileDescriptor, FromRawFileDescriptor, RawFileDescriptor};
 use shwasi_engine::{Instance, Store, WasmFuncUntyped};
-use shwasi_wasi::{sync::file::File, WasiCtxBuilder, WasiError, WasiFile};
+use shwasi_wasi::{sync::file::File, WasiCtxBuilder, WasiDir, WasiError, WasiFile};
 use smol_str::SmolStr;
 
-use crate::{ast::Pipeline, interpreter::value::Value, Ident};
+use crate::{
+    ast::Pipeline,
+    interpreter::{
+        memfs::{Entry, MemFs},
+        value::Value,
+    },
+    Ident,
+};
+
+use super::memfs::MemFsError;
 
 pub struct Env {
+    pub mem_fs: MemFs,
+
     env: HashMap<Ident, Value>,
     aliases: HashMap<SmolStr, Pipeline>,
     store: Store,
     modules: Vec<Instance>,
-    allowed: Vec<PathBuf>,
+    allowed: Vec<Allowed>,
     env_vars: Vec<String>,
     wasi_stdout: RawFileDescriptor,
     wasi_stderr: RawFileDescriptor,
@@ -47,6 +59,7 @@ impl Env {
             env_vars: vec![],
             wasi_stderr: io::stderr().as_raw_file_descriptor(),
             wasi_stdout: io::stdout().as_raw_file_descriptor(),
+            mem_fs: MemFs::new(),
         }
     }
 
@@ -127,23 +140,59 @@ impl Env {
             let stdin = File::from_cap_std(file);
             builder.stdin(Box::new(stdin));
         }
-        let mut env = self
+        let env = self
             .env_vars
             .iter()
             .filter_map(|var| {
                 let value = std::env::var(var).ok()?;
                 Some((var.clone(), value))
             })
+            .chain(other_env.iter().cloned())
             .collect::<Vec<_>>();
-        env.extend_from_slice(other_env);
         builder
             .stdout(Box::new(stdout))
             .stderr(Box::new(stderr))
             .envs(&env)
             .expect("should not overflow on environment vars");
-        for path in &self.allowed {
-            let dir = Dir::open_ambient_dir(path, cap_std::ambient_authority())?;
-            builder.preopened_dir(dir, path)?;
+        for arg in args {
+            builder
+                .arg(arg.as_ref())
+                .expect("should not overflow on args");
+        }
+
+        // We build now because the WasiCtxBuilder API doesn't allow us to use WasiDir's when
+        // setting pre-opened directories. Pre-opens are handled by interfacing with WasiCtx
+        // directly.
+        let mut ctx = builder.build();
+        for Allowed { path, location } in &self.allowed {
+            let dir: Box<dyn WasiDir> = match location {
+                Location::Memory => self
+                    .mem_fs
+                    .entry(path)
+                    .map_or_else(
+                        || match self.mem_fs.create_dir(path) {
+                            Ok(dir) => Ok(dir),
+                            Err(MemFsError::OutOfHandles) => {
+                                Err(anyhow::anyhow!("out of fs handles!"))
+                            }
+                            Err(err) => {
+                                panic!("BUG: creating directory should not fail, but got: {err}")
+                            }
+                        },
+                        |handle| match self.mem_fs.get(handle) {
+                            Entry::Directory(dir) => Ok(dir),
+                            Entry::File(_) => Err(anyhow::anyhow!("cannot pre-open virtual file!")),
+                        },
+                    )
+                    .map(Box::new)
+                    .map_err(WasiError::trap)?,
+                Location::Disk => {
+                    let cap_std_dir =
+                        cap_std::fs::Dir::open_ambient_dir(path, cap_std::ambient_authority())?;
+                    Box::new(shwasi_wasi::sync::dir::Dir::from_cap_std(cap_std_dir))
+                }
+            };
+            ctx.push_preopened_dir(dir, path)?;
             // Both the relative and absolute paths will have to be pushed here. This WASI
             // implementation makes a distinguishment between the two.
             let Ok(current_dir) = std::env::current_dir() else {
@@ -155,15 +204,25 @@ impl Env {
             if relative == Path::new("") {
                 relative = PathBuf::from(".");
             }
-            let dir = Dir::open_ambient_dir(&relative, cap_std::ambient_authority())?;
-            builder.preopened_dir(dir, relative)?;
+            let dir: Box<dyn WasiDir> = match location {
+                Location::Memory => match self.mem_fs.get(self.mem_fs.entry(path).unwrap()) {
+                    Entry::Directory(dir) => Box::new(dir),
+                    Entry::File(_) => {
+                        panic!("should not be happen because we just registered it above")
+                    }
+                },
+                Location::Disk => {
+                    let cap_std_dir = cap_std::fs::Dir::open_ambient_dir(
+                        &relative,
+                        cap_std::ambient_authority(),
+                    )?;
+                    Box::new(shwasi_wasi::sync::dir::Dir::from_cap_std(cap_std_dir))
+                }
+            };
+            ctx.push_preopened_dir(dir, relative)?;
         }
-        for arg in args {
-            builder
-                .arg(arg.as_ref())
-                .expect("should not overflow on args");
-        }
-        shwasi_wasi::sync::snapshots::preview_1::link(self.store_mut(), &mut builder.build());
+
+        shwasi_wasi::sync::snapshots::preview_1::link(self.store_mut(), &mut ctx);
 
         Ok(())
     }
@@ -177,10 +236,14 @@ impl Env {
     }
 
     /// Allow both read and write access to the given directory for WASI modules.
-    pub fn allow_dir(&mut self, path: impl AsRef<Path>) {
+    pub fn allow_dir(&mut self, path: impl AsRef<Path>, location: Location) {
         // Make sure all paths allowed are stored internally as absolute paths
+        // TODO: handle errors
         let abs_path = fs::canonicalize(path).unwrap();
-        self.allowed.push(abs_path);
+        self.allowed.push(Allowed {
+            path: abs_path,
+            location,
+        });
     }
 
     pub fn allow_env(&mut self, env_var: impl AsRef<str>) {
@@ -191,6 +254,24 @@ impl Env {
 impl Default for Env {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Location {
+    Memory,
+    Disk,
+}
+
+#[derive(Debug)]
+struct Allowed {
+    path: PathBuf,
+    location: Location,
+}
+
+impl Hash for Allowed {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.path.hash(state);
     }
 }
 

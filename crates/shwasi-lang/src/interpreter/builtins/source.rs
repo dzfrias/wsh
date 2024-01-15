@@ -23,7 +23,7 @@ pub fn source(
         .validate(&args)?;
 
     // TOOD: support passing args to scripts
-    let (file, args) = args.positional.split_first().unwrap();
+    let (file, file_args) = args.positional.split_first().unwrap();
     let contents = fs::read(file).context("error reading file")?;
 
     const MAGIC: &[u8; 4] = b"\0asm";
@@ -34,7 +34,7 @@ pub fn source(
         unsafe {
             shell
                 .env
-                .prepare_wasi(args, stdin.map(|s| s.into_raw_file_descriptor()), env)?;
+                .prepare_wasi(file_args, stdin.map(|s| s.into_raw_file_descriptor()), env)?;
         }
         let module = shwasi_parser::Parser::new(&contents)
             .read_module()

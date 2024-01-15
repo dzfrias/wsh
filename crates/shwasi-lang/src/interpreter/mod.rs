@@ -1,6 +1,7 @@
 mod builtins;
 mod env;
 mod error;
+mod memfs;
 mod value;
 
 use crate::{
