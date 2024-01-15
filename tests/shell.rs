@@ -246,6 +246,21 @@ shell_test!(
     "allow --virtual\necho \"stuff\" > hello.txt\nsource .($WASM_PATH + \"/rm.wasm\")\nmemfs",
     "- hello.txt"
 );
+shell_test!(
+    memfs_new_dir,
+    "allow --virtual\nsource .($WASM_PATH + \"/new_dir.wasm\")\nmemfs",
+    "+ hello/"
+);
+shell_test!(
+    memfs_rm_dir,
+    "allow --virtual\nmkdir hello\nsource .($WASM_PATH + \"/rm_dir.wasm\")\nmemfs",
+    "- hello"
+);
+shell_test!(
+    memfs_completely_virtual_dirs,
+    "allow --virtual\nsource .($WASM_PATH + \"/new_dir.wasm\")\nsource .($WASM_PATH + \"/rm_dir.wasm\")\nmemfs | wc -l | xargs",
+    "0"
+);
 
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");
 shell_test!(@fail unfinished_pipe, "echo hi |");

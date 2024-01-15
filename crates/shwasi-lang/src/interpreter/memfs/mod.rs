@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+mod error;
+
 use std::{
     any::Any,
     collections::HashMap,
@@ -7,10 +9,11 @@ use std::{
     path::{Path, PathBuf},
     sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard, Weak},
 };
-use system_interface::io::{Peek, ReadReady};
-use thiserror::Error;
 
-use shwasi_wasi::{Errno, FdFlags, FileType, OFlags, OpenResult, WasiDir, WasiError, WasiFile};
+use shwasi_wasi::{FdFlags, FileType, OFlags, OpenResult, WasiDir, WasiError, WasiFile};
+use system_interface::io::{Peek, ReadReady};
+
+pub use error::MemFsError;
 
 /// An in-memory file system.
 ///
@@ -24,33 +27,15 @@ impl MemFs {
         Self(Arc::new(RwLock::new(MemFsInner::default())))
     }
 
-    /// Obtain an `FsHandle` at `path`, returning `None` if it does not exist.
-    pub fn entry(&self, path: impl AsRef<Path>) -> Option<FsHandle> {
-        self.borrow().path_table.get(path.as_ref()).copied()
-    }
-
-    /// Get the file system entry at `handle`
-    pub fn get(&self, handle: FsHandle) -> Entry {
-        if handle.is_file() {
-            self.borrow()
-                .files
-                .get(handle.as_raw() as usize)
-                .map(|file| Entry::File(file.clone()))
-                .expect("fs handle should always be valid")
-        } else {
-            self.borrow()
-                .dirs
-                .get(handle.as_raw() as usize)
-                .map(|dir| Entry::Directory(dir.clone()))
-                .expect("fs handle should always be valid")
-        }
+    /// Obtain an `Entry` at `path`, returning `None` if it does not exist.
+    pub fn entry(&self, path: impl AsRef<Path>) -> Option<Entry> {
+        self.borrow().path_table.get(path.as_ref()).cloned()
     }
 
     /// Create a new directory at the **absolute** `path`.
     ///
     /// This will return:
     /// - MemFsError::AlreadyExists if the directory already exists
-    /// - MemFsError::OutOfHandles if there are no more fs handles available.
     pub fn create_dir(&self, path: impl AsRef<Path>) -> Result<MemDir, MemFsError> {
         if path.as_ref().is_relative() {
             panic!("should not provide a relative path to a MemDir");
@@ -60,16 +45,10 @@ impl MemFs {
         }
 
         let mut borrow = self.borrow_mut();
-        let idx = borrow.dirs.len();
-        let dir = MemDir::new(self.clone().downgrade(), path.as_ref());
-        borrow.dirs.push(dir.clone());
-        borrow.path_table.insert(
-            path.as_ref().to_path_buf(),
-            FsHandle::raw(
-                idx.try_into().map_err(|_err| MemFsError::OutOfHandles)?,
-                false,
-            ),
-        );
+        let dir = MemDir::new(self.downgrade(), path.as_ref());
+        borrow
+            .path_table
+            .insert(path.as_ref().to_path_buf(), Entry::Directory(dir.clone()));
         // Drop here because `try_unremove` will make a mutable borrow
         drop(borrow);
         self.try_unremove(path);
@@ -78,18 +57,18 @@ impl MemFs {
     }
 
     /// Create a new file at the **absolute** `path`. This will overwrite the previous file, unless
-    /// `excl` is passed. If excl is passed, an error will be returned instead.
+    /// `excl` is passed.
     ///
     /// This will return:
-    /// - MemFsError::OutOfHandles if there are no more fs handles available.
     /// - MemFsError::IsDir if the path is already taken by a directory.
+    /// - MemFsError::AlreadyExists if `excl` is true and the file already exists.
     pub fn create_file(&self, path: impl AsRef<Path>, excl: bool) -> Result<MemFile, MemFsError> {
         if path.as_ref().is_relative() {
             panic!("should not provide a relative path to a MemFile");
         }
 
-        if let Some(handle) = self.entry(path.as_ref()) {
-            return match self.get(handle) {
+        if let Some(entry) = self.entry(path.as_ref()) {
+            return match entry {
                 Entry::Directory(_) => Err(MemFsError::IsDir),
                 Entry::File(file) if !excl => {
                     file.truncate();
@@ -100,16 +79,10 @@ impl MemFs {
         }
 
         let mut borrow = self.borrow_mut();
-        let idx = borrow.files.len();
-        let file = MemFile::empty(self.clone().downgrade(), path.as_ref());
-        borrow.files.push(file.clone());
-        borrow.path_table.insert(
-            path.as_ref().to_path_buf(),
-            FsHandle::raw(
-                idx.try_into().map_err(|_err| MemFsError::OutOfHandles)?,
-                true,
-            ),
-        );
+        let file = MemFile::empty(self.downgrade(), path.as_ref());
+        borrow
+            .path_table
+            .insert(path.as_ref().to_path_buf(), Entry::File(file.clone()));
         drop(borrow);
         self.try_unremove(path);
 
@@ -122,12 +95,7 @@ impl MemFs {
         F: FnMut(Entry),
     {
         let borrow = self.borrow();
-        borrow
-            .files
-            .iter()
-            .map(|file| Entry::File(file.clone()))
-            .chain(borrow.dirs.iter().map(|dir| Entry::Directory(dir.clone())))
-            .for_each(f);
+        borrow.path_table.values().cloned().for_each(f);
     }
 
     /// Run `f` for each file removed in the file system.
@@ -144,7 +112,7 @@ impl MemFs {
 
     /// Get the number of total entries in the file system.
     pub fn entry_count(&self) -> usize {
-        self.borrow().dirs.len() + self.borrow().files.len()
+        self.borrow().path_table.len()
     }
 
     /// Check if there are no entries in the file system.
@@ -161,22 +129,64 @@ impl MemFs {
     ///
     /// This returns
     /// - MemFsError::IsDir if the handle points to a directory.
-    pub fn unlink(&self, handle: FsHandle) -> Result<(), MemFsError> {
-        let mut borrow = self.borrow_mut();
-        if handle.is_dir() {
+    /// - MemFsError::Noent if the file does not exist.
+    pub fn unlink(&self, path: impl AsRef<Path>) -> Result<(), MemFsError> {
+        let path = path.as_ref();
+        let Some(entry) = self.entry(path) else {
+            if path.exists() {
+                if path.is_dir() {
+                    return Err(MemFsError::IsDir);
+                }
+                self.did_remove(path);
+                return Ok(());
+            }
+            return Err(MemFsError::Noent);
+        };
+        let Entry::File(file) = entry else {
             return Err(MemFsError::IsDir);
-        }
-        let file = borrow.files.swap_remove(handle.as_raw() as usize);
-        let path = file.borrow().path.clone();
-        borrow.path_table.remove(&path);
+        };
+        let mut borrow = self.borrow_mut();
+        let file_borrow = file.borrow();
+        let path = file_borrow.path();
+        borrow.path_table.remove(path);
         drop(borrow);
         self.did_remove(path);
 
         Ok(())
     }
 
-    fn did_remove(&self, path: impl AsRef<Path>) {
-        self.borrow_mut().removals.push(path.as_ref().to_path_buf());
+    /// Remove a directory from the file system.
+    ///
+    /// Returns:
+    /// - MemFsError::Notdir if the entry is not a directory
+    /// - MemFsError::NotEmpty if the directory is not empty
+    /// - MemFsError::Noent if the directory does not exist
+    pub fn remove_dir(&self, path: impl AsRef<Path>) -> Result<(), MemFsError> {
+        let path = path.as_ref();
+        let Some(entry) = self.entry(path) else {
+            if path.exists() {
+                if path.is_file() {
+                    return Err(MemFsError::Notdir);
+                }
+                self.did_remove(path);
+                return Ok(());
+            }
+            return Err(MemFsError::Noent);
+        };
+        let Entry::Directory(dir) = entry else {
+            return Err(MemFsError::Notdir);
+        };
+        if !dir.is_empty() {
+            return Err(MemFsError::NotEmpty);
+        }
+        let mut borrow = self.borrow_mut();
+        let dir_borrow = dir.borrow();
+        let path = dir_borrow.path();
+        borrow.path_table.remove(path);
+        drop(borrow);
+        self.did_remove(path);
+
+        Ok(())
     }
 
     fn try_unremove(&self, path: impl AsRef<Path>) {
@@ -189,6 +199,10 @@ impl MemFs {
             return;
         };
         borrow.removals.swap_remove(pos);
+    }
+
+    fn did_remove(&self, path: impl AsRef<Path>) {
+        self.borrow_mut().removals.push(path.as_ref().to_path_buf());
     }
 
     fn downgrade(&self) -> WeakMemFs {
@@ -204,6 +218,13 @@ impl MemFs {
     }
 }
 
+/// An entry into the file system. This can either be a MemFile or a MemDir.
+#[derive(Debug, Clone)]
+pub enum Entry {
+    Directory(MemDir),
+    File(MemFile),
+}
+
 /// A weak pointer to a `MemFs`.
 ///
 /// This is used to prevent reference cycles in the file system. Note that as of right now, all
@@ -211,23 +232,30 @@ impl MemFs {
 #[derive(Debug)]
 struct WeakMemFs(Weak<RwLock<MemFsInner>>);
 
+macro_rules! impl_weak {
+    ($(fn $name:ident($($arg_name:ident: $arg_ty:ty),*) $(-> $return:ty)?);* $(;)?) => {
+        impl WeakMemFs {
+            $(
+                pub fn $name(&self, $($arg_name: $arg_ty),*) $(-> $return)? {
+                    self.upgrade().$name($($arg_name),*)
+                }
+            )*
+        }
+    };
+}
+
+impl_weak! {
+    fn entry(path: impl AsRef<Path>) -> Option<Entry>;
+    fn create_dir(path: impl AsRef<Path>) -> Result<MemDir, MemFsError>;
+    fn create_file(path: impl AsRef<Path>, excl: bool) -> Result<MemFile, MemFsError>;
+    fn entry_count() -> usize;
+    fn is_empty() -> bool;
+    fn exists(path: impl AsRef<Path>) -> bool;
+    fn unlink(handle: impl AsRef<Path>) -> Result<(), MemFsError>;
+    fn remove_dir(handle: impl AsRef<Path>) -> Result<(), MemFsError>;
+}
+
 impl WeakMemFs {
-    pub fn entry(&self, path: impl AsRef<Path>) -> Option<FsHandle> {
-        self.upgrade().entry(path)
-    }
-
-    pub fn get(&self, handle: FsHandle) -> Entry {
-        self.upgrade().get(handle)
-    }
-
-    pub fn create_dir(&self, path: impl AsRef<Path>) -> Result<MemDir, MemFsError> {
-        self.upgrade().create_dir(path)
-    }
-
-    pub fn create_file(&self, path: impl AsRef<Path>, excl: bool) -> Result<MemFile, MemFsError> {
-        self.upgrade().create_file(path, excl)
-    }
-
     pub fn for_each<F>(&self, f: F)
     where
         F: FnMut(Entry),
@@ -235,28 +263,11 @@ impl WeakMemFs {
         self.upgrade().for_each(f);
     }
 
-    pub fn entry_count(&self) -> usize {
-        self.upgrade().entry_count()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.upgrade().is_empty()
-    }
-
-    pub fn exists(&self, path: impl AsRef<Path>) -> bool {
-        self.upgrade().exists(path)
-    }
-
-    pub fn unlink(&self, handle: FsHandle) -> Result<(), MemFsError> {
-        self.upgrade().unlink(handle)
-    }
-
-    pub fn did_remove(&self, path: impl AsRef<Path>) {
-        self.upgrade().did_remove(path);
-    }
-
-    pub fn try_unremove(&self, path: impl AsRef<Path>) {
-        self.upgrade().try_unremove(path);
+    pub fn for_each_removal<F>(&self, f: F)
+    where
+        F: FnMut(&Path),
+    {
+        self.upgrade().for_each_removal(f);
     }
 
     fn upgrade(&self) -> MemFs {
@@ -266,118 +277,8 @@ impl WeakMemFs {
 
 #[derive(Debug, Default)]
 struct MemFsInner {
-    files: Vec<MemFile>,
-    dirs: Vec<MemDir>,
     removals: Vec<PathBuf>,
-    path_table: HashMap<PathBuf, FsHandle>,
-}
-
-/// An error type representing possible failures while creating a new entry in the file system.
-#[derive(Debug, Clone, Error)]
-pub enum MemFsError {
-    #[error("is directory")]
-    IsDir,
-    #[error("out of handles")]
-    OutOfHandles,
-    #[error("already exists")]
-    AlreadyExists,
-    #[error("no entry")]
-    Noent,
-    #[error("invalid")]
-    Inval,
-    #[error("invalid access")]
-    Acces,
-    #[error("not dir")]
-    Notdir,
-    #[error("out of memory")]
-    OutOfMemory,
-    #[error("address in use")]
-    AddrInUse,
-    #[error("operation unsupported")]
-    Nosys,
-    #[error("broken pipe")]
-    BrokenPipe,
-    #[error("operation timed out")]
-    TimedOut,
-    #[error("interrupted")]
-    Interrupted,
-    #[error("other io error")]
-    Io,
-}
-
-impl From<MemFsError> for WasiError {
-    fn from(value: MemFsError) -> Self {
-        let errno = match value {
-            MemFsError::IsDir => Errno::Isdir,
-            MemFsError::OutOfHandles => Errno::Nospc,
-            MemFsError::AlreadyExists => Errno::Exist,
-            MemFsError::Noent => Errno::Noent,
-            MemFsError::Inval => Errno::Inval,
-            MemFsError::Acces => Errno::Acces,
-            MemFsError::Notdir => Errno::Notdir,
-            MemFsError::OutOfMemory => Errno::Nomem,
-            MemFsError::AddrInUse => Errno::Addrinuse,
-            MemFsError::Nosys => Errno::Nosys,
-            MemFsError::BrokenPipe => Errno::Pipe,
-            MemFsError::TimedOut => Errno::Timedout,
-            MemFsError::Interrupted => Errno::Intr,
-            MemFsError::Io => Errno::Io,
-        };
-        WasiError::from(errno)
-    }
-}
-
-impl From<io::ErrorKind> for MemFsError {
-    fn from(value: io::ErrorKind) -> Self {
-        match value {
-            io::ErrorKind::NotFound => MemFsError::Noent,
-            io::ErrorKind::PermissionDenied => MemFsError::Acces,
-            io::ErrorKind::AlreadyExists => MemFsError::AlreadyExists,
-            io::ErrorKind::OutOfMemory => MemFsError::OutOfMemory,
-            io::ErrorKind::AddrInUse => MemFsError::AddrInUse,
-            io::ErrorKind::BrokenPipe => MemFsError::BrokenPipe,
-            io::ErrorKind::InvalidInput | io::ErrorKind::InvalidData => MemFsError::Inval,
-            io::ErrorKind::TimedOut => MemFsError::TimedOut,
-            io::ErrorKind::Interrupted => MemFsError::Interrupted,
-            io::ErrorKind::Unsupported => MemFsError::Nosys,
-            io::ErrorKind::Other => MemFsError::Io,
-            _ => todo!(),
-        }
-    }
-}
-
-/// An entry into the file system. This can either be a MemFile or a MemDir.
-#[derive(Debug, Clone)]
-pub enum Entry {
-    Directory(MemDir),
-    File(MemFile),
-}
-
-/// A handle into the in-memory file system. Note that it also encodes data about the entry being
-/// pointed to.
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-pub struct FsHandle(u32);
-
-impl FsHandle {
-    pub fn raw(raw: u32, file: bool) -> Self {
-        if raw > (1 << 31) - 1 {
-            panic!("cannot provide fs handle greater than 2^31 - 1");
-        }
-
-        Self(raw | (file as u32) << 31)
-    }
-
-    pub fn as_raw(&self) -> u32 {
-        self.0 & 0x7fffffff
-    }
-
-    pub fn is_file(&self) -> bool {
-        (self.0 & (1 << 31)) > 0
-    }
-
-    pub fn is_dir(&self) -> bool {
-        !self.is_file()
-    }
+    path_table: HashMap<PathBuf, Entry>,
 }
 
 /// An in-memory directory in the file system.
@@ -387,10 +288,15 @@ impl FsHandle {
 pub struct MemDir(Arc<RwLock<MemDirInner>>);
 
 #[derive(Debug)]
-struct MemDirInner {
+pub struct MemDirInner {
     fs: WeakMemFs,
     path: PathBuf,
-    entries: Vec<FsHandle>,
+}
+
+impl MemDirInner {
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
 }
 
 impl MemDir {
@@ -399,7 +305,6 @@ impl MemDir {
         Self(Arc::new(RwLock::new(MemDirInner {
             fs,
             path: path.as_ref().to_path_buf(),
-            entries: vec![],
         })))
     }
 
@@ -411,14 +316,20 @@ impl MemDir {
         F: FnMut(Entry),
     {
         let borrow = self.borrow();
-        for file in borrow.entries.iter() {
-            f(borrow.fs.get(*file));
-        }
+        borrow.fs.for_each(|entry| match entry {
+            Entry::Directory(ref dir) if self.is_child(dir.borrow().path()) => f(entry),
+            Entry::File(ref file) if self.is_child(file.borrow().path()) => f(entry),
+            _ => {}
+        });
     }
 
     /// Get the number of entries in the directory,
     pub fn num_entries(&self) -> usize {
-        self.borrow().entries.len()
+        let mut total = 0;
+        self.for_each(|_| {
+            total += 1;
+        });
+        total
     }
 
     /// Check if the directory is empty.
@@ -426,34 +337,24 @@ impl MemDir {
         self.num_entries() == 0
     }
 
-    /// Get the corresponding handle into the file system.
-    pub fn handle(&self) -> FsHandle {
-        let borrow = self.borrow();
-        borrow.fs.entry(&borrow.path).unwrap()
+    /// Unlink a file at `path`.
+    pub fn unlink(&self, path: &str) -> Result<(), MemFsError> {
+        let path = self.borrow().path.join(path);
+        self.borrow().fs.unlink(path)?;
+        Ok(())
     }
 
-    pub fn remove(&self, path: &str) -> Result<(), MemFsError> {
-        let mut borrow = self.borrow_mut();
-        let path = borrow.path.join(path);
-        // TODO: right now this is an O(n) check. Could get unwieldy?
-        let Some(idx) = borrow
-            .entries
-            .iter()
-            .position(|handle| match borrow.fs.get(*handle) {
-                Entry::File(file) => path == file.borrow().path(),
-                Entry::Directory(_) => false,
-            })
-        else {
-            if path.exists() {
-                borrow.fs.did_remove(path);
-                return Ok(());
-            }
+    /// Create a directory at `path`.
+    pub fn create_dir(&self, path: &str) -> Result<MemDir, MemFsError> {
+        let path = self.borrow().path.join(path);
+        let dir = self.borrow().fs.create_dir(path)?;
+        Ok(dir)
+    }
 
-            return Err(MemFsError::Noent);
-        };
-        let handle = borrow.entries[idx];
-        borrow.entries.swap_remove(idx);
-        borrow.fs.unlink(handle)?;
+    /// Remove a directory at `path`.
+    pub fn remove_dir(&self, path: &str) -> Result<(), MemFsError> {
+        let path = self.borrow().path.join(path);
+        self.borrow().fs.remove_dir(path)?;
 
         Ok(())
     }
@@ -493,14 +394,12 @@ impl MemDir {
         // If it's on our real filesystem, and but not in our in-memory one, we should load it into
         // memory.
         if path.exists() && !self.borrow().fs.exists(&path) {
-            let mut borrow = self.borrow_mut();
             let contents = std::fs::read(&path).map_err(|err| MemFsError::from(err.kind()))?;
-            let file = borrow.fs.create_file(&path, false)?;
+            let file = self.borrow().fs.create_file(&path, false)?;
             file.borrow_mut()
                 .data
                 .write_all(&contents)
                 .map_err(|err| MemFsError::from(err.kind()))?;
-            borrow.entries.push(file.handle());
         }
 
         // Files should not have to be created from this point onwards
@@ -511,10 +410,7 @@ impl MemDir {
         // Would error. In order to solve this, all .. and . components would have to be resolved
         // in the file system, which is a simple fix but still important.
         let handle = self.borrow();
-        let file = match handle
-            .fs
-            .get(handle.fs.entry(path).ok_or(MemFsError::Noent)?)
-        {
+        let file = match handle.fs.entry(path).ok_or(MemFsError::Noent)? {
             Entry::File(file) => {
                 if oflags.contains(OFlags::DIRECTORY) {
                     return Err(MemFsError::Notdir);
@@ -533,6 +429,11 @@ impl MemDir {
         Ok(Entry::File(file.clone()))
     }
 
+    fn is_child(&self, path: &Path) -> bool {
+        path.starts_with(self.borrow().path())
+            && path.components().count() - 1 == self.borrow().path().components().count()
+    }
+
     fn create(
         &self,
         path: &str,
@@ -540,15 +441,11 @@ impl MemDir {
         oflags: OFlags,
         read: bool,
     ) -> Result<MemFile, MemFsError> {
-        let mut handle = self.borrow_mut();
-        let path = handle.path.join(path);
-
-        let f = handle
+        let path = self.borrow().path.join(path);
+        let f = self
+            .borrow()
             .fs
             .create_file(path, oflags.contains(OFlags::EXCLUSIVE))?;
-        if !handle.entries.contains(&f.handle()) {
-            handle.entries.push(f.handle());
-        }
 
         // All OFlags::CREATE opens have write or append already set
         f.open(fd_flags, true, read);
@@ -558,12 +455,8 @@ impl MemDir {
         Ok(f.clone())
     }
 
-    fn borrow(&self) -> RwLockReadGuard<MemDirInner> {
+    pub fn borrow(&self) -> RwLockReadGuard<MemDirInner> {
         self.0.read().unwrap()
-    }
-
-    fn borrow_mut(&self) -> RwLockWriteGuard<MemDirInner> {
-        self.0.write().unwrap()
     }
 }
 
@@ -595,27 +488,6 @@ impl io::Write for MemFile {
 }
 
 impl MemFile {
-    fn with_contents(fs: WeakMemFs, path: impl AsRef<Path>, contents: Vec<u8>) -> Self {
-        Self(Arc::new(RwLock::new(MemFileInner {
-            fs,
-            data: io::Cursor::new(contents),
-            write: false,
-            read: false,
-            fd_flags: FdFlags::empty(),
-            path: path.as_ref().to_path_buf(),
-        })))
-    }
-
-    fn empty(fs: WeakMemFs, path: impl AsRef<Path>) -> Self {
-        Self::with_contents(fs, path, vec![])
-    }
-
-    fn append(&self) {
-        let mut borrow = self.borrow_mut();
-        let last = borrow.data.get_ref().len().saturating_sub(1);
-        borrow.data.set_position(last as u64);
-    }
-
     /// Clear the file buffer.
     pub fn truncate(&self) {
         self.borrow_mut().data.get_mut().clear();
@@ -652,17 +524,29 @@ impl MemFile {
         self.borrow().write
     }
 
-    /// Return the corresponding file-system handle to the file.
-    pub fn handle(&self) -> FsHandle {
-        let borrow = self.borrow();
-        borrow
-            .fs
-            .entry(&borrow.path)
-            .expect("file handle should exist")
-    }
-
     pub fn borrow(&self) -> RwLockReadGuard<MemFileInner> {
         self.0.read().unwrap()
+    }
+
+    fn with_contents(fs: WeakMemFs, path: impl AsRef<Path>, contents: Vec<u8>) -> Self {
+        Self(Arc::new(RwLock::new(MemFileInner {
+            fs,
+            data: io::Cursor::new(contents),
+            write: false,
+            read: false,
+            fd_flags: FdFlags::empty(),
+            path: path.as_ref().to_path_buf(),
+        })))
+    }
+
+    fn empty(fs: WeakMemFs, path: impl AsRef<Path>) -> Self {
+        Self::with_contents(fs, path, vec![])
+    }
+
+    fn append(&self) {
+        let mut borrow = self.borrow_mut();
+        let last = borrow.data.get_ref().len().saturating_sub(1);
+        borrow.data.set_position(last as u64);
     }
 
     fn borrow_mut(&self) -> RwLockWriteGuard<MemFileInner> {
@@ -801,7 +685,17 @@ impl WasiDir for MemDir {
     }
 
     async fn unlink_file(&self, path: &str) -> Result<(), WasiError> {
-        self.remove(path).map_err(Into::into)
+        self.unlink(path).map_err(Into::into)
+    }
+
+    async fn create_dir(&self, path: &str) -> Result<(), WasiError> {
+        self.create_dir(path)?;
+        Ok(())
+    }
+
+    async fn remove_dir(&self, path: &str) -> Result<(), WasiError> {
+        self.remove_dir(path)?;
+        Ok(())
     }
 }
 
@@ -932,20 +826,61 @@ mod tests {
         let dir = fs.create_dir("/test").unwrap();
         dir.open("hello", OFlags::CREATE, false, true, FdFlags::empty())
             .unwrap();
-        assert!(dir
-            .open("hello", OFlags::DIRECTORY, false, false, FdFlags::empty())
-            .is_err());
+        assert!(matches!(
+            dir.open("hello", OFlags::DIRECTORY, false, false, FdFlags::empty()),
+            Err(MemFsError::Notdir)
+        ));
         assert_eq!(1, dir.num_entries());
     }
 
     #[test]
     fn unlink() {
         let fs = MemFs::new();
-        let file = fs.create_file("/hello.txt", false).unwrap();
-        assert!(fs.unlink(file.handle()).is_ok());
+        fs.create_file("/hello.txt", false).unwrap();
+        assert!(fs.unlink("/hello.txt").is_ok());
         assert!(fs.is_empty());
-        let dir = fs.create_dir("/nice").unwrap();
-        assert!(fs.unlink(dir.handle()).is_err());
+        fs.create_dir("/nice").unwrap();
+        assert!(matches!(fs.unlink("/nice"), Err(MemFsError::IsDir)));
         assert_eq!(1, fs.entry_count());
+    }
+
+    #[test]
+    fn dir_create_dir() {
+        let fs = MemFs::new();
+        let dir = fs.create_dir("/hello").unwrap();
+        assert!(dir.create_dir("nice").is_ok());
+        assert!(matches!(
+            dir.create_dir("nice"),
+            Err(MemFsError::AlreadyExists)
+        ));
+        assert_eq!(1, dir.num_entries());
+        assert_eq!(2, fs.entry_count());
+    }
+
+    #[test]
+    fn remove_dir() {
+        let fs = MemFs::new();
+        let dir = fs.create_dir("/hello").unwrap();
+        dir.create_dir("nice").unwrap();
+        let sub_dir = dir.create_dir("woah").unwrap();
+        sub_dir
+            .open(
+                "new_file.txt",
+                OFlags::CREATE,
+                false,
+                true,
+                FdFlags::empty(),
+            )
+            .unwrap();
+        dir.open("hello.txt", OFlags::CREATE, false, true, FdFlags::empty())
+            .unwrap();
+        assert!(dir.remove_dir("nice").is_ok());
+        assert!(matches!(dir.remove_dir("nice"), Err(MemFsError::Noent)));
+        assert!(matches!(dir.remove_dir("woah"), Err(MemFsError::NotEmpty)));
+        assert!(matches!(
+            dir.remove_dir("hello.txt"),
+            Err(MemFsError::Notdir)
+        ));
+        assert_eq!(4, fs.entry_count());
     }
 }

@@ -23,8 +23,6 @@ use crate::{
     Ident,
 };
 
-use super::memfs::MemFsError;
-
 pub struct Env {
     pub mem_fs: MemFs,
 
@@ -170,16 +168,13 @@ impl Env {
                     .mem_fs
                     .entry(path)
                     .map_or_else(
-                        || match self.mem_fs.create_dir(path) {
-                            Ok(dir) => Ok(dir),
-                            Err(MemFsError::OutOfHandles) => {
-                                Err(anyhow::anyhow!("out of fs handles!"))
-                            }
-                            Err(err) => {
-                                panic!("BUG: creating directory should not fail, but got: {err}")
-                            }
+                        || {
+                            Ok(self
+                                .mem_fs
+                                .create_dir(path)
+                                .expect("BUG: creating directory should not fail, but got: {err}"))
                         },
-                        |handle| match self.mem_fs.get(handle) {
+                        |entry| match entry {
                             Entry::Directory(dir) => Ok(dir),
                             Entry::File(_) => Err(anyhow::anyhow!("cannot pre-open virtual file!")),
                         },
@@ -205,7 +200,7 @@ impl Env {
                 relative = PathBuf::from(".");
             }
             let dir: Box<dyn WasiDir> = match location {
-                Location::Memory => match self.mem_fs.get(self.mem_fs.entry(path).unwrap()) {
+                Location::Memory => match self.mem_fs.entry(path).unwrap() {
                     Entry::Directory(dir) => Box::new(dir),
                     Entry::File(_) => {
                         panic!("should not be happen because we just registered it above")
