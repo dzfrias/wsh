@@ -1,27 +1,25 @@
 use std::{env, io, path::PathBuf};
 
 use anyhow::{Context, Result};
+use clap::Parser;
 use filedescriptor::{AsRawFileDescriptor, IntoRawFileDescriptor};
 
-use crate::{
-    interpreter::builtins::{Args, ArgsValidator, Positionals},
-    Shell,
-};
+use crate::Shell;
+
+#[derive(Debug, Parser)]
+struct Args {
+    dir: Option<PathBuf>,
+}
 
 pub fn cd(
     _shell: &mut Shell,
-    args: Args,
+    args: Vec<String>,
     _stdout: &mut (impl io::Write + AsRawFileDescriptor),
     _stdin: Option<impl io::Read + IntoRawFileDescriptor>,
 ) -> Result<()> {
-    ArgsValidator::default()
-        .positionals(Positionals::Max(1))
-        .validate(&args)?;
-
+    let args = Args::try_parse_from(args)?;
     let path = args
-        .positional
-        .first()
-        .map(PathBuf::from)
+        .dir
         .map_or_else(dirs::home_dir, Some)
         .context("no home directory")?;
 

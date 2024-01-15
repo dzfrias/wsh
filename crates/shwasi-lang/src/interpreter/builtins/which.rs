@@ -1,25 +1,25 @@
 use std::io;
 
+use clap::Parser;
 use filedescriptor::{AsRawFileDescriptor, IntoRawFileDescriptor};
 
-use crate::{
-    interpreter::builtins::{Args, ArgsValidator, Builtin, Positionals},
-    Shell,
-};
+use crate::{interpreter::builtins::Builtin, Shell};
 use anyhow::Result;
 use which::which as which_bin;
 
+#[derive(Debug, Parser)]
+struct Args {
+    cmds: Vec<String>,
+}
+
 pub fn which(
     shell: &mut Shell,
-    args: Args,
+    args: Vec<String>,
     stdout: &mut (impl io::Write + AsRawFileDescriptor),
     _stdin: Option<impl io::Read + IntoRawFileDescriptor>,
 ) -> Result<()> {
-    ArgsValidator::default()
-        .positionals(Positionals::Min(1))
-        .validate(&args)?;
-
-    for arg in args.positional {
+    let args = Args::try_parse_from(args)?;
+    for arg in args.cmds {
         let arg = arg.as_ref();
         // TODO: print alias itself
         if shell.env.get_alias(arg).is_some() {

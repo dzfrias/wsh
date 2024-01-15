@@ -1,30 +1,30 @@
-use std::{fs, io};
+use std::{fs, io, path::PathBuf};
 
 use anyhow::{Context, Result};
+use clap::Parser;
 use filedescriptor::{
     AsRawFileDescriptor, FileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor,
 };
 
-use crate::{
-    interpreter::builtins::{Args, ArgsValidator, Positionals},
-    Shell,
-};
+use crate::Shell;
+
+#[derive(Debug, Parser)]
+struct Args {
+    file: PathBuf,
+    args: Vec<String>,
+}
 
 pub fn source(
     shell: &mut Shell,
-    args: Args,
+    args: Vec<String>,
     stdout: &mut (impl io::Write + AsRawFileDescriptor),
     stderr: &mut (impl io::Write + AsRawFileDescriptor),
     stdin: Option<impl io::Read + IntoRawFileDescriptor>,
     env: &[(String, String)],
 ) -> Result<()> {
-    ArgsValidator::default()
-        .positionals(Positionals::Min(1))
-        .validate(&args)?;
-
+    let Args { file, args } = Args::try_parse_from(args)?;
     // TOOD: support passing args to scripts
-    let (file, file_args) = args.positional.split_first().unwrap();
-    let contents = fs::read(file).context("error reading file")?;
+    let contents = fs::read(&file).context("error reading file")?;
 
     const MAGIC: &[u8; 4] = b"\0asm";
     // Automatically detect if the file is a wasm file. If it is, we can run it directly. This
@@ -34,7 +34,7 @@ pub fn source(
         unsafe {
             shell
                 .env
-                .prepare_wasi(file_args, stdin.map(|s| s.into_raw_file_descriptor()), env)?;
+                .prepare_wasi(args, stdin.map(|s| s.into_raw_file_descriptor()), env)?;
         }
         let module = shwasi_parser::Parser::new(&contents)
             .read_module()
@@ -57,7 +57,7 @@ pub fn source(
     // `IntoRawFileDescriptor`. We later close it, so we don't leak it.
     unsafe { shell.stdout(stdout_fd) };
     unsafe { shell.stderr(stderr_fd) };
-    let _ = shell.run(&contents, file.as_ref());
+    let _ = shell.run(&contents, &file.to_string_lossy());
     // We need to be careful that the file descriptor is closed, so we don't leak it. This can
     // cause hangs in the shell if used `source` is used with a pipe. This is because the shell
     // will never close the `stdout` it's given, so we must manually close it here.

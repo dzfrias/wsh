@@ -1,50 +1,42 @@
 use std::{io, path::PathBuf};
 
 use anyhow::{ensure, Result};
+use clap::Parser;
 use filedescriptor::{AsRawFileDescriptor, IntoRawFileDescriptor};
 
-use crate::{
-    interpreter::{
-        builtins::{Args, ArgsValidator, Positionals},
-        env::Location,
-    },
-    Shell,
-};
+use crate::{interpreter::env::Location, Shell};
+
+#[derive(Debug, Parser)]
+struct Args {
+    dirs: Vec<PathBuf>,
+
+    #[arg(short, long = "env")]
+    env_vars: Vec<String>,
+    #[arg(short, long = "virtual")]
+    virt: bool,
+}
 
 pub fn allow(
     shell: &mut Shell,
-    args: Args,
+    args: Vec<String>,
     _stdout: &mut (impl io::Write + AsRawFileDescriptor),
     _stdin: Option<impl io::Read + IntoRawFileDescriptor>,
 ) -> Result<()> {
-    ArgsValidator::default()
-        .positionals(Positionals::Any)
-        .multi("env")
-        .multi("e")
-        .bool("v")
-        .bool("virtual")
-        .validate(&args)?;
-
-    if let Some(env_pass) = args.get_argv("env", Some("e")) {
-        for env_var in env_pass {
-            shell.env.allow_env(env_var);
-        }
-        if args.positional.is_empty() {
-            return Ok(());
-        }
+    let args = Args::try_parse_from(args)?;
+    for env_var in args.env_vars {
+        shell.env.allow_env(env_var);
     }
 
-    let loc = if args.get_bool("v") || args.get_bool("virtual") {
+    let loc = if args.virt {
         Location::Memory
     } else {
         Location::Disk
     };
-    if args.positional.is_empty() {
+    if args.dirs.is_empty() {
         shell.env.allow_dir(".", loc);
         return Ok(());
     }
-    for dir in &args.positional {
-        let path = PathBuf::from(dir);
+    for path in &args.dirs {
         ensure!(path.is_dir(), "expected directory to allow");
         shell.env.allow_dir(path, loc);
     }
