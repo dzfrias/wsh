@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-use anyhow::{bail, Context};
 use std::{
     any::Any,
     collections::HashMap,
@@ -11,7 +10,7 @@ use std::{
 use system_interface::io::{Peek, ReadReady};
 use thiserror::Error;
 
-use shwasi_wasi::{FdFlags, FileType, OFlags, OpenResult, WasiDir, WasiError, WasiFile};
+use shwasi_wasi::{Errno, FdFlags, FileType, OFlags, OpenResult, WasiDir, WasiError, WasiFile};
 
 /// An in-memory file system.
 ///
@@ -282,6 +281,69 @@ pub enum MemFsError {
     OutOfHandles,
     #[error("already exists")]
     AlreadyExists,
+    #[error("no entry")]
+    Noent,
+    #[error("invalid")]
+    Inval,
+    #[error("invalid access")]
+    Acces,
+    #[error("not dir")]
+    Notdir,
+    #[error("out of memory")]
+    OutOfMemory,
+    #[error("address in use")]
+    AddrInUse,
+    #[error("operation unsupported")]
+    Nosys,
+    #[error("broken pipe")]
+    BrokenPipe,
+    #[error("operation timed out")]
+    TimedOut,
+    #[error("interrupted")]
+    Interrupted,
+    #[error("other io error")]
+    Io,
+}
+
+impl From<MemFsError> for WasiError {
+    fn from(value: MemFsError) -> Self {
+        let errno = match value {
+            MemFsError::IsDir => Errno::Isdir,
+            MemFsError::OutOfHandles => Errno::Nospc,
+            MemFsError::AlreadyExists => Errno::Exist,
+            MemFsError::Noent => Errno::Noent,
+            MemFsError::Inval => Errno::Inval,
+            MemFsError::Acces => Errno::Acces,
+            MemFsError::Notdir => Errno::Notdir,
+            MemFsError::OutOfMemory => Errno::Nomem,
+            MemFsError::AddrInUse => Errno::Addrinuse,
+            MemFsError::Nosys => Errno::Nosys,
+            MemFsError::BrokenPipe => Errno::Pipe,
+            MemFsError::TimedOut => Errno::Timedout,
+            MemFsError::Interrupted => Errno::Intr,
+            MemFsError::Io => Errno::Io,
+        };
+        WasiError::from(errno)
+    }
+}
+
+impl From<io::ErrorKind> for MemFsError {
+    fn from(value: io::ErrorKind) -> Self {
+        match value {
+            io::ErrorKind::NotFound => MemFsError::Noent,
+            io::ErrorKind::PermissionDenied => MemFsError::Acces,
+            io::ErrorKind::AlreadyExists => MemFsError::AlreadyExists,
+            io::ErrorKind::OutOfMemory => MemFsError::OutOfMemory,
+            io::ErrorKind::AddrInUse => MemFsError::AddrInUse,
+            io::ErrorKind::BrokenPipe => MemFsError::BrokenPipe,
+            io::ErrorKind::InvalidInput | io::ErrorKind::InvalidData => MemFsError::Inval,
+            io::ErrorKind::TimedOut => MemFsError::TimedOut,
+            io::ErrorKind::Interrupted => MemFsError::Interrupted,
+            io::ErrorKind::Unsupported => MemFsError::Nosys,
+            io::ErrorKind::Other => MemFsError::Io,
+            _ => todo!(),
+        }
+    }
 }
 
 /// An entry into the file system. This can either be a MemFile or a MemDir.
@@ -370,7 +432,7 @@ impl MemDir {
         borrow.fs.entry(&borrow.path).unwrap()
     }
 
-    pub fn remove(&self, path: &str) -> Result<(), anyhow::Error> {
+    pub fn remove(&self, path: &str) -> Result<(), MemFsError> {
         let mut borrow = self.borrow_mut();
         let path = borrow.path.join(path);
         // TODO: right now this is an O(n) check. Could get unwieldy?
@@ -387,11 +449,11 @@ impl MemDir {
                 return Ok(());
             }
 
-            bail!("file not found");
+            return Err(MemFsError::Noent);
         };
         let handle = borrow.entries[idx];
         borrow.entries.swap_remove(idx);
-        borrow.fs.unlink(handle).context("error unlinking file")?;
+        borrow.fs.unlink(handle)?;
 
         Ok(())
     }
@@ -404,23 +466,23 @@ impl MemDir {
         read: bool,
         write: bool,
         fd_flags: FdFlags,
-    ) -> Result<Entry, anyhow::Error> {
+    ) -> Result<Entry, MemFsError> {
         if oflags.contains(OFlags::DIRECTORY)
             && oflags.intersects(OFlags::CREATE | OFlags::EXCLUSIVE | OFlags::TRUNCATE)
         {
-            bail!("invalid directory oflags");
+            return Err(MemFsError::IsDir);
         }
         if fd_flags.intersects(FdFlags::DSYNC | FdFlags::SYNC | FdFlags::RSYNC) {
-            bail!("SYNC flags not supported");
+            return Err(MemFsError::Inval);
         }
         if !write
             && !fd_flags.contains(FdFlags::APPEND)
             && oflags.intersects(OFlags::CREATE | OFlags::EXCLUSIVE)
         {
-            bail!("cannot create new file without write or append access");
+            return Err(MemFsError::Acces);
         }
         if !write && oflags.contains(OFlags::TRUNCATE) {
-            bail!("cannot truncate file without write access");
+            return Err(MemFsError::Acces);
         }
 
         if oflags.intersects(OFlags::CREATE | OFlags::EXCLUSIVE) {
@@ -432,16 +494,12 @@ impl MemDir {
         // memory.
         if path.exists() && !self.borrow().fs.exists(&path) {
             let mut borrow = self.borrow_mut();
-            let contents = std::fs::read(&path)
-                .with_context(|| format!("error reading {}", path.display()))?;
-            let file = borrow
-                .fs
-                .create_file(&path, false)
-                .context("error creating file")?;
+            let contents = std::fs::read(&path).map_err(|err| MemFsError::from(err.kind()))?;
+            let file = borrow.fs.create_file(&path, false)?;
             file.borrow_mut()
                 .data
                 .write_all(&contents)
-                .expect("write should not fail");
+                .map_err(|err| MemFsError::from(err.kind()))?;
             borrow.entries.push(file.handle());
         }
 
@@ -455,11 +513,11 @@ impl MemDir {
         let handle = self.borrow();
         let file = match handle
             .fs
-            .get(handle.fs.entry(path).context("entry does not exist")?)
+            .get(handle.fs.entry(path).ok_or(MemFsError::Noent)?)
         {
             Entry::File(file) => {
                 if oflags.contains(OFlags::DIRECTORY) {
-                    bail!("expected directory, but got file");
+                    return Err(MemFsError::Notdir);
                 }
                 file
             }
@@ -481,14 +539,13 @@ impl MemDir {
         fd_flags: FdFlags,
         oflags: OFlags,
         read: bool,
-    ) -> Result<MemFile, anyhow::Error> {
+    ) -> Result<MemFile, MemFsError> {
         let mut handle = self.borrow_mut();
         let path = handle.path.join(path);
 
         let f = handle
             .fs
-            .create_file(path, oflags.contains(OFlags::EXCLUSIVE))
-            .context("error creating file")?;
+            .create_file(path, oflags.contains(OFlags::EXCLUSIVE))?;
         if !handle.entries.contains(&f.handle()) {
             handle.entries.push(f.handle());
         }
@@ -736,17 +793,15 @@ impl WasiDir for MemDir {
         write: bool,
         fdflags: FdFlags,
     ) -> Result<OpenResult, WasiError> {
-        self.open(path, oflags, read, write, fdflags)
-            .map_err(WasiError::trap)
-            .map(|entry| match entry {
-                Entry::Directory(dir) => OpenResult::Dir(Box::new(dir)),
-                Entry::File(file) => OpenResult::File(Box::new(file)),
-            })
+        let entry = self.open(path, oflags, read, write, fdflags)?;
+        Ok(match entry {
+            Entry::Directory(dir) => OpenResult::Dir(Box::new(dir)),
+            Entry::File(file) => OpenResult::File(Box::new(file)),
+        })
     }
 
     async fn unlink_file(&self, path: &str) -> Result<(), WasiError> {
-        self.remove(path).map_err(WasiError::trap)?;
-        Ok(())
+        self.remove(path).map_err(Into::into)
     }
 }
 
