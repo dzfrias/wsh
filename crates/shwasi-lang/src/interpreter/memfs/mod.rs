@@ -66,12 +66,9 @@ impl MemFs {
         }
 
         let dir = MemDir::new(self.downgrade(), path.as_ref(), self.new_inode());
-        let mut borrow = self.borrow_mut();
-        borrow
+        self.borrow_mut()
             .path_table
             .insert(path.as_ref().to_path_buf(), Entry::Directory(dir.clone()));
-        // Drop here because `try_unremove` will make a mutable borrow
-        drop(borrow);
         self.try_unremove(path);
 
         Ok(dir)
@@ -100,11 +97,9 @@ impl MemFs {
         }
 
         let file = MemFile::empty(self.downgrade(), path.as_ref(), self.new_inode());
-        let mut borrow = self.borrow_mut();
-        borrow
+        self.borrow_mut()
             .path_table
             .insert(path.as_ref().to_path_buf(), Entry::File(file.clone()));
-        drop(borrow);
         self.try_unremove(path);
 
         Ok(file)
@@ -166,11 +161,9 @@ impl MemFs {
         let Entry::File(file) = entry else {
             return Err(MemFsError::IsDir);
         };
-        let mut borrow = self.borrow_mut();
         let file_borrow = file.borrow();
         let path = file_borrow.path();
-        borrow.path_table.remove(path);
-        drop(borrow);
+        self.borrow_mut().path_table.remove(path);
         self.did_remove(path);
 
         Ok(())
@@ -200,11 +193,9 @@ impl MemFs {
         if !dir.is_empty() {
             return Err(MemFsError::NotEmpty);
         }
-        let mut borrow = self.borrow_mut();
         let dir_borrow = dir.borrow();
         let path = dir_borrow.path();
-        borrow.path_table.remove(path);
-        drop(borrow);
+        self.borrow_mut().path_table.remove(path);
         self.did_remove(path);
 
         Ok(())
@@ -469,42 +460,44 @@ impl MemDir {
             return Err(MemFsError::Acces);
         }
 
+        // Files should not have to be created from this point onwards
         if oflags.intersects(OFlags::CREATE | OFlags::EXCLUSIVE) {
             return Ok(Entry::File(self.create(path, fd_flags, oflags, read)?));
         }
 
         let path = self.borrow().path.join(path);
-        // If it's on our real filesystem, and but not in our in-memory one, we should load it into
-        // memory.
-        if path.exists() && !self.borrow().fs.exists(&path) {
-            return self.borrow().fs.load(&path);
-        }
-
-        // Files should not have to be created from this point onwards
         // TODO: what happens if a file is created with an absolute path, but then is retrieved
         // with a relative path?
         //   CREATE /Users/dzfrias/code/shwasi/test.txt
         //   GET ../test.txt FROM /Users/dzfrias/code/shwasi/tests/test.txt
         // Would error. In order to solve this, all .. and . components would have to be resolved
         // in the file system, which is a simple fix but still important.
-        let handle = self.borrow();
-        let file = match handle.fs.entry(path).ok_or(MemFsError::Noent)? {
+        let entry = self
+            .borrow()
+            .fs
+            .entry(&path)
+            .ok_or(MemFsError::Noent)
+            .or_else(|err| {
+                if !path.try_exists()? {
+                    return Err(err);
+                }
+                // If it doesn't exist in memory, but does exist on disk, load it into memory!
+                self.borrow().fs.load(&path)
+            })?;
+
+        Ok(match entry {
             Entry::File(file) => {
                 if oflags.contains(OFlags::DIRECTORY) {
                     return Err(MemFsError::Notdir);
                 }
-                file
+                file.open(fd_flags, write, read);
+                if oflags.contains(OFlags::TRUNCATE) {
+                    file.truncate();
+                }
+                Entry::File(file)
             }
-            Entry::Directory(dir) => {
-                return Ok(Entry::Directory(dir));
-            }
-        };
-        file.open(fd_flags, write, read);
-        if oflags.contains(OFlags::TRUNCATE) {
-            file.truncate();
-        }
-
-        Ok(Entry::File(file.clone()))
+            Entry::Directory(dir) => Entry::Directory(dir),
+        })
     }
 
     /// Return the directory inode.
