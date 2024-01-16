@@ -1,3 +1,20 @@
+//! # memfs
+//!
+//! A WASI-compatible in-memory file system.
+//!
+//! This is meant to be a _layer_ over the disk file system, not as a standlone file manager.
+//! As such, disk memory is a "fallback" for the file system. For example, if a path is not found
+//! in main memory, it will be checked for its presence on disk. If it exists on disk, it'll be
+//! loaded into memfs (and then accessed). In this way, memfs can be thought of as a diff over the
+//! real file system. All disk fallbacks are lazy; memfs will **never** load a file into memory
+//! extraneously.
+//!
+//! memfs's MemDir and MemFile respectively implement the two core traits in `wasi_common`:
+//! 1. `WasiFile`
+//! 2. `WasiDir`
+//! While support for all preview1 APIs are still in-progress, common functionality for most
+//! programs should work as expected.
+
 #![allow(dead_code)]
 
 mod error;
@@ -10,7 +27,11 @@ use std::{
     sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard, Weak},
 };
 
-use shwasi_wasi::{FdFlags, FileType, OFlags, OpenResult, WasiDir, WasiError, WasiFile};
+use itertools::Itertools;
+use shwasi_wasi::{
+    Errno, FdFlags, FileType, OFlags, OpenResult, ReaddirCursor, ReaddirEntity, WasiDir, WasiError,
+    WasiFile,
+};
 use system_interface::io::{Peek, ReadReady};
 
 pub use error::MemFsError;
@@ -44,8 +65,8 @@ impl MemFs {
             return Err(MemFsError::AlreadyExists);
         }
 
+        let dir = MemDir::new(self.downgrade(), path.as_ref(), self.new_inode());
         let mut borrow = self.borrow_mut();
-        let dir = MemDir::new(self.downgrade(), path.as_ref());
         borrow
             .path_table
             .insert(path.as_ref().to_path_buf(), Entry::Directory(dir.clone()));
@@ -78,8 +99,8 @@ impl MemFs {
             };
         }
 
+        let file = MemFile::empty(self.downgrade(), path.as_ref(), self.new_inode());
         let mut borrow = self.borrow_mut();
-        let file = MemFile::empty(self.downgrade(), path.as_ref());
         borrow
             .path_table
             .insert(path.as_ref().to_path_buf(), Entry::File(file.clone()));
@@ -120,7 +141,7 @@ impl MemFs {
         self.entry_count() == 0
     }
 
-    /// Check if a path exists.
+    /// Check if a path exists (no fallback to disk, only checks memfs files).
     pub fn exists(&self, path: impl AsRef<Path>) -> bool {
         self.borrow().path_table.get(path.as_ref()).is_some()
     }
@@ -189,6 +210,34 @@ impl MemFs {
         Ok(())
     }
 
+    /// Load an entry from the **disk** file system to the in-memory file system. This will **not**
+    /// recursively load the entire subtree into memroy in the case of a directory!
+    ///
+    /// Returns:
+    /// - MemFsError::AlreadyExists if the path already exists in memory
+    /// - MemFsError::Noent if the path could not be retrieved from disk
+    /// - Any errors from `create_file` or `create_dir`
+    /// - Any disk io errors encountered
+    pub fn load(&self, path: impl AsRef<Path>) -> Result<Entry, MemFsError> {
+        let path = path.as_ref();
+        if self.exists(path) {
+            return Err(MemFsError::AlreadyExists);
+        }
+        if !path.try_exists()? {
+            return Err(MemFsError::Noent);
+        }
+
+        if path.is_file() {
+            let contents = std::fs::read(path)?;
+            let file = self.create_file(path, false)?;
+            file.borrow_mut().data.write_all(&contents)?;
+            return Ok(Entry::File(file));
+        }
+
+        let dir = self.create_dir(path)?;
+        Ok(Entry::Directory(dir))
+    }
+
     fn try_unremove(&self, path: impl AsRef<Path>) {
         let mut borrow = self.borrow_mut();
         let Some(pos) = borrow
@@ -203,6 +252,12 @@ impl MemFs {
 
     fn did_remove(&self, path: impl AsRef<Path>) {
         self.borrow_mut().removals.push(path.as_ref().to_path_buf());
+    }
+
+    fn new_inode(&self) -> u64 {
+        let old = self.borrow().current_inode;
+        self.borrow_mut().current_inode += 1;
+        old
     }
 
     fn downgrade(&self) -> WeakMemFs {
@@ -223,6 +278,24 @@ impl MemFs {
 pub enum Entry {
     Directory(MemDir),
     File(MemFile),
+}
+
+impl Entry {
+    /// Returns the entry inode.
+    pub fn inode(&self) -> u64 {
+        match self {
+            Entry::Directory(dir) => dir.inode(),
+            Entry::File(file) => file.inode(),
+        }
+    }
+
+    /// Returns the path of the entry.
+    pub fn path(&self) -> PathBuf {
+        match self {
+            Entry::Directory(dir) => dir.borrow().path().to_path_buf(),
+            Entry::File(file) => file.borrow().path().to_path_buf(),
+        }
+    }
 }
 
 /// A weak pointer to a `MemFs`.
@@ -248,11 +321,10 @@ impl_weak! {
     fn entry(path: impl AsRef<Path>) -> Option<Entry>;
     fn create_dir(path: impl AsRef<Path>) -> Result<MemDir, MemFsError>;
     fn create_file(path: impl AsRef<Path>, excl: bool) -> Result<MemFile, MemFsError>;
-    fn entry_count() -> usize;
-    fn is_empty() -> bool;
     fn exists(path: impl AsRef<Path>) -> bool;
     fn unlink(handle: impl AsRef<Path>) -> Result<(), MemFsError>;
     fn remove_dir(handle: impl AsRef<Path>) -> Result<(), MemFsError>;
+    fn load(path: impl AsRef<Path>) -> Result<Entry, MemFsError>;
 }
 
 impl WeakMemFs {
@@ -278,7 +350,11 @@ impl WeakMemFs {
 #[derive(Debug, Default)]
 struct MemFsInner {
     removals: Vec<PathBuf>,
+    // TODO: maybe some sort of memory management would be helpful here. If a file has only been
+    // read from disk, with no modifications, it can be removed from the file system and
+    // deallocated. A garbage collector, of sorts.
     path_table: HashMap<PathBuf, Entry>,
+    current_inode: u64,
 }
 
 /// An in-memory directory in the file system.
@@ -289,6 +365,7 @@ pub struct MemDir(Arc<RwLock<MemDirInner>>);
 
 #[derive(Debug)]
 pub struct MemDirInner {
+    inode: u64,
     fs: WeakMemFs,
     path: PathBuf,
 }
@@ -301,14 +378,15 @@ impl MemDirInner {
 
 impl MemDir {
     /// Create a new `MemDir` at the provided (**absolute**) path.
-    fn new(fs: WeakMemFs, path: impl AsRef<Path>) -> Self {
+    fn new(fs: WeakMemFs, path: impl AsRef<Path>, inode: u64) -> Self {
         Self(Arc::new(RwLock::new(MemDirInner {
             fs,
+            inode,
             path: path.as_ref().to_path_buf(),
         })))
     }
 
-    /// Iterate through each file in the in-memory directory.
+    /// Iterate through each file in the in-memory directory with no particular order.
     ///
     /// A direct `Iterator` cannot be provided as a result of RwLock guards.
     pub fn for_each<F>(&self, mut f: F)
@@ -316,14 +394,19 @@ impl MemDir {
         F: FnMut(Entry),
     {
         let borrow = self.borrow();
-        borrow.fs.for_each(|entry| match entry {
-            Entry::Directory(ref dir) if self.is_child(dir.borrow().path()) => f(entry),
-            Entry::File(ref file) if self.is_child(file.borrow().path()) => f(entry),
-            _ => {}
+        // TODO: this is linearly increasing over all total entries in the file system, doing a
+        // moderately expensive string comparison with each. Would be nice to have something clever
+        // here.
+        borrow.fs.for_each(|entry| {
+            if self.is_child(&entry.path()) {
+                f(entry);
+            }
         });
     }
 
     /// Get the number of entries in the directory,
+    // TODO: this actually needs to check how many files exist on disk (if the directory is
+    // present), combined with the in memory files that only exist in memory and not on disk.
     pub fn num_entries(&self) -> usize {
         let mut total = 0;
         self.for_each(|_| {
@@ -394,12 +477,7 @@ impl MemDir {
         // If it's on our real filesystem, and but not in our in-memory one, we should load it into
         // memory.
         if path.exists() && !self.borrow().fs.exists(&path) {
-            let contents = std::fs::read(&path).map_err(|err| MemFsError::from(err.kind()))?;
-            let file = self.borrow().fs.create_file(&path, false)?;
-            file.borrow_mut()
-                .data
-                .write_all(&contents)
-                .map_err(|err| MemFsError::from(err.kind()))?;
+            return self.borrow().fs.load(&path);
         }
 
         // Files should not have to be created from this point onwards
@@ -427,6 +505,11 @@ impl MemDir {
         }
 
         Ok(Entry::File(file.clone()))
+    }
+
+    /// Return the directory inode.
+    pub fn inode(&self) -> u64 {
+        self.borrow().inode
     }
 
     fn is_child(&self, path: &Path) -> bool {
@@ -470,6 +553,7 @@ pub struct MemFile(Arc<RwLock<MemFileInner>>);
 pub struct MemFileInner {
     // We hold on to a weak pointer to prevent an Arc cycle
     fs: WeakMemFs,
+    inode: u64,
     data: io::Cursor<Vec<u8>>,
     write: bool,
     read: bool,
@@ -528,9 +612,15 @@ impl MemFile {
         self.0.read().unwrap()
     }
 
-    fn with_contents(fs: WeakMemFs, path: impl AsRef<Path>, contents: Vec<u8>) -> Self {
+    /// Return the file inode.
+    pub fn inode(&self) -> u64 {
+        self.borrow().inode
+    }
+
+    fn with_contents(fs: WeakMemFs, path: impl AsRef<Path>, inode: u64, contents: Vec<u8>) -> Self {
         Self(Arc::new(RwLock::new(MemFileInner {
             fs,
+            inode,
             data: io::Cursor::new(contents),
             write: false,
             read: false,
@@ -539,8 +629,8 @@ impl MemFile {
         })))
     }
 
-    fn empty(fs: WeakMemFs, path: impl AsRef<Path>) -> Self {
-        Self::with_contents(fs, path, vec![])
+    fn empty(fs: WeakMemFs, path: impl AsRef<Path>, inode: u64) -> Self {
+        Self::with_contents(fs, path, inode, vec![])
     }
 
     fn append(&self) {
@@ -696,6 +786,69 @@ impl WasiDir for MemDir {
     async fn remove_dir(&self, path: &str) -> Result<(), WasiError> {
         self.remove_dir(path)?;
         Ok(())
+    }
+
+    async fn readdir(
+        &self,
+        cursor: ReaddirCursor,
+    ) -> Result<Box<dyn Iterator<Item = Result<ReaddirEntity, WasiError>> + Send>, WasiError> {
+        let mut entries = vec![];
+        self.for_each(|entry| {
+            entries.push(entry);
+        });
+        // Load any disk entries that aren't in memory yet
+        if let Ok(readdir) = std::fs::read_dir(self.borrow().path()) {
+            for entry in readdir.filter_map(Result::ok) {
+                let Ok(entry) = self.borrow().fs.load(entry.path()) else {
+                    continue;
+                };
+                entries.push(entry);
+            }
+        }
+        let iter = [
+            Ok(ReaddirEntity {
+                next: 1.into(),
+                filetype: FileType::Directory,
+                inode: self.inode(),
+                name: ".".to_owned(),
+            }),
+            Ok(ReaddirEntity {
+                next: 2.into(),
+                filetype: FileType::Directory,
+                inode: self.inode(),
+                name: "..".to_owned(),
+            }),
+        ]
+        .into_iter()
+        .chain(
+            entries
+                .into_iter()
+                // TODO: is it possible to find a way to not have to do this sort? This happens
+                // because our internal for_each is in no particular order because of our HashMap.
+                .sorted_by_key(|entry| entry.path())
+                .enumerate()
+                .map(|(i, entry)| {
+                    Ok(ReaddirEntity {
+                        // Plus 3 because we need to offset the two implicit entries ("." and "..")
+                        next: ReaddirCursor::from(i as u64 + 3),
+                        filetype: match entry {
+                            Entry::Directory(_) => FileType::Directory,
+                            Entry::File(_) => FileType::RegularFile,
+                        },
+                        inode: entry.inode(),
+                        name: entry
+                            .path()
+                            .file_name()
+                            .expect("path should never terminate in `..`")
+                            .to_str()
+                            .map(ToOwned::to_owned)
+                            .ok_or(WasiError::from(Errno::Ilseq))?,
+                    })
+                }),
+        )
+        .skip(u64::from(cursor) as usize);
+
+        Ok(Box::new(iter))
     }
 }
 

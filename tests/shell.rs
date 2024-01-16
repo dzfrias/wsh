@@ -261,6 +261,11 @@ shell_test!(
     "allow --virtual\nsource .($WASM_PATH + \"/new_dir.wasm\")\nsource .($WASM_PATH + \"/rm_dir.wasm\")\nmemfs | wc -l | xargs",
     "0"
 );
+shell_test!(
+    memfs_readdir,
+    "allow --virtual\ntouch nice.txt\ntouch hi.txt\nsource .($WASM_PATH + \"/read_dir.wasm\")",
+    "./hi.txt\n./memfs_readdir.tmp\n./nice.txt"
+);
 
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");
 shell_test!(@fail unfinished_pipe, "echo hi |");

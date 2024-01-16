@@ -4,7 +4,7 @@ pub mod sync;
 pub use self::guest_memory::ShwasiGuestMemory;
 pub use wasi_common::{
     clocks::SystemTimeSpec,
-    dir::OpenResult,
+    dir::{OpenResult, ReaddirCursor, ReaddirEntity},
     file::{
         Advice, FdFlags, FileAccessMode, FileType, Filestat, OFlags, RiFlags, RoFlags, SdFlags,
         SiFlags,

@@ -15,8 +15,12 @@ provided to the modules.
 | `args.wasm`       | Writes each argument to stdout.                      |
 | `hello_wasi.wasm` | Writes "Hello, World!" to stdout.                    |
 | `new_file.wasm`   | Attempts to create a file named `hello.txt`.         |
+| `new_dir.wasm`    | Attempts to create a directory named `hello`.        |
 | `stdin.wasm`      | Writes "Got: {STDIN}" to stdout.                     |
 | `env.wasm`        | Writes "{$HELLO}" to stdout, or "NOT HERE" if unset. |
+| `rm.wasm`         | Attempts to remove a file, `hello.txt`.              |
+| `rm_dir.wasm`     | Attempts to remove a directory, `hello`.             |
+| `read_dir.wasm`   | Print each file in cwd.                              |
 
 ## Non-WASI Inputs
 

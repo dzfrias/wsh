@@ -58,9 +58,9 @@ impl From<MemFsError> for WasiError {
     }
 }
 
-impl From<io::ErrorKind> for MemFsError {
-    fn from(value: io::ErrorKind) -> Self {
-        match value {
+impl From<io::Error> for MemFsError {
+    fn from(err: io::Error) -> Self {
+        match err.kind() {
             io::ErrorKind::NotFound => MemFsError::Noent,
             io::ErrorKind::PermissionDenied => MemFsError::Acces,
             io::ErrorKind::AlreadyExists => MemFsError::AlreadyExists,

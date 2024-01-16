@@ -2076,6 +2076,7 @@ dependencies = [
  "filedescriptor",
  "insta",
  "io-extras",
+ "itertools 0.12.0",
  "os_pipe",
  "pathdiff",
  "rustix",
