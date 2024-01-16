@@ -29,8 +29,8 @@ use std::{
 
 use itertools::Itertools;
 use shwasi_wasi::{
-    Errno, FdFlags, FileType, OFlags, OpenResult, ReaddirCursor, ReaddirEntity, WasiDir, WasiError,
-    WasiFile,
+    Errno, ErrorExt, FdFlags, FileType, OFlags, OpenResult, ReaddirCursor, ReaddirEntity, WasiDir,
+    WasiError, WasiFile,
 };
 use system_interface::io::{Peek, ReadReady};
 
@@ -214,7 +214,8 @@ impl MemFs {
         if self.exists(path) {
             return Err(MemFsError::AlreadyExists);
         }
-        if !path.try_exists()? {
+        // If it's already been removed in memfs, it shouldn't exist
+        if self.borrow().removals.iter().any(|p| p == path) || !path.try_exists()? {
             return Err(MemFsError::Noent);
         }
 
@@ -227,6 +228,54 @@ impl MemFs {
 
         let dir = self.create_dir(path)?;
         Ok(Entry::Directory(dir))
+    }
+
+    /// Rename a file or directory in the file system.
+    ///
+    /// Returns:
+    /// - MemFsError::Noent if the src entry does not exist
+    /// - MemFsError::IsDir if the src entry is a file but the dst entry is a directory
+    /// - MemFsError::NotDir if the src entry is a directory but the dst entry is a file
+    /// - MemFsError::NotEmpty if the dst entry is a directory but is not empty
+    pub fn rename(&self, src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Result<(), MemFsError> {
+        let src = src.as_ref();
+        let dst = dst.as_ref();
+        match self
+            .entry(src)
+            .ok_or(MemFsError::Noent)
+            .or_else(|_err| self.load(src))?
+        {
+            Entry::File(file) => {
+                if matches!(self.entry(dst), Some(Entry::Directory(_))) {
+                    return Err(MemFsError::IsDir);
+                }
+                file.borrow_mut().path = dst.to_path_buf();
+                self.borrow_mut()
+                    .path_table
+                    .insert(dst.to_path_buf(), Entry::File(file));
+            }
+            Entry::Directory(dir) => {
+                if let Some(entry) = self.entry(dst) {
+                    let Entry::Directory(dst_dir) = entry else {
+                        return Err(MemFsError::Notdir);
+                    };
+                    if !dst_dir.is_empty() {
+                        return Err(MemFsError::NotEmpty);
+                    }
+                }
+                dir.borrow_mut().path = dst.to_path_buf();
+                self.borrow_mut()
+                    .path_table
+                    .insert(dst.to_path_buf(), Entry::Directory(dir));
+            }
+        }
+        self.borrow_mut()
+            .path_table
+            .remove(src)
+            .expect("src should be in path table");
+        self.did_remove(src);
+
+        Ok(())
     }
 
     fn try_unremove(&self, path: impl AsRef<Path>) {
@@ -316,6 +365,7 @@ impl_weak! {
     fn unlink(handle: impl AsRef<Path>) -> Result<(), MemFsError>;
     fn remove_dir(handle: impl AsRef<Path>) -> Result<(), MemFsError>;
     fn load(path: impl AsRef<Path>) -> Result<Entry, MemFsError>;
+    fn rename(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Result<(), MemFsError>;
 }
 
 impl WeakMemFs {
@@ -534,6 +584,10 @@ impl MemDir {
     pub fn borrow(&self) -> RwLockReadGuard<MemDirInner> {
         self.0.read().unwrap()
     }
+
+    pub fn borrow_mut(&self) -> RwLockWriteGuard<MemDirInner> {
+        self.0.write().unwrap()
+    }
 }
 
 /// An in-memory file.
@@ -659,9 +713,7 @@ impl WasiFile for MemFile {
 
     async fn set_fdflags(&mut self, fdflags: FdFlags) -> Result<(), WasiError> {
         if fdflags.intersects(FdFlags::DSYNC | FdFlags::SYNC | FdFlags::RSYNC) {
-            return Err(WasiError::trap(anyhow::anyhow!(
-                "cannot set the SYNC family of flags"
-            )));
+            return Err(WasiError::not_supported().context("SYNC family of fd flags"));
         }
         self.borrow_mut().fd_flags = fdflags;
         Ok(())
@@ -673,7 +725,7 @@ impl WasiFile for MemFile {
 
     async fn read_vectored<'a>(&self, bufs: &mut [io::IoSliceMut<'a>]) -> Result<u64, WasiError> {
         if !self.can_read() {
-            return Err(WasiError::trap(anyhow::anyhow!("read not supported")));
+            return Err(WasiError::badf().context("read vectored"));
         }
 
         let n = self.borrow_mut().data.read_vectored(bufs)?;
@@ -686,7 +738,7 @@ impl WasiFile for MemFile {
         offset: u64,
     ) -> Result<u64, WasiError> {
         if !self.can_read() {
-            return Err(WasiError::trap(anyhow::anyhow!("read not supported")));
+            return Err(WasiError::badf().context("read vectored at"));
         }
 
         let mut handle = self.borrow_mut();
@@ -699,7 +751,7 @@ impl WasiFile for MemFile {
 
     async fn write_vectored<'a>(&self, bufs: &[io::IoSlice<'a>]) -> Result<u64, WasiError> {
         if !self.can_write() {
-            return Err(WasiError::trap(anyhow::anyhow!("write not supported")));
+            return Err(WasiError::badf().context("write vectored"));
         }
 
         let n = self.borrow_mut().data.write_vectored(bufs)?;
@@ -712,7 +764,7 @@ impl WasiFile for MemFile {
         offset: u64,
     ) -> Result<u64, WasiError> {
         if !self.can_write() {
-            return Err(WasiError::trap(anyhow::anyhow!("write not supported")));
+            return Err(WasiError::badf().context("write vectored at"));
         }
 
         let mut handle = self.borrow_mut();
@@ -729,7 +781,7 @@ impl WasiFile for MemFile {
 
     async fn peek(&self, buf: &mut [u8]) -> Result<u64, WasiError> {
         if !self.can_read() {
-            return Err(WasiError::trap(anyhow::anyhow!("read not supported")));
+            return Err(WasiError::badf().context("peek"));
         }
 
         let n = self.borrow_mut().data.peek(buf)?;
@@ -842,6 +894,22 @@ impl WasiDir for MemDir {
         .skip(u64::from(cursor) as usize);
 
         Ok(Box::new(iter))
+    }
+
+    async fn rename(
+        &self,
+        src_path: &str,
+        dst: &dyn WasiDir,
+        dst_path: &str,
+    ) -> Result<(), WasiError> {
+        let dst = dst
+            .as_any()
+            .downcast_ref::<Self>()
+            .ok_or(WasiError::badf().context("failed downcast to memfs dir"))?;
+        let dst_path = dst.borrow().path().join(dst_path);
+        let src_path = self.borrow().path().join(src_path);
+        self.borrow().fs.rename(src_path, dst_path)?;
+        Ok(())
     }
 }
 
@@ -1028,5 +1096,37 @@ mod tests {
             Err(MemFsError::Notdir)
         ));
         assert_eq!(4, fs.entry_count());
+    }
+
+    #[test]
+    fn rename() {
+        let fs = MemFs::new();
+        let dir = fs.create_dir("/hello").unwrap();
+        let not_empty = fs.create_dir("/not_empty").unwrap();
+        not_empty
+            .open("hello.txt", OFlags::CREATE, false, true, FdFlags::empty())
+            .unwrap();
+        let file = fs.create_file("/hello.txt", false).unwrap();
+        fs.create_file("/nice.txt", false).unwrap();
+        assert!(fs.rename("/hello", "/hi").is_ok());
+        assert!(fs.rename("/hello.txt", "/hi.txt").is_ok());
+        assert!(matches!(
+            fs.rename("/hi", "/nice.txt"),
+            Err(MemFsError::Notdir)
+        ));
+        assert!(matches!(
+            fs.rename("/hi", "/not_empty"),
+            Err(MemFsError::NotEmpty)
+        ));
+        not_empty.unlink("hello.txt").unwrap();
+        // Should be empty now
+        assert!(fs.rename("/not_empty", "/hi").is_ok());
+        assert!(matches!(
+            fs.rename("/nice.txt", "/hi"),
+            Err(MemFsError::IsDir)
+        ));
+        assert_eq!(Path::new("/hi"), dir.borrow().path());
+        assert_eq!(Path::new("/hi.txt"), file.borrow().path());
+        assert_eq!(3, fs.entry_count());
     }
 }

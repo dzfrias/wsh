@@ -266,6 +266,11 @@ shell_test!(
     "allow --virtual\ntouch nice.txt\ntouch hi.txt\nsource .($WASM_PATH + \"/read_dir.wasm\")",
     "./hi.txt\n./memfs_readdir.tmp\n./nice.txt"
 );
+shell_test!(
+    memfs_rename,
+    "allow --virtual\ntouch hello.txt\nsource .($WASM_PATH + \"/rename.wasm\")\nmemfs",
+    "+ nice.txt\n- hello.txt"
+);
 
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");
 shell_test!(@fail unfinished_pipe, "echo hi |");

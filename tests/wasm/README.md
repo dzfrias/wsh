@@ -20,7 +20,8 @@ provided to the modules.
 | `env.wasm`        | Writes "{$HELLO}" to stdout, or "NOT HERE" if unset. |
 | `rm.wasm`         | Attempts to remove a file, `hello.txt`.              |
 | `rm_dir.wasm`     | Attempts to remove a directory, `hello`.             |
-| `read_dir.wasm`   | Print each file in cwd.                              |
+| `read_dir.wasm`   | Prints each file in cwd.                             |
+| `rename.wasm`     | Renames "hello.txt" to "nice.txt".                   |
 
 ## Non-WASI Inputs
 

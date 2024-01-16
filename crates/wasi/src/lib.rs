@@ -9,7 +9,10 @@ pub use wasi_common::{
         Advice, FdFlags, FileAccessMode, FileType, Filestat, OFlags, RiFlags, RoFlags, SdFlags,
         SiFlags,
     },
-    snapshots::preview_1::types::{Errno, Error as WasiError},
+    snapshots::preview_1::{
+        error::ErrorExt,
+        types::{Errno, Error as WasiError},
+    },
     WasiDir, WasiFile,
 };
 pub use wasmtime_wasi::{sync::WasiCtxBuilder, WasiCtx};
