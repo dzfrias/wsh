@@ -23,6 +23,15 @@ impl Value {
         matches!(self, Value::Null)
     }
 
+    pub fn is_truthy(&self) -> bool {
+        match self {
+            Value::Number(n) => *n != 0.0,
+            Value::String(s) => !s.is_empty(),
+            Value::Bool(b) => *b,
+            Value::Null => false,
+        }
+    }
+
     pub fn type_of(&self) -> Type {
         match self {
             Value::Number(_) => Type::Number,

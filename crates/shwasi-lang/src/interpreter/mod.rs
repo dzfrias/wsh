@@ -6,7 +6,7 @@ mod value;
 
 use crate::{
     ast::{
-        AliasAssign, Assign, EnvSet, Export, InfixOp, Pipeline, PipelineEnd, PipelineEndKind,
+        AliasAssign, Assign, EnvSet, Export, If, InfixOp, Pipeline, PipelineEnd, PipelineEndKind,
         PrefixOp,
     },
     interpreter::{builtins::Builtin, env::Env},
@@ -121,6 +121,10 @@ impl Shell {
             }
             Stmt::Export(export) => {
                 self.eval_export(export)?;
+                Ok(Value::Null)
+            }
+            Stmt::If(if_) => {
+                self.eval_if(if_)?;
                 Ok(Value::Null)
             }
         }
@@ -534,6 +538,25 @@ impl Shell {
                 Err(())
             }
         }
+    }
+
+    fn eval_if(&mut self, if_: &If) -> ShellResult<()> {
+        let cond = self.eval_expr(&if_.condition)?;
+        if cond.is_truthy() {
+            self.eval_block(&if_.body)?;
+        } else if let Some(else_) = &if_.else_ {
+            self.eval_block(else_)?;
+        }
+
+        Ok(())
+    }
+
+    fn eval_block(&mut self, block: &[Stmt]) -> ShellResult<()> {
+        for stmt in block {
+            self.eval_stmt(stmt)?;
+        }
+
+        Ok(())
     }
 
     fn eval_prefix(&mut self, prefix: &PrefixExpr) -> ShellResult<Value> {

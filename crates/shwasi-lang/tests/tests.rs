@@ -66,3 +66,5 @@ shwasi_test!(
     ".(\"hello\"(\"nice\" + \"cool\"))",
     Value::String("hellonicecool".into())
 );
+
+shwasi_test!(if_stmt, "if true then .x = 1 end\n.x", Value::Number(1.0));

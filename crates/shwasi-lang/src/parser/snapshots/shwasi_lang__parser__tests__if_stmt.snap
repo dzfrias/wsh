@@ -1,0 +1,99 @@
+---
+source: crates/shwasi-lang/src/parser/mod.rs
+expression: ast
+---
+Ast {
+    statements: [
+        If(
+            If {
+                condition: Infix(
+                    InfixExpr {
+                        lhs: Ident(
+                            Ident(
+                                "x",
+                            ),
+                        ),
+                        rhs: Number(
+                            10.0,
+                        ),
+                        op: Eq,
+                    },
+                ),
+                body: [
+                    Pipeline(
+                        Pipeline {
+                            env: [],
+                            commands: [
+                                Command {
+                                    name: "echo",
+                                    args: [
+                                        String(
+                                            "hi",
+                                        ),
+                                    ],
+                                    merge_stderr: false,
+                                },
+                            ],
+                            write: None,
+                        },
+                    ),
+                ],
+                else_: None,
+            },
+        ),
+        If(
+            If {
+                condition: Infix(
+                    InfixExpr {
+                        lhs: Ident(
+                            Ident(
+                                "x",
+                            ),
+                        ),
+                        rhs: Number(
+                            10.0,
+                        ),
+                        op: Eq,
+                    },
+                ),
+                body: [
+                    Pipeline(
+                        Pipeline {
+                            env: [],
+                            commands: [
+                                Command {
+                                    name: "echo",
+                                    args: [
+                                        String(
+                                            "hi",
+                                        ),
+                                    ],
+                                    merge_stderr: false,
+                                },
+                            ],
+                            write: None,
+                        },
+                    ),
+                    Pipeline(
+                        Pipeline {
+                            env: [],
+                            commands: [
+                                Command {
+                                    name: "echo",
+                                    args: [
+                                        String(
+                                            "hello",
+                                        ),
+                                    ],
+                                    merge_stderr: false,
+                                },
+                            ],
+                            write: None,
+                        },
+                    ),
+                ],
+                else_: None,
+            },
+        ),
+    ],
+}

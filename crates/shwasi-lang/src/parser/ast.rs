@@ -22,6 +22,14 @@ pub enum Stmt {
     AliasAssign(AliasAssign),
     Assign(Assign),
     Export(Export),
+    If(If),
+}
+
+#[derive(Debug, Clone)]
+pub struct If {
+    pub condition: Expr,
+    pub body: Vec<Stmt>,
+    pub else_: Option<Vec<Stmt>>,
 }
 
 #[derive(Debug, Clone)]

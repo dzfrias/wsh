@@ -4,7 +4,7 @@ mod lexer;
 
 pub use self::error::*;
 use crate::{
-    ast::{AliasAssign, Assign, EnvSet, Export, Pipeline, PipelineEnd, PipelineEndKind},
+    ast::{AliasAssign, Assign, EnvSet, Export, If, Pipeline, PipelineEnd, PipelineEndKind},
     parser::ast::{Ast, Command, Expr, InfixExpr, InfixOp, PrefixExpr, PrefixOp, Stmt},
 };
 pub use lexer::*;
@@ -39,6 +39,27 @@ impl<'src> Parser<'src> {
         Ok(Ast::new(stmts))
     }
 
+    fn parse_block(&mut self) -> ParseResult<Vec<Stmt>> {
+        let mut stmts = vec![];
+        loop {
+            let stmt = self.parse_stmt()?;
+            stmts.push(stmt);
+            if self.current_token == Token::End {
+                break;
+            }
+            if self.current_token == Token::Newline && self.peek() == Token::End {
+                self.next_token();
+                break;
+            }
+            self.next_token();
+        }
+        if self.peek() != Token::Eof {
+            self.expect_next(Token::Newline, "expected newline after `end` token")?;
+        }
+
+        Ok(stmts)
+    }
+
     fn parse_stmt(&mut self) -> ParseResult<Stmt> {
         Ok(match self.current_token {
             Token::String(_) | Token::QuotedString(_) | Token::Dollar => {
@@ -47,6 +68,7 @@ impl<'src> Parser<'src> {
             Token::Alias => Stmt::AliasAssign(self.parse_alias_assign()?),
             Token::Ident(_) if self.peek() == Token::Assign => Stmt::Assign(self.parse_assign()?),
             Token::Export => Stmt::Export(self.parse_export()?),
+            Token::If => Stmt::If(self.parse_if()?),
             _ => Stmt::Expr(self.parse_expr(Precedence::Lowest)?),
         })
     }
@@ -111,6 +133,23 @@ impl<'src> Parser<'src> {
             commands: cmds,
             env,
             write,
+        })
+    }
+
+    fn parse_if(&mut self) -> ParseResult<If> {
+        debug_assert_eq!(self.current_token, Token::If);
+        self.next_token();
+        let condition = self.parse_expr(Precedence::Lowest)?;
+        self.expect_next(Token::Then, "expected `then` after if condition")?;
+        if self.peek() == Token::Newline {
+            self.next_token();
+        }
+        self.next_token();
+        let body = self.parse_block()?;
+        Ok(If {
+            condition,
+            body,
+            else_: None,
         })
     }
 
@@ -185,6 +224,7 @@ impl<'src> Parser<'src> {
                 | Token::PercentPipe
                 | Token::PercentWrite
                 | Token::PercentAppend
+                | Token::End
         ) {
             if self.peek() == Token::Backtick && self.in_subcmd {
                 return Ok(Command {
@@ -642,6 +682,14 @@ mod tests {
     #[test]
     fn implicit_concat() {
         let input = "echo $ENV_VAR/nice .(hello)/nice";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn if_stmt() {
+        let input = "if x == 10 then echo hi end\nif x == 10 then\necho hi\necho hello\nend\n";
         let buf = Lexer::new(input).lex();
         let ast = Parser::new(&buf).parse().unwrap();
         insta::assert_debug_snapshot!(ast);
