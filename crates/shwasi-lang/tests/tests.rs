@@ -60,3 +60,9 @@ shwasi_test!(
     ".(true + \"false\")",
     Value::String("truefalse".into())
 );
+
+shwasi_test!(
+    implicit_concat,
+    ".(\"hello\"(\"nice\" + \"cool\"))",
+    Value::String("hellonicecool".into())
+);

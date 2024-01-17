@@ -20,6 +20,7 @@ pub enum Token {
     Append,
     PercentAppend,
     Newline,
+    Space,
     QuestionMark,
     Dollar,
 
@@ -137,6 +138,7 @@ impl TokenBuffer {
             }
             TokenKind::Assign => Token::Assign,
             TokenKind::Newline => Token::Newline,
+            TokenKind::Space => Token::Space,
             TokenKind::LParen => Token::LParen,
             TokenKind::RParen => Token::RParen,
             TokenKind::Plus => Token::Plus,
@@ -253,6 +255,7 @@ pub(super) enum TokenKind {
     Append,
     PercentAppend,
     Newline,
+    Space,
     Backtick,
     QuestionMark,
     Dollar,
@@ -376,6 +379,7 @@ impl Token {
             Token::End => TokenKind::End,
             Token::Export => TokenKind::Export,
             Token::Newline => TokenKind::Newline,
+            Token::Space => TokenKind::Space,
             Token::Invalid(_) => TokenKind::Invalid,
             Token::QuestionMark => TokenKind::QuestionMark,
             Token::Gt => TokenKind::Gt,
@@ -432,7 +436,7 @@ impl Token {
             Token::UnquotedString(s) => s.len() + 1,
             // TODO: perhaps the ryu crate can be used here?
             Token::Number(n) => n.to_string().len(),
-            Token::Eof => 0,
+            Token::Eof | Token::Space => 0,
         }
     }
 
@@ -499,6 +503,7 @@ impl fmt::Display for Token {
             Token::PercentAppend => write!(f, "percent append"),
             Token::Backtick => write!(f, "backtick"),
             Token::Invalid(c) => write!(f, "invalid `{c}`"),
+            Token::Space => write!(f, "space"),
             Token::Eof => write!(f, "eof"),
         }
     }

@@ -60,6 +60,9 @@ impl<'src> Lexer<'src> {
                 ' ' | '\t' => {
                     let len = self.consume_while(|c| c.is_whitespace() && c != '\n').len();
                     buf.skip(len);
+                    if !self.strict() {
+                        push!(Space);
+                    }
                 }
 
                 '=' if self.peek() == Some('=') && self.strict() => {
@@ -192,7 +195,13 @@ impl<'src> Lexer<'src> {
                         buf.skip(1);
                         self.next();
                         push!(Ident(token::Ident::new(self.consume_str())));
-                        self.consume_while(|c| c.is_whitespace());
+                        // Edge case here for EOF
+                        if self.peek().is_some() {
+                            let ws = self.consume_while(|c| c.is_whitespace());
+                            if !ws.is_empty() {
+                                push!(Space);
+                            }
+                        }
                         if self.peek() == Some('=') {
                             self.mode = Mode::Strict {
                                 ending: Token::Newline,
@@ -354,9 +363,11 @@ mod tests {
         let buf = lexer.lex();
         let expect = token_buf!(
             Token::String("echo".into()),
+            Token::Space,
             Token::String("hello".into()),
             Token::Newline,
             Token::String("echo".into()),
+            Token::Space,
             Token::String("hi".into()),
             Token::Eof,
         );
@@ -370,6 +381,7 @@ mod tests {
         let buf = lexer.lex();
         let expect = token_buf!(
             Token::String("echo".into()),
+            Token::Space,
             Token::Ident(super::token::Ident::new("i")),
             Token::Eof,
         );
@@ -383,6 +395,7 @@ mod tests {
         let buf = lexer.lex();
         let expect = token_buf!(
             Token::String("echo".into()),
+            Token::Space,
             Token::LParen,
             Token::Ident(super::token::Ident::new("x")),
             Token::Plus,
@@ -404,8 +417,11 @@ mod tests {
             Token::Eq,
             Token::Ident(super::token::Ident::new("y")),
             Token::Then,
+            Token::Space,
             Token::String("echo".into()),
+            Token::Space,
             Token::String("hi".into()),
+            Token::Space,
             Token::End,
             Token::Eof,
         );
@@ -424,8 +440,11 @@ mod tests {
             Token::Eq,
             Token::Ident(super::token::Ident::new("y")),
             Token::Then,
+            Token::Space,
             Token::String("echo".into()),
+            Token::Space,
             Token::String("hi".into()),
+            Token::Space,
             Token::End,
             Token::Eof,
         );
@@ -452,6 +471,7 @@ mod tests {
             Token::Plus,
             Token::Number(1.0),
             Token::RParen,
+            Token::Space,
             Token::String("2".into()),
             Token::Eof,
         );
@@ -481,7 +501,9 @@ mod tests {
         let buf = lexer.lex();
         let expect = token_buf!(
             Token::String("echo".into()),
+            Token::Space,
             Token::QuotedString("hello world".into()),
+            Token::Space,
             Token::LParen,
             Token::QuotedString("nice".into()),
             Token::Plus,
@@ -499,6 +521,7 @@ mod tests {
         let buf = lexer.lex();
         let expect = token_buf!(
             Token::String("echo".into()),
+            Token::Space,
             Token::UnquotedString("hello".into()),
             Token::Eof,
         );
@@ -512,6 +535,7 @@ mod tests {
         let buf = lexer.lex();
         let expect = token_buf!(
             Token::String("echo".into()),
+            Token::Space,
             Token::Backtick,
             Token::String("nice".into()),
             Token::Backtick,
@@ -536,7 +560,9 @@ mod tests {
         let buf = lexer.lex();
         let expect = token_buf!(
             Token::String("echo".into()),
+            Token::Space,
             Token::QuestionMark,
+            Token::Space,
             Token::LParen,
             Token::QuestionMark,
             Token::RParen,
@@ -552,9 +578,13 @@ mod tests {
         let buf = lexer.lex();
         let expect = token_buf!(
             Token::Alias,
+            Token::Space,
             Token::String("echo".into()),
+            Token::Space,
             Token::Assign,
+            Token::Space,
             Token::String("echo".into()),
+            Token::Space,
             Token::String("-n".into()),
             Token::Eof
         );
@@ -568,6 +598,7 @@ mod tests {
         let buf = lexer.lex();
         let expect = token_buf!(
             Token::Ident(Ident::new("x")),
+            Token::Space,
             Token::Assign,
             Token::Number(10.0),
             Token::Eof
@@ -599,7 +630,9 @@ mod tests {
         let buf = lexer.lex();
         let expect = token_buf!(
             Token::String("true".into()),
+            Token::Space,
             Token::String("false".into()),
+            Token::Space,
             Token::LParen,
             Token::BoolTrue,
             Token::BoolFalse,
@@ -616,8 +649,11 @@ mod tests {
         let buf = lexer.lex();
         let expect = token_buf!(
             Token::String("echo".into()),
+            Token::Space,
             Token::String("hi".into()),
+            Token::Space,
             Token::Write,
+            Token::Space,
             Token::String("t".into()),
             Token::Eof
         );
@@ -631,8 +667,11 @@ mod tests {
         let buf = lexer.lex();
         let expect = token_buf!(
             Token::String("echo".into()),
+            Token::Space,
             Token::String("hi".into()),
+            Token::Space,
             Token::Append,
+            Token::Space,
             Token::String("t".into()),
             Token::Eof
         );
@@ -664,6 +703,7 @@ mod tests {
         let buf = lexer.lex();
         let expect = token_buf!(
             Token::String("echo".into()),
+            Token::Space,
             Token::String("hi".into()),
             Token::Eof
         );
@@ -693,8 +733,11 @@ mod tests {
         let buf = lexer.lex();
         let expect = token_buf!(
             Token::String("echo".into()),
+            Token::Space,
             Token::String("export".into()),
+            Token::Space,
             Token::String("alias".into()),
+            Token::Space,
             Token::String("if".into()),
             Token::Eof
         );
@@ -708,12 +751,19 @@ mod tests {
         let buf = lexer.lex();
         let expect = token_buf!(
             Token::String("echo".into()),
+            Token::Space,
             Token::String("hi".into()),
+            Token::Space,
             Token::PercentPipe,
+            Token::Space,
             Token::String("cat".into()),
+            Token::Space,
             Token::PercentWrite,
+            Token::Space,
             Token::String("file.txt".into()),
+            Token::Space,
             Token::PercentAppend,
+            Token::Space,
             Token::String("hi.txt".into()),
             Token::Eof
         );

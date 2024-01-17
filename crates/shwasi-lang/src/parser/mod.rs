@@ -242,6 +242,27 @@ impl<'src> Parser<'src> {
             };
         }
 
+        // Implicit concatenation of expressions
+        if self.buf.get(self.tok_idx + 1).is_some_and(|t| {
+            matches!(
+                t,
+                Token::String(_)
+                    | Token::QuotedString(_)
+                    | Token::Dollar
+                    | Token::LParen
+                    | Token::Ident(_)
+                    | Token::QuestionMark
+            )
+        }) {
+            self.next_token();
+            let next = self.parse_expr(Precedence::Lowest)?;
+            expr = Expr::Infix(InfixExpr {
+                op: InfixOp::Add,
+                lhs: Box::new(expr),
+                rhs: Box::new(next),
+            });
+        }
+
         Ok(expr)
     }
 
@@ -321,10 +342,18 @@ impl<'src> Parser<'src> {
                 Token::Eof
             })
             .clone();
+        if self.current_token == Token::Space {
+            self.next_token();
+        }
     }
 
     fn peek(&self) -> Token {
-        self.buf.get(self.tok_idx + 1).unwrap_or(Token::Eof).clone()
+        self.buf
+            .iter()
+            .skip(self.tok_idx + 1)
+            .find(|t| !matches!(t, Token::Space))
+            .unwrap_or(Token::Eof)
+            .clone()
     }
 
     fn expect_next(&mut self, tok: Token, msg: &'static str) -> ParseResult<()> {
@@ -604,6 +633,14 @@ mod tests {
     #[test]
     fn merge_stderr_redirect_append() {
         let input = "echo hi %>> file.txt";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn implicit_concat() {
+        let input = "echo $ENV_VAR/nice .(hello)/nice";
         let buf = Lexer::new(input).lex();
         let ast = Parser::new(&buf).parse().unwrap();
         insta::assert_debug_snapshot!(ast);
