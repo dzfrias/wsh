@@ -135,6 +135,7 @@ impl<'src> Lexer<'src> {
                     self.next();
                     push!(Append);
                 }
+                '~' if !self.strict() => push!(Tilde),
                 '>' => push!(Write),
                 '`' => {
                     if let Mode::NormalUntilBacktick(old) = self.mode {
@@ -765,6 +766,23 @@ mod tests {
             Token::PercentAppend,
             Token::Space,
             Token::String("hi.txt".into()),
+            Token::Eof
+        );
+        assert_eq!(expect, buf);
+    }
+
+    #[test]
+    fn tilde() {
+        let input = "echo ~/nice hell~o";
+        let lexer = Lexer::new(input);
+        let buf = lexer.lex();
+        let expect = token_buf!(
+            Token::String("echo".into()),
+            Token::Space,
+            Token::Tilde,
+            Token::String("/nice".into()),
+            Token::Space,
+            Token::String("hell~o".into()),
             Token::Eof
         );
         assert_eq!(expect, buf);

@@ -23,6 +23,7 @@ pub enum Token {
     Space,
     QuestionMark,
     Dollar,
+    Tilde,
 
     LParen,
     RParen,
@@ -168,6 +169,7 @@ impl TokenBuffer {
             TokenKind::Export => Token::Export,
             TokenKind::PercentWrite => Token::PercentWrite,
             TokenKind::PercentAppend => Token::PercentAppend,
+            TokenKind::Tilde => Token::Tilde,
             TokenKind::Invalid => Token::Invalid(*payload as u8 as char),
             TokenKind::Eof => Token::Eof,
         };
@@ -259,6 +261,7 @@ pub(super) enum TokenKind {
     Backtick,
     QuestionMark,
     Dollar,
+    Tilde,
 
     LParen,
     RParen,
@@ -394,6 +397,7 @@ impl Token {
             Token::PercentAppend => TokenKind::PercentAppend,
             Token::Append => TokenKind::Append,
             Token::Dollar => TokenKind::Dollar,
+            Token::Tilde => TokenKind::Tilde,
             Token::Alias => TokenKind::Alias,
         }
     }
@@ -417,7 +421,8 @@ impl Token {
             | Token::Gt
             | Token::Lt
             | Token::Write
-            | Token::Dollar => 1,
+            | Token::Dollar
+            | Token::Tilde => 1,
             Token::Eq
             | Token::Ne
             | Token::If
@@ -504,6 +509,7 @@ impl fmt::Display for Token {
             Token::Backtick => write!(f, "backtick"),
             Token::Invalid(c) => write!(f, "invalid `{c}`"),
             Token::Space => write!(f, "space"),
+            Token::Tilde => write!(f, "tilde"),
             Token::Eof => write!(f, "eof"),
         }
     }

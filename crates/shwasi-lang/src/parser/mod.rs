@@ -217,6 +217,7 @@ impl<'src> Parser<'src> {
             Token::Ident(ident) => Expr::Ident(ident.clone()),
             Token::LParen => self.parse_grouped_expr()?,
             Token::Bang | Token::Minus | Token::Plus => Expr::Prefix(self.parse_prefix()?),
+            Token::Tilde => Expr::Tilde,
             Token::Backtick => Expr::Pipeline(self.parse_backtick()?),
             Token::QuestionMark => Expr::LastStatus,
             Token::Dollar => Expr::Env(self.parse_env_expr()?),

@@ -72,6 +72,11 @@ shell_test!(piping, "echo \"hello world\" | wc -w | xargs", "2");
 shell_test!(nested_commands, "echo `echo .(1 / 1)`", "1");
 shell_test!(last_status, "false\necho .?\ntrue\necho .?", "1\n0");
 shell_test!(last_status_in_piping, "false | echo .?", "0");
+shell_test!(
+    tilde_expansion,
+    "echo ~/.vimrc",
+    concat!(::std::env!("HOME"), "/.vimrc")
+);
 shell_test!(aliases, "alias foo = echo hi\nfoo", "hi");
 shell_test!(assignments, ".x = 10 + 10\necho .x", "20");
 shell_test!(

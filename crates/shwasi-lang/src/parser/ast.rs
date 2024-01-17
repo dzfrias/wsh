@@ -83,6 +83,7 @@ pub enum Expr {
     Pipeline(Pipeline),
     Bool(bool),
     LastStatus,
+    Tilde,
 
     Infix(InfixExpr),
     Prefix(PrefixExpr),

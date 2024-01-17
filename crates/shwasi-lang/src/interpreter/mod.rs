@@ -497,6 +497,9 @@ impl Shell {
             Expr::Pipeline(pipeline) => self.eval_pipeline(pipeline, /*capture =*/ true)?,
             Expr::LastStatus => Value::Number(self.last_status as f64),
             Expr::Env(name) => self.eval_env_var(name)?,
+            Expr::Tilde => Value::String(SmolStr::new(
+                dirs::home_dir().unwrap_or_default().to_string_lossy(),
+            )),
         })
     }
 
