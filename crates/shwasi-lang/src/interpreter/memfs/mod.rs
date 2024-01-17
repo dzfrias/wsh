@@ -278,6 +278,86 @@ impl MemFs {
         Ok(())
     }
 
+    /// Open a file or directory at the given path. There are a number of flags that can be set to
+    /// change the behavior and permissions of the opening.
+    ///
+    /// Returns:
+    /// - MemFsError::IsDir if the flags contain DIRECTORY but also CREATE, EXCLUSIVE, or TRUNCATE
+    /// - MemFsError::Inval if the flags contain DSYNC, SYNC, or RSYNC
+    /// - MemFsError::Acces if the flags contain CREATE or EXCLUSIVE but not opened in write or
+    ///                     append mode
+    /// - MemFsError::Acces if the flags contain TRUNCATE but not opened in write mode
+    /// - MemFsError::AlreadyExists if the path already exists and EXCLUSIVE is set
+    /// - MemFsError::IsDir if EXCLUSIVE or CREATE are set but the path points to a directory
+    /// - MemFsError::Noent if the entry does not exist in memory or on disk
+    /// - MemFsError::Notdir if the flags contain DIRECTORY but the path to open is file
+    pub fn open(
+        &self,
+        path: impl AsRef<Path>,
+        oflags: OFlags,
+        read: bool,
+        write: bool,
+        fd_flags: FdFlags,
+    ) -> Result<Entry, MemFsError> {
+        let path = path.as_ref();
+        if oflags.contains(OFlags::DIRECTORY)
+            && oflags.intersects(OFlags::CREATE | OFlags::EXCLUSIVE | OFlags::TRUNCATE)
+        {
+            return Err(MemFsError::IsDir);
+        }
+        if fd_flags.intersects(FdFlags::DSYNC | FdFlags::SYNC | FdFlags::RSYNC) {
+            return Err(MemFsError::Inval);
+        }
+        if !write
+            && !fd_flags.contains(FdFlags::APPEND)
+            && oflags.intersects(OFlags::CREATE | OFlags::EXCLUSIVE)
+        {
+            return Err(MemFsError::Acces);
+        }
+        if !write && oflags.contains(OFlags::TRUNCATE) {
+            return Err(MemFsError::Acces);
+        }
+
+        // Files should not have to be created from this point onwards
+        if oflags.intersects(OFlags::CREATE | OFlags::EXCLUSIVE) {
+            let f = self.create_file(path, oflags.contains(OFlags::EXCLUSIVE))?;
+            // All OFlags::CREATE opens have write or append already set
+            f.open(fd_flags, true, read);
+            if oflags.contains(OFlags::TRUNCATE) {
+                f.truncate();
+            }
+            return Ok(Entry::File(f.clone()));
+        }
+
+        // TODO: what happens if a file is created with an absolute path, but then is retrieved
+        // with a relative path?
+        //   CREATE /Users/dzfrias/code/shwasi/test.txt
+        //   GET ../test.txt FROM /Users/dzfrias/code/shwasi/tests/test.txt
+        // Would error. In order to solve this, all .. and . components would have to be resolved
+        // in the file system, which is a simple fix but still important.
+        let entry = self.entry(path).ok_or(MemFsError::Noent).or_else(|err| {
+            if !path.try_exists()? {
+                return Err(err);
+            }
+            // If it doesn't exist in memory, but does exist on disk, load it into memory!
+            self.load(path)
+        })?;
+
+        Ok(match entry {
+            Entry::File(file) => {
+                if oflags.contains(OFlags::DIRECTORY) {
+                    return Err(MemFsError::Notdir);
+                }
+                file.open(fd_flags, write, read);
+                if oflags.contains(OFlags::TRUNCATE) {
+                    file.truncate();
+                }
+                Entry::File(file)
+            }
+            Entry::Directory(dir) => Entry::Directory(dir),
+        })
+    }
+
     fn try_unremove(&self, path: impl AsRef<Path>) {
         let mut borrow = self.borrow_mut();
         let Some(pos) = borrow
@@ -366,6 +446,7 @@ impl_weak! {
     fn remove_dir(handle: impl AsRef<Path>) -> Result<(), MemFsError>;
     fn load(path: impl AsRef<Path>) -> Result<Entry, MemFsError>;
     fn rename(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Result<(), MemFsError>;
+    fn open(path: impl AsRef<Path>, oflags: OFlags, read: bool, write: bool, fd_flags: FdFlags) -> Result<Entry, MemFsError>;
 }
 
 impl WeakMemFs {
@@ -492,62 +573,8 @@ impl MemDir {
         write: bool,
         fd_flags: FdFlags,
     ) -> Result<Entry, MemFsError> {
-        if oflags.contains(OFlags::DIRECTORY)
-            && oflags.intersects(OFlags::CREATE | OFlags::EXCLUSIVE | OFlags::TRUNCATE)
-        {
-            return Err(MemFsError::IsDir);
-        }
-        if fd_flags.intersects(FdFlags::DSYNC | FdFlags::SYNC | FdFlags::RSYNC) {
-            return Err(MemFsError::Inval);
-        }
-        if !write
-            && !fd_flags.contains(FdFlags::APPEND)
-            && oflags.intersects(OFlags::CREATE | OFlags::EXCLUSIVE)
-        {
-            return Err(MemFsError::Acces);
-        }
-        if !write && oflags.contains(OFlags::TRUNCATE) {
-            return Err(MemFsError::Acces);
-        }
-
-        // Files should not have to be created from this point onwards
-        if oflags.intersects(OFlags::CREATE | OFlags::EXCLUSIVE) {
-            return Ok(Entry::File(self.create(path, fd_flags, oflags, read)?));
-        }
-
-        let path = self.borrow().path.join(path);
-        // TODO: what happens if a file is created with an absolute path, but then is retrieved
-        // with a relative path?
-        //   CREATE /Users/dzfrias/code/shwasi/test.txt
-        //   GET ../test.txt FROM /Users/dzfrias/code/shwasi/tests/test.txt
-        // Would error. In order to solve this, all .. and . components would have to be resolved
-        // in the file system, which is a simple fix but still important.
-        let entry = self
-            .borrow()
-            .fs
-            .entry(&path)
-            .ok_or(MemFsError::Noent)
-            .or_else(|err| {
-                if !path.try_exists()? {
-                    return Err(err);
-                }
-                // If it doesn't exist in memory, but does exist on disk, load it into memory!
-                self.borrow().fs.load(&path)
-            })?;
-
-        Ok(match entry {
-            Entry::File(file) => {
-                if oflags.contains(OFlags::DIRECTORY) {
-                    return Err(MemFsError::Notdir);
-                }
-                file.open(fd_flags, write, read);
-                if oflags.contains(OFlags::TRUNCATE) {
-                    file.truncate();
-                }
-                Entry::File(file)
-            }
-            Entry::Directory(dir) => Entry::Directory(dir),
-        })
+        let path = self.borrow().path().join(path);
+        self.borrow().fs.open(path, oflags, read, write, fd_flags)
     }
 
     /// Return the directory inode.
