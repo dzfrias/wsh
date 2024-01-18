@@ -42,6 +42,8 @@ pub enum Token {
 
     If,
     While,
+    Break,
+    Continue,
     Do,
     Then,
     Else,
@@ -175,6 +177,8 @@ impl TokenBuffer {
             TokenKind::PercentAppend => Token::PercentAppend,
             TokenKind::Tilde => Token::Tilde,
             TokenKind::Invalid => Token::Invalid(*payload as u8 as char),
+            TokenKind::Break => Token::Break,
+            TokenKind::Continue => Token::Continue,
             TokenKind::Eof => Token::Eof,
         };
 
@@ -284,6 +288,8 @@ pub(super) enum TokenKind {
 
     If,
     While,
+    Break,
+    Continue,
     Do,
     Then,
     Else,
@@ -407,6 +413,8 @@ impl Token {
             Token::Alias => TokenKind::Alias,
             Token::While => TokenKind::While,
             Token::Do => TokenKind::Do,
+            Token::Break => TokenKind::Break,
+            Token::Continue => TokenKind::Continue,
         }
     }
 
@@ -442,7 +450,8 @@ impl Token {
             | Token::PercentAppend
             | Token::Do => 2,
             Token::Then | Token::Else | Token::BoolTrue => 4,
-            Token::Alias | Token::BoolFalse | Token::While => 5,
+            Token::Alias | Token::BoolFalse | Token::While | Token::Break => 5,
+            Token::Continue => 8,
             Token::Export => 6,
             Token::End => 3,
             Token::Ident(Ident(s)) | Token::String(s) => s.len(),
@@ -465,6 +474,8 @@ impl Token {
             "end" => Token::End,
             "alias" if last_newline => Token::Alias,
             "export" if last_newline => Token::Export,
+            "break" if last_newline => Token::Break,
+            "continue" if last_newline => Token::Continue,
             _ => return None,
         })
     }
@@ -523,6 +534,8 @@ impl fmt::Display for Token {
             Token::Invalid(c) => write!(f, "invalid `{c}`"),
             Token::Space => write!(f, "space"),
             Token::Tilde => write!(f, "tilde"),
+            Token::Break => write!(f, "break"),
+            Token::Continue => write!(f, "continue"),
             Token::Eof => write!(f, "eof"),
         }
     }

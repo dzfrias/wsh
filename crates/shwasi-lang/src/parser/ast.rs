@@ -24,6 +24,8 @@ pub enum Stmt {
     Export(Export),
     If(If),
     While(While),
+    Break,
+    Continue,
 }
 
 #[derive(Debug, Clone)]

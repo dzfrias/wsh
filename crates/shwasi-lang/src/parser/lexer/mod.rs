@@ -198,7 +198,7 @@ impl<'src> Lexer<'src> {
                         push!(Ident(token::Ident::new(self.consume_str())));
                         // Edge case here for EOF
                         if self.peek().is_some() {
-                            let ws = self.consume_while(|c| c.is_whitespace());
+                            let ws = self.consume_while(|c| matches!(c, ' ' | '\t'));
                             if !ws.is_empty() {
                                 push!(Space);
                             }
@@ -216,7 +216,7 @@ impl<'src> Lexer<'src> {
                 // Identifiers in strict mode. Note that they cannot start with a digit
                 c if is_ident_char(c) && !c.is_ascii_digit() && self.strict() => {
                     let s = self.consume_ident();
-                    let last_is_newline = buf.last() == Some(Token::Newline) || buf.is_empty();
+                    let last_is_newline = last_implicit_newline(&buf);
                     match Token::from_kw(s, last_is_newline) {
                         Some(t) if t.is_mode_switch_kw() => {
                             self.mode = Mode::StrictNoEnd;
@@ -234,7 +234,7 @@ impl<'src> Lexer<'src> {
                 // Everything else in normal mode is a string
                 _ if !self.strict() => {
                     let s = self.consume_str();
-                    let last_is_newline = buf.last() == Some(Token::Newline) || buf.is_empty();
+                    let last_is_newline = last_implicit_newline(&buf);
                     match Token::from_kw(s, last_is_newline) {
                         Some(t) if t.is_mode_switch_kw() => {
                             self.mode = Mode::StrictNoEnd;
@@ -335,6 +335,32 @@ impl<'src> Lexer<'src> {
 
 fn is_ident_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '_'
+}
+
+/// Returns true if the last non-space item in the buffer is an implicit newline token
+///
+/// An implicit newline token is one where keywords like "break" and "if" should be recognized if
+/// they succeed the token. For example `while true do break end` should not lex "break" as a
+/// string. `echo i'm finally on break`, **should** lex "break" as a string. Because of this
+/// descrepancy there's a need for the notion of an "implicit newline" token.
+fn last_implicit_newline(buf: &TokenBuffer) -> bool {
+    if buf.is_empty() {
+        return true;
+    }
+    if buf.last().unwrap() == Token::Space {
+        let Some(second_last) = buf.len().checked_sub(2) else {
+            return true;
+        };
+        return matches!(
+            buf.get(second_last).unwrap(),
+            Token::Newline | Token::Do | Token::Else | Token::Then
+        );
+    }
+
+    matches!(
+        buf.last().unwrap(),
+        Token::Newline | Token::Do | Token::Else | Token::Then
+    )
 }
 
 #[derive(Debug, PartialEq)]

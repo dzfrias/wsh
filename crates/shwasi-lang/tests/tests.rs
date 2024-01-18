@@ -80,3 +80,31 @@ shwasi_test!(
     ".x = 0\nwhile x < 5 do .x = x + 1 end\n.x",
     Value::Number(5.0)
 );
+
+shwasi_test!(
+    break_from_while,
+    ".x = 0
+while true do
+  if x == 10 then
+    break
+  end
+  .x = x + 1
+end
+.x",
+    Value::Number(10.0)
+);
+
+shwasi_test!(
+    continue_in_while,
+    ".x = 0
+.y = 1
+while x < 10 do
+  .x = x + 1
+  if x == 5 then
+    continue
+  end
+  .y = y * 2
+end
+.y",
+    Value::Number(512.0)
+);

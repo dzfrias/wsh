@@ -33,6 +33,17 @@ use std::{
 };
 pub use value::*;
 
+/// Macro to propagate control flow results during execution.
+macro_rules! control_flow {
+    ($expr:expr) => {
+        match $expr {
+            ControlFlow::Break => return Ok(ControlFlow::Break),
+            ControlFlow::Continue => return Ok(ControlFlow::Continue),
+            ControlFlow::Value(_) => {}
+        }
+    };
+}
+
 /// The executor of shwasi programs.
 pub struct Shell {
     env: Env,
@@ -72,7 +83,10 @@ impl Shell {
         let mut result = Value::Null;
         for stmt in program {
             result = match self.eval_stmt(&stmt) {
-                Ok(result) => result,
+                Ok(ControlFlow::Value(result)) => result,
+                // TODO: make parser have a scope stack that only conditionally allows break and
+                // continue
+                Ok(_) => panic!("BUG: should not have top-level control flow execution!"),
                 Err(_) => continue,
             }
         }
@@ -107,30 +121,31 @@ impl Shell {
         self.env.wasi_stderr(stderr);
     }
 
-    fn eval_stmt(&mut self, stmt: &Stmt) -> ShellResult<Value> {
+    fn eval_stmt(&mut self, stmt: &Stmt) -> ShellResult<ControlFlow> {
         match stmt {
-            Stmt::Pipeline(pipeline) => self.eval_pipeline(pipeline, /*capture =*/ false),
-            Stmt::Expr(expr) => self.eval_expr(expr),
+            Stmt::Pipeline(pipeline) => Ok(ControlFlow::Value(
+                self.eval_pipeline(pipeline, /*capture =*/ false)?,
+            )),
+            Stmt::Expr(expr) => Ok(ControlFlow::Value(self.eval_expr(expr)?)),
             Stmt::AliasAssign(assign) => {
                 self.eval_alias_assign(assign)?;
-                Ok(Value::Null)
+                Ok(ControlFlow::Value(Value::Null))
             }
             Stmt::Assign(assign) => {
                 self.eval_assign(assign)?;
-                Ok(Value::Null)
+                Ok(ControlFlow::Value(Value::Null))
             }
             Stmt::Export(export) => {
                 self.eval_export(export)?;
-                Ok(Value::Null)
+                Ok(ControlFlow::Value(Value::Null))
             }
-            Stmt::If(if_) => {
-                self.eval_if(if_)?;
-                Ok(Value::Null)
-            }
+            Stmt::If(if_) => self.eval_if(if_),
             Stmt::While(while_) => {
                 self.eval_while(while_)?;
-                Ok(Value::Null)
+                Ok(ControlFlow::Value(Value::Null))
             }
+            Stmt::Break => Ok(ControlFlow::Break),
+            Stmt::Continue => Ok(ControlFlow::Continue),
         }
     }
 
@@ -544,30 +559,34 @@ impl Shell {
         }
     }
 
-    fn eval_if(&mut self, if_: &If) -> ShellResult<()> {
+    fn eval_if(&mut self, if_: &If) -> ShellResult<ControlFlow> {
         let cond = self.eval_expr(&if_.condition)?;
         if cond.is_truthy() {
-            self.eval_block(&if_.body)?;
+            control_flow!(self.eval_block(&if_.body)?);
         } else if let Some(else_) = &if_.else_ {
-            self.eval_block(else_)?;
+            control_flow!(self.eval_block(else_)?);
         }
 
-        Ok(())
+        Ok(ControlFlow::Value(Value::Null))
     }
 
     fn eval_while(&mut self, while_: &While) -> ShellResult<()> {
         while self.eval_expr(&while_.condition)?.is_truthy() {
-            self.eval_block(&while_.body)?;
+            match self.eval_block(&while_.body)? {
+                ControlFlow::Break => break,
+                ControlFlow::Continue => continue,
+                ControlFlow::Value(_) => {}
+            }
         }
         Ok(())
     }
 
-    fn eval_block(&mut self, block: &[Stmt]) -> ShellResult<()> {
+    fn eval_block(&mut self, block: &[Stmt]) -> ShellResult<ControlFlow> {
         for stmt in block {
-            self.eval_stmt(stmt)?;
+            control_flow!(self.eval_stmt(stmt)?);
         }
 
-        Ok(())
+        Ok(ControlFlow::Value(Value::Null))
     }
 
     fn eval_prefix(&mut self, prefix: &PrefixExpr) -> ShellResult<Value> {
@@ -848,6 +867,13 @@ impl Default for Shell {
     fn default() -> Self {
         Self::new()
     }
+}
+
+#[derive(Debug)]
+enum ControlFlow {
+    Break,
+    Continue,
+    Value(Value),
 }
 
 /// A wrapper around a `FileDescriptor` that does not close the underlying file descriptor when

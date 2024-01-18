@@ -15,6 +15,7 @@ pub struct Parser<'src> {
     tok_idx: usize,
     current_token: Token,
     in_subcmd: bool,
+    scope_stack: Vec<Scope>,
 }
 
 impl<'src> Parser<'src> {
@@ -24,6 +25,7 @@ impl<'src> Parser<'src> {
             tok_idx: 0,
             current_token: buf.get(0).unwrap_or(Token::Eof).clone(),
             in_subcmd: false,
+            scope_stack: vec![],
         }
     }
 
@@ -69,6 +71,20 @@ impl<'src> Parser<'src> {
             Token::Export => Stmt::Export(self.parse_export()?),
             Token::If => Stmt::If(self.parse_if()?),
             Token::While => Stmt::While(self.parse_while()?),
+            Token::Break => {
+                if !self.in_loop() {
+                    return Err(self.expected("cannot break outside of loop"));
+                }
+                self.expect_next(Token::Newline, "expected newline to follow break")?;
+                Stmt::Break
+            }
+            Token::Continue => {
+                if !self.in_loop() {
+                    return Err(self.expected("cannot continue outside of loop"));
+                }
+                self.expect_next(Token::Newline, "expected newline to follow continue")?;
+                Stmt::Continue
+            }
             _ => Stmt::Expr(self.parse_expr(Precedence::Lowest)?),
         })
     }
@@ -176,7 +192,9 @@ impl<'src> Parser<'src> {
         self.expect_next(Token::Do, "expected `do` after while condition")?;
         self.opt(Token::Newline);
         self.next_token();
+        self.scope_stack.push(Scope::Loop);
         let body = self.parse_block()?;
+        assert_eq!(Scope::Loop, self.scope_stack.pop().unwrap());
         if self.current_token != Token::End {
             return Err(self.expected("expected `end` to terminate while block"));
         }
@@ -405,6 +423,13 @@ impl<'src> Parser<'src> {
             .ok_or_else(|| self.expected("expected a valid environment variable name"))
     }
 
+    fn in_loop(&self) -> bool {
+        self.scope_stack
+            .iter()
+            .rfind(|scope| **scope == Scope::Loop)
+            .is_some()
+    }
+
     fn next_token(&mut self) {
         self.tok_idx += 1;
         self.current_token = self
@@ -474,6 +499,11 @@ impl<'src> Parser<'src> {
             false
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Scope {
+    Loop,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -750,5 +780,30 @@ mod tests {
         let buf = Lexer::new(input).lex();
         let ast = Parser::new(&buf).parse().unwrap();
         insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn break_and_continue() {
+        let input = "while x == 10 do break\ncontinue\nend";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn no_break_outside_of_loop() {
+        let input = "break";
+        let buf = Lexer::new(input).lex();
+        let err = Parser::new(&buf).parse().unwrap_err();
+        assert_eq!(
+            ParseError::new(
+                0..5,
+                ParseErrorKind::UnexpectedToken {
+                    token: Token::Break,
+                    expected: "cannot break outside of loop"
+                }
+            ),
+            err
+        );
     }
 }
