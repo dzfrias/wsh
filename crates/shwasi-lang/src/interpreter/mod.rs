@@ -7,7 +7,7 @@ mod value;
 use crate::{
     ast::{
         AliasAssign, Assign, EnvSet, Export, If, InfixOp, Pipeline, PipelineEnd, PipelineEndKind,
-        PrefixOp,
+        PrefixOp, While,
     },
     interpreter::{builtins::Builtin, env::Env},
     parser::ast::{Command, Expr, InfixExpr, PrefixExpr, Stmt},
@@ -125,6 +125,10 @@ impl Shell {
             }
             Stmt::If(if_) => {
                 self.eval_if(if_)?;
+                Ok(Value::Null)
+            }
+            Stmt::While(while_) => {
+                self.eval_while(while_)?;
                 Ok(Value::Null)
             }
         }
@@ -548,6 +552,13 @@ impl Shell {
             self.eval_block(else_)?;
         }
 
+        Ok(())
+    }
+
+    fn eval_while(&mut self, while_: &While) -> ShellResult<()> {
+        while self.eval_expr(&while_.condition)?.is_truthy() {
+            self.eval_block(&while_.body)?;
+        }
         Ok(())
     }
 

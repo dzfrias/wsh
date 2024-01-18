@@ -787,4 +787,24 @@ mod tests {
         );
         assert_eq!(expect, buf);
     }
+
+    #[test]
+    fn while_() {
+        let input = "while true do echo hi end";
+        let lexer = Lexer::new(input);
+        let buf = lexer.lex();
+        let expect = token_buf!(
+            Token::While,
+            Token::BoolTrue,
+            Token::Do,
+            Token::Space,
+            Token::String("echo".into()),
+            Token::Space,
+            Token::String("hi".into()),
+            Token::Space,
+            Token::End,
+            Token::Eof
+        );
+        assert_eq!(expect, buf);
+    }
 }

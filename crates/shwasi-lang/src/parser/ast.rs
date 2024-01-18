@@ -23,6 +23,7 @@ pub enum Stmt {
     Assign(Assign),
     Export(Export),
     If(If),
+    While(While),
 }
 
 #[derive(Debug, Clone)]
@@ -30,6 +31,12 @@ pub struct If {
     pub condition: Expr,
     pub body: Vec<Stmt>,
     pub else_: Option<Vec<Stmt>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct While {
+    pub condition: Expr,
+    pub body: Vec<Stmt>,
 }
 
 #[derive(Debug, Clone)]

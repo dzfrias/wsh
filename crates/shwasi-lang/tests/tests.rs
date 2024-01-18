@@ -68,3 +68,9 @@ shwasi_test!(
 );
 
 shwasi_test!(if_stmt, "if true then .x = 1 end\n.x", Value::Number(1.0));
+
+shwasi_test!(
+    while_stmt,
+    ".x = 0\nwhile x < 5 do .x = x + 1 end\n.x",
+    Value::Number(5.0)
+);

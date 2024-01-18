@@ -4,7 +4,7 @@ mod lexer;
 
 pub use self::error::*;
 use crate::{
-    ast::{AliasAssign, Assign, EnvSet, Export, If, Pipeline, PipelineEnd, PipelineEndKind},
+    ast::{AliasAssign, Assign, EnvSet, Export, If, Pipeline, PipelineEnd, PipelineEndKind, While},
     parser::ast::{Ast, Command, Expr, InfixExpr, InfixOp, PrefixExpr, PrefixOp, Stmt},
 };
 pub use lexer::*;
@@ -69,6 +69,7 @@ impl<'src> Parser<'src> {
             Token::Ident(_) if self.peek() == Token::Assign => Stmt::Assign(self.parse_assign()?),
             Token::Export => Stmt::Export(self.parse_export()?),
             Token::If => Stmt::If(self.parse_if()?),
+            Token::While => Stmt::While(self.parse_while()?),
             _ => Stmt::Expr(self.parse_expr(Precedence::Lowest)?),
         })
     }
@@ -141,9 +142,7 @@ impl<'src> Parser<'src> {
         self.next_token();
         let condition = self.parse_expr(Precedence::Lowest)?;
         self.expect_next(Token::Then, "expected `then` after if condition")?;
-        if self.peek() == Token::Newline {
-            self.next_token();
-        }
+        self.opt(Token::Newline);
         self.next_token();
         let body = self.parse_block()?;
         Ok(If {
@@ -151,6 +150,17 @@ impl<'src> Parser<'src> {
             body,
             else_: None,
         })
+    }
+
+    fn parse_while(&mut self) -> ParseResult<While> {
+        debug_assert_eq!(self.current_token, Token::While);
+        self.next_token();
+        let condition = self.parse_expr(Precedence::Lowest)?;
+        self.expect_next(Token::Do, "expected `do` after while condition")?;
+        self.opt(Token::Newline);
+        self.next_token();
+        let body = self.parse_block()?;
+        Ok(While { condition, body })
     }
 
     fn parse_alias_assign(&mut self) -> ParseResult<AliasAssign> {
@@ -433,6 +443,15 @@ impl<'src> Parser<'src> {
             .offset(self.tok_idx)
             .expect("token index should be within bounds")
     }
+
+    fn opt(&mut self, tok: Token) -> bool {
+        if self.peek() == tok {
+            self.next_token();
+            true
+        } else {
+            false
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -690,6 +709,14 @@ mod tests {
     #[test]
     fn if_stmt() {
         let input = "if x == 10 then echo hi end\nif x == 10 then\necho hi\necho hello\nend\n";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn while_stmt() {
+        let input = "while x == 10 do echo hi end";
         let buf = Lexer::new(input).lex();
         let ast = Parser::new(&buf).parse().unwrap();
         insta::assert_debug_snapshot!(ast);
