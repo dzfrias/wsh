@@ -44,17 +44,16 @@ impl<'src> Parser<'src> {
         loop {
             let stmt = self.parse_stmt()?;
             stmts.push(stmt);
-            if self.current_token == Token::End {
+            if matches!(self.current_token, Token::End | Token::Else) {
                 break;
             }
-            if self.current_token == Token::Newline && self.peek() == Token::End {
+            if self.current_token == Token::Newline
+                && matches!(self.peek(), Token::End | Token::Else)
+            {
                 self.next_token();
                 break;
             }
             self.next_token();
-        }
-        if self.peek() != Token::Eof {
-            self.expect_next(Token::Newline, "expected newline after `end` token")?;
         }
 
         Ok(stmts)
@@ -145,11 +144,29 @@ impl<'src> Parser<'src> {
         self.opt(Token::Newline);
         self.next_token();
         let body = self.parse_block()?;
-        Ok(If {
-            condition,
-            body,
-            else_: None,
-        })
+        let current = self.current_token.clone();
+        self.opt(Token::Newline);
+        match current {
+            Token::End => Ok(If {
+                condition,
+                body,
+                else_: None,
+            }),
+            Token::Else => {
+                self.next_token();
+                let else_ = self.parse_block()?;
+                if self.current_token != Token::End {
+                    return Err(self.expected("expected `end` to terminate else block"));
+                }
+                self.opt(Token::Newline);
+                Ok(If {
+                    condition,
+                    body,
+                    else_: Some(else_),
+                })
+            }
+            _ => panic!("should not terminate with anything other than `end` or `else`!"),
+        }
     }
 
     fn parse_while(&mut self) -> ParseResult<While> {
@@ -160,6 +177,10 @@ impl<'src> Parser<'src> {
         self.opt(Token::Newline);
         self.next_token();
         let body = self.parse_block()?;
+        if self.current_token != Token::End {
+            return Err(self.expected("expected `end` to terminate while block"));
+        }
+        self.opt(Token::Newline);
         Ok(While { condition, body })
     }
 
@@ -235,6 +256,7 @@ impl<'src> Parser<'src> {
                 | Token::PercentWrite
                 | Token::PercentAppend
                 | Token::End
+                | Token::Else
         ) {
             if self.peek() == Token::Backtick && self.in_subcmd {
                 return Ok(Command {
@@ -709,6 +731,14 @@ mod tests {
     #[test]
     fn if_stmt() {
         let input = "if x == 10 then echo hi end\nif x == 10 then\necho hi\necho hello\nend\n";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn if_else() {
+        let input = "if x == 10 then echo hi else echo nice end";
         let buf = Lexer::new(input).lex();
         let ast = Parser::new(&buf).parse().unwrap();
         insta::assert_debug_snapshot!(ast);
