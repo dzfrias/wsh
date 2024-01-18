@@ -11,7 +11,7 @@ use clap::{Args as ClapArgs, Parser, Subcommand, ValueEnum};
 use crate::{
     interpreter::{
         builtins::IoStreams,
-        memfs::{self, Entry},
+        memfs::{self, Entry, EntryType},
     },
     Shell,
 };
@@ -75,7 +75,7 @@ fn diff(shell: &mut Shell, io_streams: &mut IoStreams, args: Show) -> Result<()>
         .chain(
             removals
                 .into_iter()
-                .map(|removal| (removal, DiffType::Removal)),
+                .map(|(removal, _)| (removal, DiffType::Removal)),
         )
         .find(|(p, _)| path.as_path() == p)
     else {
@@ -126,7 +126,7 @@ fn show_patch(args: &Show, io_streams: &mut IoStreams, patch: diffy::Patch<'_, s
     }
 }
 
-fn get_status(shell: &mut Shell) -> (Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>) {
+fn get_status(shell: &mut Shell) -> (Vec<PathBuf>, Vec<PathBuf>, Vec<(PathBuf, EntryType)>) {
     let mut additions = vec![];
     let mut modifications = vec![];
     let mut removals = vec![];
@@ -149,12 +149,12 @@ fn get_status(shell: &mut Shell) -> (Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>) {
             additions.push(path.to_path_buf());
         }
     });
-    shell.env.mem_fs.for_each_removal(|path| {
+    shell.env.mem_fs.for_each_removal(|path, ty| {
         if !path.exists() {
             return;
         }
 
-        removals.push(path.to_path_buf());
+        removals.push((path.to_path_buf(), ty));
     });
 
     (additions, modifications, removals)
@@ -165,20 +165,36 @@ fn status(shell: &mut Shell, io_streams: &mut IoStreams) -> Result<()> {
     if !additions.is_empty() {
         writeln!(io_streams.stdout, "Created entries:").expect("write to stdout failed!");
         for addition in additions {
+            let ty = shell.env.mem_fs.entry(&addition).unwrap().ty();
             let addition = relative_to_cwd(&addition);
-            writeln!(io_streams.stdout, "    + {}", addition.display())
-                .expect("write to stdout failed!");
+            writeln!(
+                io_streams.stdout,
+                "    + {}{}",
+                addition.display(),
+                matches!(ty, EntryType::Directory)
+                    .then_some("/")
+                    .unwrap_or("")
+            )
+            .expect("write to stdout failed!");
         }
-        if !modifications.is_empty() {
+        if !modifications.is_empty() || !removals.is_empty() {
             writeln!(io_streams.stdout).expect("write to stdout failed!");
         }
     }
     if !modifications.is_empty() {
         writeln!(io_streams.stdout, "Modified entries:").expect("write to stdout failed!");
         for modification in modifications {
+            let ty = shell.env.mem_fs.entry(&modification).unwrap().ty();
             let modification = relative_to_cwd(&modification);
-            writeln!(io_streams.stdout, "    ~ {}", modification.display())
-                .expect("write to stdout failed!");
+            writeln!(
+                io_streams.stdout,
+                "    ~ {}{}",
+                modification.display(),
+                matches!(ty, EntryType::Directory)
+                    .then_some("/")
+                    .unwrap_or("")
+            )
+            .expect("write to stdout failed!");
         }
         if !removals.is_empty() {
             writeln!(io_streams.stdout).expect("write to stdout failed!");
@@ -186,10 +202,17 @@ fn status(shell: &mut Shell, io_streams: &mut IoStreams) -> Result<()> {
     }
     if !removals.is_empty() {
         writeln!(io_streams.stdout, "Removed entries:").expect("write to stdout failed!");
-        for removal in removals {
+        for (removal, ty) in removals {
             let removal = relative_to_cwd(&removal);
-            writeln!(io_streams.stdout, "    - {}", removal.display())
-                .expect("write to stdout failed!");
+            writeln!(
+                io_streams.stdout,
+                "    - {}{}",
+                removal.display(),
+                matches!(ty, EntryType::Directory)
+                    .then_some("/")
+                    .unwrap_or("")
+            )
+            .expect("write to stdout failed!");
         }
     }
 

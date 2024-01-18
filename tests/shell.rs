@@ -244,22 +244,22 @@ shell_test!(
 shell_test!(
     memfs,
     "allow --virtual\nsource .($WASM_PATH + \"/new_file.wasm\")\nmemfs\nls | wc -l | xargs",
-    "+ hello.txt\n1"
+    "Created entries:\n    + hello.txt\n1"
 );
 shell_test!(
     memfs_rm,
     "allow --virtual\necho \"stuff\" > hello.txt\nsource .($WASM_PATH + \"/rm.wasm\")\nmemfs",
-    "- hello.txt"
+    "Removed entries:\n    - hello.txt"
 );
 shell_test!(
     memfs_new_dir,
     "allow --virtual\nsource .($WASM_PATH + \"/new_dir.wasm\")\nmemfs",
-    "+ hello/"
+    "Created entries:\n    + hello/"
 );
 shell_test!(
     memfs_rm_dir,
     "allow --virtual\nmkdir hello\nsource .($WASM_PATH + \"/rm_dir.wasm\")\nmemfs",
-    "- hello"
+    "Removed entries:\n    - hello/"
 );
 shell_test!(
     memfs_completely_virtual_dirs,
@@ -274,7 +274,7 @@ shell_test!(
 shell_test!(
     memfs_rename,
     "allow --virtual\ntouch hello.txt\nsource .($WASM_PATH + \"/rename.wasm\")\nmemfs",
-    "+ nice.txt\n- hello.txt"
+    "Created entries:\n    + nice.txt\n\nRemoved entries:\n    - hello.txt"
 );
 
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");

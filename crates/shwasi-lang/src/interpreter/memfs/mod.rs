@@ -115,15 +115,15 @@ impl MemFs {
     }
 
     /// Run `f` for each file removed in the file system.
-    pub fn for_each_removal<F>(&self, f: F)
+    pub fn for_each_removal<F>(&self, mut f: F)
     where
-        F: FnMut(&Path),
+        F: FnMut(&Path, EntryType),
     {
         self.borrow()
             .removals
             .iter()
-            .map(PathBuf::as_path)
-            .for_each(f);
+            .map(|(p, ty)| (p.as_path(), ty))
+            .for_each(|(p, ty)| f(p, *ty));
     }
 
     /// Get the number of total entries in the file system.
@@ -153,7 +153,7 @@ impl MemFs {
                 if path.is_dir() {
                     return Err(MemFsError::IsDir);
                 }
-                self.did_remove(path);
+                self.did_remove(path, EntryType::File);
                 return Ok(());
             }
             return Err(MemFsError::Noent);
@@ -164,7 +164,7 @@ impl MemFs {
         let file_borrow = file.borrow();
         let path = file_borrow.path();
         self.borrow_mut().path_table.remove(path);
-        self.did_remove(path);
+        self.did_remove(path, EntryType::File);
 
         Ok(())
     }
@@ -182,7 +182,7 @@ impl MemFs {
                 if path.is_file() {
                     return Err(MemFsError::Notdir);
                 }
-                self.did_remove(path);
+                self.did_remove(path, EntryType::Directory);
                 return Ok(());
             }
             return Err(MemFsError::Noent);
@@ -196,7 +196,7 @@ impl MemFs {
         let dir_borrow = dir.borrow();
         let path = dir_borrow.path();
         self.borrow_mut().path_table.remove(path);
-        self.did_remove(path);
+        self.did_remove(path, EntryType::Directory);
 
         Ok(())
     }
@@ -215,7 +215,7 @@ impl MemFs {
             return Err(MemFsError::AlreadyExists);
         }
         // If it's already been removed in memfs, it shouldn't exist
-        if self.borrow().removals.iter().any(|p| p == path) || !path.try_exists()? {
+        if self.borrow().removals.iter().any(|(p, _)| p == path) || !path.try_exists()? {
             return Err(MemFsError::Noent);
         }
 
@@ -253,6 +253,7 @@ impl MemFs {
                 self.borrow_mut()
                     .path_table
                     .insert(dst.to_path_buf(), Entry::File(file));
+                self.did_remove(src, EntryType::File);
             }
             Entry::Directory(dir) => {
                 if let Some(entry) = self.entry(dst) {
@@ -267,13 +268,13 @@ impl MemFs {
                 self.borrow_mut()
                     .path_table
                     .insert(dst.to_path_buf(), Entry::Directory(dir));
+                self.did_remove(src, EntryType::Directory);
             }
         }
         self.borrow_mut()
             .path_table
             .remove(src)
             .expect("src should be in path table");
-        self.did_remove(src);
 
         Ok(())
     }
@@ -363,15 +364,17 @@ impl MemFs {
         let Some(pos) = borrow
             .removals
             .iter()
-            .position(|removed| path.as_ref() == removed)
+            .position(|(removed, _)| path.as_ref() == removed)
         else {
             return;
         };
         borrow.removals.swap_remove(pos);
     }
 
-    fn did_remove(&self, path: impl AsRef<Path>) {
-        self.borrow_mut().removals.push(path.as_ref().to_path_buf());
+    fn did_remove(&self, path: impl AsRef<Path>, entry_type: EntryType) {
+        self.borrow_mut()
+            .removals
+            .push((path.as_ref().to_path_buf(), entry_type));
     }
 
     fn new_inode(&self) -> u64 {
@@ -400,6 +403,12 @@ pub enum Entry {
     File(MemFile),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EntryType {
+    Directory,
+    File,
+}
+
 impl Entry {
     /// Returns the entry inode.
     pub fn inode(&self) -> u64 {
@@ -415,6 +424,24 @@ impl Entry {
             Entry::Directory(dir) => dir.borrow().path().to_path_buf(),
             Entry::File(file) => file.borrow().path().to_path_buf(),
         }
+    }
+
+    /// Get the type of the entry.
+    pub fn ty(&self) -> EntryType {
+        match self {
+            Entry::Directory(_) => EntryType::Directory,
+            Entry::File(_) => EntryType::File,
+        }
+    }
+
+    /// Returns `true` if the entry is a directory.
+    pub fn is_dir(&self) -> bool {
+        matches!(self.ty(), EntryType::Directory)
+    }
+
+    /// Returns `true` if the entry is a file.
+    pub fn is_file(&self) -> bool {
+        matches!(self.ty(), EntryType::File)
     }
 }
 
@@ -459,7 +486,7 @@ impl WeakMemFs {
 
     pub fn for_each_removal<F>(&self, f: F)
     where
-        F: FnMut(&Path),
+        F: FnMut(&Path, EntryType),
     {
         self.upgrade().for_each_removal(f);
     }
@@ -471,7 +498,10 @@ impl WeakMemFs {
 
 #[derive(Debug, Default)]
 struct MemFsInner {
-    removals: Vec<PathBuf>,
+    /// A structure that contains everything that has been removed from the original file system.
+    /// We store EntryType along with the path because we no longer have access to its type (on
+    /// disk) once it has been removed.
+    removals: Vec<(PathBuf, EntryType)>,
     // TODO: maybe some sort of memory management would be helpful here. If a file has only been
     // read from disk, with no modifications, it can be removed from the file system and
     // deallocated. A garbage collector, of sorts.
