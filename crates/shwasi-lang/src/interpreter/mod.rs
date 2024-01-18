@@ -9,7 +9,10 @@ use crate::{
         AliasAssign, Assign, EnvSet, Export, If, InfixOp, Pipeline, PipelineEnd, PipelineEndKind,
         PrefixOp, While,
     },
-    interpreter::{builtins::Builtin, env::Env},
+    interpreter::{
+        builtins::{Builtin, IoStreams},
+        env::Env,
+    },
     parser::ast::{Command, Expr, InfixExpr, PrefixExpr, Stmt},
     Ident, Lexer, Parser,
 };
@@ -344,6 +347,7 @@ impl Shell {
                 stdout,
                 stderr.into_raw_file_descriptor(),
                 stdin.take(),
+                pipes.is_none(),
             ) else {
                 self.stdout(old_stdout);
                 self.stderr(old_stderr);
@@ -386,6 +390,7 @@ impl Shell {
         stdout: RawFileDescriptor,
         stderr: RawFileDescriptor,
         stdin: Option<os_pipe::PipeReader>,
+        to_tty: bool,
     ) -> ShellResult<i32> {
         // Priority one is aliases for commands
         // TODO: avoid clone here?
@@ -442,7 +447,15 @@ impl Shell {
 
         // Priority three is built-ins
         if let Some(builtin) = Builtin::from_name(&cmd.name) {
-            let status = builtin.run(self, args, stdout, stderr, stdin, &env)?;
+            let io_streams = IoStreams {
+                stdout,
+                stderr,
+                stdin: stdin.map(|reader| unsafe {
+                    File::from_raw_file_descriptor(reader.into_raw_file_descriptor())
+                }),
+                to_tty,
+            };
+            let status = builtin.run(self, args, io_streams, &env)?;
             return Ok(status);
         }
 

@@ -1,10 +1,12 @@
-use std::{io, path::PathBuf};
+use std::path::PathBuf;
 
 use anyhow::{ensure, Result};
 use clap::Parser;
-use filedescriptor::{AsRawFileDescriptor, IntoRawFileDescriptor};
 
-use crate::{interpreter::env::Location, Shell};
+use crate::{
+    interpreter::{builtins::IoStreams, env::Location},
+    Shell,
+};
 
 #[derive(Debug, Parser)]
 struct Args {
@@ -16,12 +18,7 @@ struct Args {
     virt: bool,
 }
 
-pub fn allow(
-    shell: &mut Shell,
-    args: Vec<String>,
-    _stdout: &mut (impl io::Write + AsRawFileDescriptor),
-    _stdin: Option<impl io::Read + IntoRawFileDescriptor>,
-) -> Result<()> {
+pub fn allow(shell: &mut Shell, args: Vec<String>, _io_streams: &mut IoStreams) -> Result<()> {
     let args = Args::try_parse_from(args)?;
     for env_var in args.env_vars {
         shell.env.allow_env(env_var);

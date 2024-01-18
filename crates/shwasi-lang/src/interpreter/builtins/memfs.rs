@@ -1,17 +1,30 @@
 use std::{
     borrow::Cow,
-    fmt, io,
+    fmt,
+    io::Write,
     path::{Path, PathBuf},
 };
 
 use anyhow::{bail, Context, Result};
 use clap::{Args as ClapArgs, Parser, Subcommand, ValueEnum};
-use filedescriptor::{AsRawFileDescriptor, IntoRawFileDescriptor};
 
 use crate::{
-    interpreter::memfs::{self, Entry},
+    interpreter::{
+        builtins::IoStreams,
+        memfs::{self, Entry},
+    },
     Shell,
 };
+
+pub fn memfs(shell: &mut Shell, args: Vec<String>, io_streams: &mut IoStreams) -> Result<()> {
+    let args = Args::try_parse_from(args)?;
+    let command = args.command.unwrap_or_default();
+
+    match command {
+        Command::Status => status(shell, io_streams),
+        Command::Show(show) => diff(shell, io_streams, show),
+    }
+}
 
 #[derive(Debug, Parser)]
 struct Args {
@@ -41,26 +54,7 @@ enum Color {
     Never,
 }
 
-pub fn memfs(
-    shell: &mut Shell,
-    args: Vec<String>,
-    stdout: &mut (impl io::Write + AsRawFileDescriptor),
-    _stdin: Option<impl io::Read + IntoRawFileDescriptor>,
-) -> Result<()> {
-    let args = Args::try_parse_from(args)?;
-    let command = args.command.unwrap_or_default();
-
-    match command {
-        Command::Status => status(shell, stdout),
-        Command::Show(show) => diff(shell, stdout, show),
-    }
-}
-
-fn diff(
-    shell: &mut Shell,
-    stdout: &mut (impl io::Write + AsRawFileDescriptor),
-    args: Show,
-) -> Result<()> {
+fn diff(shell: &mut Shell, io_streams: &mut IoStreams, args: Show) -> Result<()> {
     enum DiffType {
         Addition,
         Modification,
@@ -104,31 +98,30 @@ fn diff(
                 String::new()
             };
             let patch = diffy::create_patch(&real, contents);
-            show_patch(&args, stdout, patch);
+            show_patch(&args, io_streams, patch);
         }
         DiffType::Removal => {
             let real = std::fs::read_to_string(&path).context("error reading disk file")?;
             let patch = diffy::create_patch(&real, "");
-            show_patch(&args, stdout, patch);
+            show_patch(&args, io_streams, patch);
         }
     }
 
     Ok(())
 }
 
-fn show_patch(
-    args: &Show,
-    stdout: &mut (impl io::Write + AsRawFileDescriptor),
-    patch: diffy::Patch<'_, str>,
-) {
+fn show_patch(args: &Show, io_streams: &mut IoStreams, patch: diffy::Patch<'_, str>) {
     match args.color {
-        // TODO: check if stdout stream is main needs more information
-        Color::Always | Color::Auto => {
+        Color::Always => {
             let f = diffy::PatchFormatter::new().with_color();
-            write!(stdout, "{}", f.fmt_patch(&patch)).expect("write to stdout failed!");
+            write!(io_streams.stdout, "{}", f.fmt_patch(&patch)).expect("write to stdout failed!");
         }
-        Color::Never => {
-            write!(stdout, "{patch}").expect("write to stdout failed!");
+        Color::Auto if io_streams.to_tty => {
+            let f = diffy::PatchFormatter::new().with_color();
+            write!(io_streams.stdout, "{}", f.fmt_patch(&patch)).expect("write to stdout failed!");
+        }
+        Color::Never | Color::Auto => {
+            write!(io_streams.stdout, "{patch}").expect("write to stdout failed!");
         }
     }
 }
@@ -167,33 +160,36 @@ fn get_status(shell: &mut Shell) -> (Vec<PathBuf>, Vec<PathBuf>, Vec<PathBuf>) {
     (additions, modifications, removals)
 }
 
-fn status(shell: &mut Shell, stdout: &mut (impl io::Write + AsRawFileDescriptor)) -> Result<()> {
+fn status(shell: &mut Shell, io_streams: &mut IoStreams) -> Result<()> {
     let (additions, modifications, removals) = get_status(shell);
     if !additions.is_empty() {
-        writeln!(stdout, "Created entries:").expect("write to stdout failed!");
+        writeln!(io_streams.stdout, "Created entries:").expect("write to stdout failed!");
         for addition in additions {
             let addition = relative_to_cwd(&addition);
-            writeln!(stdout, "    + {}", addition.display()).expect("write to stdout failed!");
+            writeln!(io_streams.stdout, "    + {}", addition.display())
+                .expect("write to stdout failed!");
         }
         if !modifications.is_empty() {
-            writeln!(stdout).expect("write to stdout failed!");
+            writeln!(io_streams.stdout).expect("write to stdout failed!");
         }
     }
     if !modifications.is_empty() {
-        writeln!(stdout, "Modified entries:").expect("write to stdout failed!");
+        writeln!(io_streams.stdout, "Modified entries:").expect("write to stdout failed!");
         for modification in modifications {
             let modification = relative_to_cwd(&modification);
-            writeln!(stdout, "    ~ {}", modification.display()).expect("write to stdout failed!");
+            writeln!(io_streams.stdout, "    ~ {}", modification.display())
+                .expect("write to stdout failed!");
         }
         if !removals.is_empty() {
-            writeln!(stdout).expect("write to stdout failed!");
+            writeln!(io_streams.stdout).expect("write to stdout failed!");
         }
     }
     if !removals.is_empty() {
-        writeln!(stdout, "Removed entries:").expect("write to stdout failed!");
+        writeln!(io_streams.stdout, "Removed entries:").expect("write to stdout failed!");
         for removal in removals {
             let removal = relative_to_cwd(&removal);
-            writeln!(stdout, "    - {}", removal.display()).expect("write to stdout failed!");
+            writeln!(io_streams.stdout, "    - {}", removal.display())
+                .expect("write to stdout failed!");
         }
     }
 

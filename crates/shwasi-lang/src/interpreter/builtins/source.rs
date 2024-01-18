@@ -1,4 +1,4 @@
-use std::{fs, io, path::PathBuf};
+use std::{fs, path::PathBuf};
 
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -6,7 +6,7 @@ use filedescriptor::{
     AsRawFileDescriptor, FileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor,
 };
 
-use crate::Shell;
+use crate::{interpreter::builtins::IoStreams, Shell};
 
 #[derive(Debug, Parser)]
 struct Args {
@@ -17,9 +17,7 @@ struct Args {
 pub fn source(
     shell: &mut Shell,
     args: Vec<String>,
-    stdout: &mut (impl io::Write + AsRawFileDescriptor),
-    stderr: &mut (impl io::Write + AsRawFileDescriptor),
-    stdin: Option<impl io::Read + IntoRawFileDescriptor>,
+    io_streams: &mut IoStreams,
     env: &[(String, String)],
 ) -> Result<()> {
     let Args { file, args } = Args::try_parse_from(args)?;
@@ -32,9 +30,14 @@ pub fn source(
     if contents.len() >= 4 && &contents[0..4] == MAGIC {
         // SAFETY: `stdin` is a valid raw fd because it can from IntoRawFileDescriptor
         unsafe {
-            shell
-                .env
-                .prepare_wasi(args, stdin.map(|s| s.into_raw_file_descriptor()), env)?;
+            shell.env.prepare_wasi(
+                args,
+                io_streams
+                    .stdin
+                    .take()
+                    .map(|s| s.into_raw_file_descriptor()),
+                env,
+            )?;
         }
         let module = shwasi_parser::Parser::new(&contents)
             .read_module()
@@ -51,8 +54,8 @@ pub fn source(
     }
 
     let contents = String::from_utf8(contents).context("error reading file")?;
-    let stdout_fd = stdout.as_raw_file_descriptor();
-    let stderr_fd = stderr.as_raw_file_descriptor();
+    let stdout_fd = io_streams.stdout.as_raw_file_descriptor();
+    let stderr_fd = io_streams.stderr.as_raw_file_descriptor();
     // SAFETY: `fd` is a valid file descriptor on account of it being from an
     // `IntoRawFileDescriptor`. We later close it, so we don't leak it.
     unsafe { shell.stdout(stdout_fd) };

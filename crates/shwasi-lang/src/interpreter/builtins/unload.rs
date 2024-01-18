@@ -1,20 +1,14 @@
-use std::io;
+use std::io::Write;
 
 use anyhow::{ensure, Result};
-use filedescriptor::{AsRawFileDescriptor, IntoRawFileDescriptor};
 
-use crate::Shell;
+use crate::{interpreter::builtins::IoStreams, Shell};
 
-pub fn unload(
-    shell: &mut Shell,
-    args: Vec<String>,
-    stdout: &mut (impl io::Write + AsRawFileDescriptor),
-    _stdin: Option<impl io::Read + IntoRawFileDescriptor>,
-) -> Result<()> {
+pub fn unload(shell: &mut Shell, args: Vec<String>, io_streams: &mut IoStreams) -> Result<()> {
     ensure!(args.len() == 1, "expected no arguments");
 
     let unloaded = shell.env.unload_modules();
-    writeln!(stdout, "unloaded {unloaded} modules").expect("error writing to stdout");
+    writeln!(io_streams.stdout, "unloaded {unloaded} modules").expect("error writing to stdout");
 
     Ok(())
 }

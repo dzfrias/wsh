@@ -1,11 +1,10 @@
-use std::{fs, io, path::PathBuf};
+use std::{fs, path::PathBuf};
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use filedescriptor::{AsRawFileDescriptor, IntoRawFileDescriptor};
 use shwasi_engine::Instance;
 
-use crate::Shell;
+use crate::{interpreter::builtins::IoStreams, Shell};
 
 #[derive(Debug, Parser)]
 struct Args {
@@ -15,12 +14,7 @@ struct Args {
     export: Option<String>,
 }
 
-pub fn load(
-    shell: &mut Shell,
-    args: Vec<String>,
-    _stdout: &mut (impl io::Write + AsRawFileDescriptor),
-    _stdin: Option<impl io::Read + IntoRawFileDescriptor>,
-) -> Result<()> {
+pub fn load(shell: &mut Shell, args: Vec<String>, _io_streams: &mut IoStreams) -> Result<()> {
     let args = Args::try_parse_from(args)?;
     let contents = fs::read(args.path).context("error reading input file")?;
     let module = shwasi_parser::Parser::new(&contents)

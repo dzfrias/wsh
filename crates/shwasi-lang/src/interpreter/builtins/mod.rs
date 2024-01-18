@@ -6,9 +6,7 @@ mod source;
 mod unload;
 mod which;
 
-use std::io;
-
-use filedescriptor::{AsRawFileDescriptor, IntoRawFileDescriptor};
+use std::{fs::File, io::Write};
 
 use crate::{Shell, ShellResult};
 use allow::allow;
@@ -48,25 +46,24 @@ impl Builtin {
         &self,
         shell: &mut Shell,
         mut builtin_args: Vec<String>,
-        mut stdout: impl io::Write + AsRawFileDescriptor,
-        mut stderr: impl io::Write + AsRawFileDescriptor,
-        stdin: Option<impl io::Read + IntoRawFileDescriptor>,
+        mut io_streams: IoStreams,
         env: &[(String, String)],
     ) -> ShellResult<i32> {
         let mut args = vec![self.name().to_owned()];
         args.append(&mut builtin_args);
 
         let result = match self {
-            Self::Cd => cd(shell, args, &mut stdout, stdin),
-            Self::Source => source(shell, args, &mut stdout, &mut stderr, stdin, env),
-            Self::Load => load(shell, args, &mut stdout, stdin),
-            Self::Unload => unload(shell, args, &mut stdout, stdin),
-            Self::Which => which(shell, args, &mut stdout, stdin),
-            Self::Allow => allow(shell, args, &mut stdout, stdin),
-            Self::Memfs => memfs(shell, args, &mut stdout, stdin),
+            Self::Cd => cd(shell, args, &mut io_streams),
+            Self::Source => source(shell, args, &mut io_streams, env),
+            Self::Load => load(shell, args, &mut io_streams),
+            Self::Unload => unload(shell, args, &mut io_streams),
+            Self::Which => which(shell, args, &mut io_streams),
+            Self::Allow => allow(shell, args, &mut io_streams),
+            Self::Memfs => memfs(shell, args, &mut io_streams),
         };
         if let Err(err) = result {
-            writeln!(stderr, "{}: {err:#}", self.name()).expect("error writing to stderr");
+            writeln!(io_streams.stderr, "{}: {err:#}", self.name())
+                .expect("error writing to stderr");
         };
 
         Ok(0)
@@ -83,4 +80,12 @@ impl Builtin {
             Self::Memfs => "memfs",
         }
     }
+}
+
+#[derive(Debug)]
+pub struct IoStreams {
+    pub stdout: File,
+    pub stderr: File,
+    pub stdin: Option<File>,
+    pub to_tty: bool,
 }

@@ -1,22 +1,16 @@
-use std::{env, io, path::PathBuf};
+use std::{env, path::PathBuf};
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use filedescriptor::{AsRawFileDescriptor, IntoRawFileDescriptor};
 
-use crate::Shell;
+use crate::{interpreter::builtins::IoStreams, Shell};
 
 #[derive(Debug, Parser)]
 struct Args {
     dir: Option<PathBuf>,
 }
 
-pub fn cd(
-    _shell: &mut Shell,
-    args: Vec<String>,
-    _stdout: &mut (impl io::Write + AsRawFileDescriptor),
-    _stdin: Option<impl io::Read + IntoRawFileDescriptor>,
-) -> Result<()> {
+pub fn cd(_shell: &mut Shell, args: Vec<String>, _io_streams: &mut IoStreams) -> Result<()> {
     let args = Args::try_parse_from(args)?;
     let path = args
         .dir
