@@ -56,7 +56,7 @@ pub enum Token {
 }
 
 /// A container of tokens.
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct TokenBuffer {
     infos: Vec<TokenInfo>,
     offset: usize,
@@ -64,7 +64,7 @@ pub struct TokenBuffer {
     number_table: Vec<f64>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(PartialEq)]
 struct TokenInfo {
     pub kind: TokenKind,
     pub offset: usize,
@@ -330,6 +330,12 @@ impl PartialEq for TokenBuffer {
                 .all(|(a, b)| a.kind == b.kind)
             && self.str_table == other.str_table
             && self.number_table == other.number_table
+    }
+}
+
+impl fmt::Debug for TokenBuffer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_list().entries(self.iter()).finish()
     }
 }
 

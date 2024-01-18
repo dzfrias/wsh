@@ -179,6 +179,14 @@ impl<'src> Lexer<'src> {
                     push!(RParen);
                 }
 
+                '.' if self.strict() => match self.peek() {
+                    Some(c) if is_ident_char(c) && !c.is_ascii_digit() => {
+                        buf.skip(1);
+                        self.next();
+                        push!(Ident(token::Ident::new(self.consume_str())));
+                    }
+                    _ => push!(Token::Invalid('.')),
+                },
                 '.' if !self.strict() => match self.peek() {
                     Some('(') => {
                         buf.skip(1);
@@ -457,22 +465,15 @@ mod tests {
 
     #[test]
     fn dot_in_strict_err() {
-        let input = "if .x == y then echo hi end";
+        let input = "echo .(.)";
         let lexer = Lexer::new(input);
         let buf = lexer.lex();
         let expect = token_buf!(
-            Token::If,
-            Token::Invalid('.'),
-            Token::Ident(super::token::Ident::new("x")),
-            Token::Eq,
-            Token::Ident(super::token::Ident::new("y")),
-            Token::Then,
-            Token::Space,
             Token::String("echo".into()),
             Token::Space,
-            Token::String("hi".into()),
-            Token::Space,
-            Token::End,
+            Token::LParen,
+            Token::Invalid('.'),
+            Token::RParen,
             Token::Eof,
         );
         assert_eq!(expect, buf);
@@ -829,6 +830,22 @@ mod tests {
             Token::String("hi".into()),
             Token::Space,
             Token::End,
+            Token::Eof
+        );
+        assert_eq!(expect, buf);
+    }
+
+    #[test]
+    fn dot_idents_in_strict_mode() {
+        let input = ".(.x + 1)";
+        let lexer = Lexer::new(input);
+        let buf = lexer.lex();
+        let expect = token_buf!(
+            Token::LParen,
+            Token::Ident(Ident::new("x")),
+            Token::Plus,
+            Token::Number(1.0),
+            Token::RParen,
             Token::Eof
         );
         assert_eq!(expect, buf);
