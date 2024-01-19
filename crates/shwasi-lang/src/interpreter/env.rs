@@ -74,7 +74,11 @@ impl Env {
     }
 
     pub fn get(&self, sym: &Ident) -> Option<&Value> {
-        self.env.iter().rev().find_map(|env| env.get(sym))
+        self.env
+            .last()
+            .unwrap()
+            .get(sym)
+            .or_else(|| self.env.first().unwrap().get(sym))
     }
 
     pub fn set(&mut self, sym: Ident, value: Value) {
