@@ -6,12 +6,13 @@ use crate::Ident;
 
 #[derive(Debug, Clone)]
 pub struct Ast {
-    statements: Vec<Stmt>,
+    pub defs: Vec<Def>,
+    pub statements: Vec<Stmt>,
 }
 
 impl Ast {
-    pub fn new(statements: Vec<Stmt>) -> Self {
-        Self { statements }
+    pub fn new(statements: Vec<Stmt>, defs: Vec<Def>) -> Self {
+        Self { statements, defs }
     }
 }
 
@@ -26,6 +27,33 @@ pub enum Stmt {
     While(While),
     Break,
     Continue,
+    Return,
+}
+
+#[derive(Debug, Clone)]
+pub struct Def {
+    pub name: Ident,
+    pub body: Vec<Stmt>,
+    pub args: DefArgs,
+}
+
+#[derive(Debug, Clone)]
+pub struct DefArgs(pub Vec<DefArg>);
+
+#[derive(Debug, Clone)]
+pub enum DefArg {
+    Positional {
+        name: Ident,
+    },
+    Named {
+        name: Ident,
+        alias: Option<char>,
+        default: SmolStr,
+    },
+    Boolean {
+        name: Ident,
+        alias: char,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -45,6 +73,7 @@ pub struct While {
 pub struct Assign {
     pub name: Ident,
     pub expr: Expr,
+    pub global: bool,
 }
 
 #[derive(Debug, Clone)]

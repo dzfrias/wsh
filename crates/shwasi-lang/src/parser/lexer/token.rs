@@ -24,6 +24,8 @@ pub enum Token {
     QuestionMark,
     Dollar,
     Tilde,
+    Colon,
+    ColonAssign,
 
     LParen,
     RParen,
@@ -41,8 +43,10 @@ pub enum Token {
     Bang,
 
     If,
+    Def,
     While,
     Break,
+    Return,
     Continue,
     Do,
     Then,
@@ -176,9 +180,13 @@ impl TokenBuffer {
             TokenKind::PercentWrite => Token::PercentWrite,
             TokenKind::PercentAppend => Token::PercentAppend,
             TokenKind::Tilde => Token::Tilde,
+            TokenKind::ColonAssign => Token::ColonAssign,
             TokenKind::Invalid => Token::Invalid(*payload as u8 as char),
             TokenKind::Break => Token::Break,
+            TokenKind::Return => Token::Return,
             TokenKind::Continue => Token::Continue,
+            TokenKind::Def => Token::Def,
+            TokenKind::Colon => Token::Colon,
             TokenKind::Eof => Token::Eof,
         };
 
@@ -270,6 +278,8 @@ pub(super) enum TokenKind {
     QuestionMark,
     Dollar,
     Tilde,
+    Colon,
+    ColonAssign,
 
     LParen,
     RParen,
@@ -287,8 +297,10 @@ pub(super) enum TokenKind {
     Bang,
 
     If,
+    Def,
     While,
     Break,
+    Return,
     Continue,
     Do,
     Then,
@@ -393,8 +405,10 @@ impl Token {
             Token::Bang => TokenKind::Bang,
             Token::Pipe => TokenKind::Pipe,
             Token::PercentPipe => TokenKind::PercentPipe,
+            Token::Colon => TokenKind::Colon,
 
             Token::If => TokenKind::If,
+            Token::Def => TokenKind::Def,
             Token::Then => TokenKind::Then,
             Token::Else => TokenKind::Else,
             Token::End => TokenKind::End,
@@ -418,8 +432,10 @@ impl Token {
             Token::Tilde => TokenKind::Tilde,
             Token::Alias => TokenKind::Alias,
             Token::While => TokenKind::While,
+            Token::ColonAssign => TokenKind::ColonAssign,
             Token::Do => TokenKind::Do,
             Token::Break => TokenKind::Break,
+            Token::Return => TokenKind::Return,
             Token::Continue => TokenKind::Continue,
         }
     }
@@ -427,6 +443,7 @@ impl Token {
     /// Get the expected size of the token in as a string.
     pub fn size(&self) -> usize {
         match self {
+            Token::Eof | Token::Space => 0,
             Token::Assign
             | Token::LParen
             | Token::RParen
@@ -444,7 +461,8 @@ impl Token {
             | Token::Lt
             | Token::Write
             | Token::Dollar
-            | Token::Tilde => 1,
+            | Token::Tilde
+            | Token::Colon => 1,
             Token::Eq
             | Token::Ne
             | Token::If
@@ -454,18 +472,18 @@ impl Token {
             | Token::PercentPipe
             | Token::PercentWrite
             | Token::PercentAppend
-            | Token::Do => 2,
+            | Token::Do
+            | Token::ColonAssign => 2,
+            Token::End | Token::Def => 3,
             Token::Then | Token::Else | Token::BoolTrue => 4,
             Token::Alias | Token::BoolFalse | Token::While | Token::Break => 5,
+            Token::Export | Token::Return => 6,
             Token::Continue => 8,
-            Token::Export => 6,
-            Token::End => 3,
             Token::Ident(Ident(s)) | Token::String(s) => s.len(),
             Token::QuotedString(s) => s.len() + 2,
             Token::UnquotedString(s) => s.len() + 1,
             // TODO: perhaps the ryu crate can be used here?
             Token::Number(n) => n.to_string().len(),
-            Token::Eof | Token::Space => 0,
         }
     }
 
@@ -474,6 +492,7 @@ impl Token {
         Some(match kw {
             "if" if last_newline => Token::If,
             "while" if last_newline => Token::While,
+            "def" if last_newline => Token::Def,
             "do" => Token::Do,
             "then" => Token::Then,
             "else" => Token::Else,
@@ -481,6 +500,7 @@ impl Token {
             "alias" if last_newline => Token::Alias,
             "export" if last_newline => Token::Export,
             "break" if last_newline => Token::Break,
+            "return" if last_newline => Token::Return,
             "continue" if last_newline => Token::Continue,
             _ => return None,
         })
@@ -491,7 +511,7 @@ impl Token {
     /// A common example of this is the `if` keyword, which allows expression tokens after it,
     /// until the `then` keyword is encountered.
     pub(super) fn is_mode_switch_kw(&self) -> bool {
-        matches!(self, Token::If | Token::While)
+        matches!(self, Token::If | Token::While | Token::Def)
     }
 }
 
@@ -520,8 +540,11 @@ impl fmt::Display for Token {
             Token::Le => write!(f, "le"),
             Token::Ge => write!(f, "ge"),
             Token::QuestionMark => write!(f, "question mark"),
+            Token::Colon => write!(f, "colon"),
             Token::Bang => write!(f, "bang"),
             Token::If => write!(f, "if"),
+            Token::Return => write!(f, "return"),
+            Token::Def => write!(f, "def"),
             Token::While => write!(f, "while"),
             Token::Do => write!(f, "do"),
             Token::Alias => write!(f, "alias"),
@@ -536,6 +559,7 @@ impl fmt::Display for Token {
             Token::Dollar => write!(f, "dollar"),
             Token::Append => write!(f, "append"),
             Token::PercentAppend => write!(f, "percent append"),
+            Token::ColonAssign => write!(f, "colon assign"),
             Token::Backtick => write!(f, "backtick"),
             Token::Invalid(c) => write!(f, "invalid `{c}`"),
             Token::Space => write!(f, "space"),

@@ -4,10 +4,14 @@ mod lexer;
 
 pub use self::error::*;
 use crate::{
-    ast::{AliasAssign, Assign, EnvSet, Export, If, Pipeline, PipelineEnd, PipelineEndKind, While},
+    ast::{
+        AliasAssign, Assign, Def, DefArg, DefArgs, EnvSet, Export, If, Pipeline, PipelineEnd,
+        PipelineEndKind, While,
+    },
     parser::ast::{Ast, Command, Expr, InfixExpr, InfixOp, PrefixExpr, PrefixOp, Stmt},
 };
 pub use lexer::*;
+use smol_str::SmolStr;
 
 #[derive(Debug)]
 pub struct Parser<'src> {
@@ -31,14 +35,21 @@ impl<'src> Parser<'src> {
 
     pub fn parse(mut self) -> ParseResult<Ast> {
         let mut stmts = vec![];
+        let mut defs = vec![];
 
         while self.current_token != Token::Eof {
+            if self.current_token == Token::Def {
+                let def = self.parse_def()?;
+                defs.push(def);
+                self.next_token();
+                continue;
+            }
             let stmt = self.parse_stmt()?;
             stmts.push(stmt);
             self.next_token();
         }
 
-        Ok(Ast::new(stmts))
+        Ok(Ast::new(stmts, defs))
     }
 
     fn parse_block(&mut self) -> ParseResult<Vec<Stmt>> {
@@ -67,7 +78,9 @@ impl<'src> Parser<'src> {
                 Stmt::Pipeline(self.parse_pipeline()?)
             }
             Token::Alias => Stmt::AliasAssign(self.parse_alias_assign()?),
-            Token::Ident(_) if self.peek() == Token::Assign => Stmt::Assign(self.parse_assign()?),
+            Token::Ident(_) if matches!(self.peek(), Token::Assign | Token::ColonAssign) => {
+                Stmt::Assign(self.parse_assign()?)
+            }
             Token::Export => Stmt::Export(self.parse_export()?),
             Token::If => Stmt::If(self.parse_if()?),
             Token::While => Stmt::While(self.parse_while()?),
@@ -84,6 +97,13 @@ impl<'src> Parser<'src> {
                 }
                 self.expect_next(Token::Newline, "expected newline to follow continue")?;
                 Stmt::Continue
+            }
+            Token::Return => {
+                if !self.in_func() {
+                    return Err(self.expected("cannot return outside of function"));
+                }
+                self.expect_next(Token::Newline, "expected newline to follow return")?;
+                Stmt::Return
             }
             _ => Stmt::Expr(self.parse_expr(Precedence::Lowest)?),
         })
@@ -202,6 +222,93 @@ impl<'src> Parser<'src> {
         Ok(While { condition, body })
     }
 
+    fn parse_def(&mut self) -> ParseResult<Def> {
+        debug_assert_eq!(self.current_token, Token::Def);
+        self.next_token();
+        let name = self
+            .buf
+            .get_ident(self.tok_idx)
+            .ok_or_else(|| self.expected("expected function name"))?;
+        let args = if self.peek() == Token::Colon {
+            self.next_token();
+            let mut args = vec![];
+            self.next_token();
+            args.push(self.parse_arg()?);
+            while self.peek() != Token::Do {
+                self.next_token();
+                let def_arg = self.parse_arg()?;
+                args.push(def_arg);
+            }
+            DefArgs(args)
+        } else {
+            DefArgs(vec![])
+        };
+        self.expect_next(
+            Token::Do,
+            "expected `do` token to follow function signature",
+        )?;
+        self.opt(Token::Newline);
+        self.next_token();
+        self.scope_stack.push(Scope::Function);
+        let body = self.parse_block()?;
+        assert_eq!(Scope::Function, self.scope_stack.pop().unwrap());
+        if self.current_token != Token::End {
+            return Err(self.expected("expected `end` to terminate function block"));
+        }
+        self.opt(Token::Newline);
+        Ok(Def { name, body, args })
+    }
+
+    fn parse_arg(&mut self) -> ParseResult<DefArg> {
+        let name = self
+            .buf
+            .get_ident(self.tok_idx)
+            .ok_or_else(|| self.expected("expected argument name"))?;
+        let alias = if self.peek() == Token::Pipe {
+            self.next_token();
+            self.next_token();
+            let alias = self
+                .buf
+                .get_ident(self.tok_idx)
+                .ok_or_else(|| self.expected("expected argument name"))?;
+            let mut chars = alias.chars();
+            let alias = chars.next().unwrap();
+            if chars.next().is_some() {
+                return Err(self.expected("expected arg alias to be one character long"));
+            }
+            Some(alias)
+        } else {
+            None
+        };
+        let default = if self.peek() == Token::Assign {
+            self.next_token();
+            self.next_token();
+            let default = self
+                .buf
+                .get_ident(self.tok_idx)
+                .map(|ident| SmolStr::new::<&str>(&ident))
+                .or_else(|| self.buf.get_string(self.tok_idx))
+                .ok_or_else(|| self.expected("expected argument name"))?;
+            Some(default)
+        } else {
+            None
+        };
+        Ok(match (alias, default) {
+            (None, None) => DefArg::Positional { name },
+            (None, Some(default)) => DefArg::Named {
+                name,
+                alias: None,
+                default,
+            },
+            (Some(alias), None) => DefArg::Boolean { name, alias },
+            (Some(alias), Some(default)) => DefArg::Named {
+                name,
+                alias: Some(alias),
+                default,
+            },
+        })
+    }
+
     fn parse_alias_assign(&mut self) -> ParseResult<AliasAssign> {
         debug_assert_eq!(self.current_token, Token::Alias);
         self.next_token();
@@ -238,12 +345,13 @@ impl<'src> Parser<'src> {
         debug_assert!(matches!(self.current_token, Token::Ident(_)));
 
         let name = self.buf.get_ident(self.tok_idx).unwrap();
-        self.expect_next(Token::Assign, "BUG: should be unreachable")
-            .unwrap();
+        // Peek should either be Token::Assign or Token::ColonAssign
+        let global = matches!(self.peek(), Token::ColonAssign);
+        self.next_token();
         self.next_token();
         let expr = self.parse_expr(Precedence::Lowest)?;
         self.next_token();
-        Ok(Assign { name, expr })
+        Ok(Assign { name, expr, global })
     }
 
     fn parse_backtick(&mut self) -> ParseResult<Pipeline> {
@@ -430,6 +538,13 @@ impl<'src> Parser<'src> {
             .is_some()
     }
 
+    fn in_func(&self) -> bool {
+        self.scope_stack
+            .iter()
+            .rfind(|scope| **scope == Scope::Function)
+            .is_some()
+    }
+
     fn next_token(&mut self) {
         self.tok_idx += 1;
         self.current_token = self
@@ -504,6 +619,7 @@ impl<'src> Parser<'src> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Scope {
     Loop,
+    Function,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -801,6 +917,89 @@ mod tests {
                 ParseErrorKind::UnexpectedToken {
                     token: Token::Break,
                     expected: "cannot break outside of loop"
+                }
+            ),
+            err
+        );
+    }
+
+    #[test]
+    fn function_simple() {
+        let input = "def f do\necho hello world\nend\n";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn global() {
+        let input = ".x := hi";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn no_return_outside_of_function() {
+        let input = "return";
+        let buf = Lexer::new(input).lex();
+        let err = Parser::new(&buf).parse().unwrap_err();
+        assert_eq!(
+            ParseError::new(
+                0..6,
+                ParseErrorKind::UnexpectedToken {
+                    token: Token::Return,
+                    expected: "cannot return outside of function"
+                }
+            ),
+            err
+        );
+    }
+
+    #[test]
+    fn function_args() {
+        let input = "def f : x y do echo hello world end";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn named_function_args() {
+        let input = "def f : x color|c=always fast|f do echo hello world end";
+        let buf = Lexer::new(input).lex();
+        let ast = Parser::new(&buf).parse().unwrap();
+        insta::assert_debug_snapshot!(ast);
+    }
+
+    #[test]
+    fn arg_aliases_error_with_more_than_one_character() {
+        let input = "def f : color|color2=always do echo hello world end";
+        let buf = Lexer::new(input).lex();
+        let err = Parser::new(&buf).parse().unwrap_err();
+        assert_eq!(
+            ParseError::new(
+                14..20,
+                ParseErrorKind::UnexpectedToken {
+                    token: Token::Ident(Ident::new("color2")),
+                    expected: "expected arg alias to be one character long"
+                }
+            ),
+            err
+        );
+    }
+
+    #[test]
+    fn function_args_needs_one_if_indicated() {
+        let input = "def f : do echo hello world end";
+        let buf = Lexer::new(input).lex();
+        let err = Parser::new(&buf).parse().unwrap_err();
+        assert_eq!(
+            ParseError::new(
+                8..10,
+                ParseErrorKind::UnexpectedToken {
+                    token: Token::Do,
+                    expected: "expected argument name"
                 }
             ),
             err

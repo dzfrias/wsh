@@ -1,0 +1,60 @@
+---
+source: crates/shwasi-lang/src/parser/mod.rs
+expression: ast
+---
+Ast {
+    defs: [
+        Def {
+            name: Ident(
+                "f",
+            ),
+            body: [
+                Pipeline(
+                    Pipeline {
+                        env: [],
+                        commands: [
+                            Command {
+                                name: "echo",
+                                args: [
+                                    String(
+                                        "hello",
+                                    ),
+                                    String(
+                                        "world",
+                                    ),
+                                ],
+                                merge_stderr: false,
+                            },
+                        ],
+                        write: None,
+                    },
+                ),
+            ],
+            args: DefArgs(
+                [
+                    Positional {
+                        name: Ident(
+                            "x",
+                        ),
+                    },
+                    Named {
+                        name: Ident(
+                            "color",
+                        ),
+                        alias: Some(
+                            'c',
+                        ),
+                        default: "always",
+                    },
+                    Boolean {
+                        name: Ident(
+                            "fast",
+                        ),
+                        alias: 'f',
+                    },
+                ],
+            ),
+        },
+    ],
+    statements: [],
+}

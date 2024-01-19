@@ -122,7 +122,6 @@ shell_test!(
     "alias foo = echo\nfoo hi | wc -c | xargs",
     "3"
 );
-// TODO: figure out how to test setting environment variables for processes spawned by the shell
 shell_test!(get_environment_variables, "echo $SHWASI_ENV", "test");
 // Could fail if the user has $FOO_NO_ASSIGN set in their environment.
 shell_test!(environment_variables_default, "echo $FOO_NO_ASSIGN", "");
@@ -155,6 +154,28 @@ shell_test!(
     "echo .(!1) %| wc -l | xargs",
     "1"
 );
+shell_test!(simple_functions, "def f do echo hi end\nf", "hi");
+shell_test!(
+    function_with_args,
+    "def f : x y do echo .x .y end\nf hello world",
+    "hello world"
+);
+shell_test!(
+    function_with_named_args,
+    "def f : x color|c=always force|f do echo .x .color .force end\nf hello -c never -f\nf goodbye\nf greetings -f",
+    "hello never true\ngoodbye always false\ngreetings always true"
+);
+shell_test!(
+    return_from_func,
+    "def f do\nreturn\necho hi\nend\nf | wc -l | xargs",
+    "0"
+);
+shell_test!(
+    functions_do_not_leak_scope,
+    "def f do .x = 1 end\nf\necho .x",
+    @stderr "shwasi: unbound: `x`"
+);
+shell_test!(global_vars, "def f do .hello := 1 end\nf\necho .hello", "1");
 
 shell_test!(wasm, "load .($WASM_PATH + \"/fib.wasm\")\nfib 10", "55");
 shell_test!(

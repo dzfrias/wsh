@@ -7,6 +7,7 @@ use std::{
     mem::ManuallyDrop,
     path::{Path, PathBuf},
     pin::Pin,
+    rc::Rc,
 };
 
 use filedescriptor::{AsRawFileDescriptor, FromRawFileDescriptor, RawFileDescriptor};
@@ -15,7 +16,7 @@ use shwasi_wasi::{sync::file::File, WasiCtxBuilder, WasiDir, WasiError, WasiFile
 use smol_str::SmolStr;
 
 use crate::{
-    ast::Pipeline,
+    ast::{Def, Pipeline},
     interpreter::{
         memfs::{Entry, MemFs},
         value::Value,
@@ -26,7 +27,8 @@ use crate::{
 pub struct Env {
     pub mem_fs: MemFs,
 
-    env: HashMap<Ident, Value>,
+    env: Vec<HashMap<Ident, Value>>,
+    funcs: HashMap<Ident, Rc<Def>>,
     aliases: HashMap<SmolStr, Pipeline>,
     store: Store,
     modules: Vec<Instance>,
@@ -49,7 +51,8 @@ impl Env {
         // necessary.
         shwasi_wasi::sync::snapshots::preview_1::link(&mut store, &mut wasi_ctx);
         Self {
-            env: HashMap::new(),
+            env: vec![HashMap::new()],
+            funcs: HashMap::new(),
             aliases: HashMap::new(),
             modules: Vec::new(),
             store,
@@ -61,12 +64,37 @@ impl Env {
         }
     }
 
+    pub fn get_func(&self, sym: &Ident) -> Option<Rc<Def>> {
+        self.funcs.get(sym).cloned()
+    }
+
+    pub fn add_funcs(&mut self, funcs: Vec<Def>) {
+        self.funcs
+            .extend(funcs.into_iter().map(|f| (f.name.clone(), Rc::new(f))));
+    }
+
     pub fn get(&self, sym: &Ident) -> Option<&Value> {
-        self.env.get(sym)
+        self.env.iter().rev().find_map(|env| env.get(sym))
     }
 
     pub fn set(&mut self, sym: Ident, value: Value) {
-        self.env.insert(sym, value);
+        self.env.last_mut().unwrap().insert(sym, value);
+    }
+
+    pub fn set_global(&mut self, sym: Ident, value: Value) {
+        self.env.first_mut().unwrap().insert(sym, value);
+    }
+
+    pub fn push_scope(&mut self) {
+        self.env.push(HashMap::new());
+    }
+
+    pub fn pop_scope(&mut self) {
+        if self.env.is_empty() {
+            panic!("BUG: cannot pop last (global) scope!");
+        }
+
+        self.env.pop();
     }
 
     pub fn set_alias(&mut self, name: SmolStr, expr: Pipeline) {

@@ -65,6 +65,10 @@ impl<'src> Lexer<'src> {
                     }
                 }
 
+                ':' if self.peek() == Some('=') => {
+                    self.next();
+                    push!(ColonAssign);
+                }
                 '=' if self.peek() == Some('=') && self.strict() => {
                     self.next();
                     push!(Eq);
@@ -89,6 +93,7 @@ impl<'src> Lexer<'src> {
                 '-' if self.strict() => push!(Minus),
                 '*' if self.strict() => push!(Star),
                 '/' if self.strict() => push!(Slash),
+                ':' if self.strict() => push!(Colon),
                 '#' => {
                     let s = self.consume_while(|c| c != '\n');
                     buf.skip(s.len() + 1);
@@ -211,7 +216,7 @@ impl<'src> Lexer<'src> {
                                 push!(Space);
                             }
                         }
-                        if self.peek() == Some('=') {
+                        if matches!(self.peek(), Some('=' | ':')) {
                             self.mode = Mode::Strict {
                                 ending: Token::Newline,
                                 count: 0,
@@ -846,6 +851,29 @@ mod tests {
             Token::Plus,
             Token::Number(1.0),
             Token::RParen,
+            Token::Eof
+        );
+        assert_eq!(expect, buf);
+    }
+
+    #[test]
+    fn def_and_colon() {
+        let input = "def f : x y do echo hello end";
+        let lexer = Lexer::new(input);
+        let buf = lexer.lex();
+        let expect = token_buf!(
+            Token::Def,
+            Token::Ident(Ident::new("f")),
+            Token::Colon,
+            Token::Ident(Ident::new("x")),
+            Token::Ident(Ident::new("y")),
+            Token::Do,
+            Token::Space,
+            Token::String("echo".into()),
+            Token::Space,
+            Token::String("hello".into()),
+            Token::Space,
+            Token::End,
             Token::Eof
         );
         assert_eq!(expect, buf);

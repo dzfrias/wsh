@@ -3,6 +3,7 @@ source: crates/shwasi-lang/src/parser/mod.rs
 expression: ast
 ---
 Ast {
+    defs: [],
     statements: [
         If(
             If {

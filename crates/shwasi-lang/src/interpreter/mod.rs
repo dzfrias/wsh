@@ -6,8 +6,8 @@ mod value;
 
 use crate::{
     ast::{
-        AliasAssign, Assign, EnvSet, Export, If, InfixOp, Pipeline, PipelineEnd, PipelineEndKind,
-        PrefixOp, While,
+        AliasAssign, Assign, Def, DefArg, EnvSet, Export, If, InfixOp, Pipeline, PipelineEnd,
+        PipelineEndKind, PrefixOp, While,
     },
     interpreter::{
         builtins::{Builtin, IoStreams},
@@ -42,6 +42,7 @@ macro_rules! control_flow {
         match $expr {
             ControlFlow::Break => return Ok(ControlFlow::Break),
             ControlFlow::Continue => return Ok(ControlFlow::Continue),
+            ControlFlow::Return => return Ok(ControlFlow::Return),
             ControlFlow::Value(_) => {}
         }
     };
@@ -72,7 +73,7 @@ impl Shell {
     #[allow(clippy::result_unit_err)]
     pub fn run(&mut self, src: &str, name: &str) -> ShellResult<Option<Value>> {
         let buf = Lexer::new(src).lex();
-        let program = match Parser::new(&buf).parse() {
+        let mut program = match Parser::new(&buf).parse() {
             Ok(program) => program,
             Err(err) => {
                 // SAFETY: `stderr` must be a valid file descriptor
@@ -82,13 +83,12 @@ impl Shell {
                 return Err(());
             }
         };
+        self.env.add_funcs(std::mem::take(&mut program.defs));
 
         let mut result = Value::Null;
         for stmt in program {
             result = match self.eval_stmt(&stmt) {
                 Ok(ControlFlow::Value(result)) => result,
-                // TODO: make parser have a scope stack that only conditionally allows break and
-                // continue
                 Ok(_) => panic!("BUG: should not have top-level control flow execution!"),
                 Err(_) => continue,
             }
@@ -143,12 +143,10 @@ impl Shell {
                 Ok(ControlFlow::Value(Value::Null))
             }
             Stmt::If(if_) => self.eval_if(if_),
-            Stmt::While(while_) => {
-                self.eval_while(while_)?;
-                Ok(ControlFlow::Value(Value::Null))
-            }
+            Stmt::While(while_) => self.eval_while(while_),
             Stmt::Break => Ok(ControlFlow::Break),
             Stmt::Continue => Ok(ControlFlow::Continue),
+            Stmt::Return => Ok(ControlFlow::Return),
         }
     }
 
@@ -420,7 +418,13 @@ impl Shell {
         // This is where we take ownership of the file descriptor, which will be closed when
         // `stdout` is dropped.
         let stdout = File::from_raw_file_descriptor(stdout);
-        let stderr = File::from_raw_file_descriptor(stderr);
+        let mut stderr = File::from_raw_file_descriptor(stderr);
+
+        if let Some(func) = self.env.get_func(&Ident::new(&cmd.name)) {
+            self.run_func(cmd, &func, &mut stderr)?;
+            return Ok(0);
+        }
+
         let env = env
             .iter()
             .map(|env_set| -> ShellResult<(String, String)> {
@@ -501,9 +505,13 @@ impl Shell {
         Ok(())
     }
 
-    fn eval_assign(&mut self, Assign { name, expr }: &Assign) -> ShellResult<()> {
+    fn eval_assign(&mut self, Assign { name, expr, global }: &Assign) -> ShellResult<()> {
         let val = self.eval_expr(expr)?;
-        self.env.set(name.clone(), val);
+        if *global {
+            self.env.set_global(name.clone(), val);
+        } else {
+            self.env.set(name.clone(), val);
+        }
 
         Ok(())
     }
@@ -583,15 +591,16 @@ impl Shell {
         Ok(ControlFlow::Value(Value::Null))
     }
 
-    fn eval_while(&mut self, while_: &While) -> ShellResult<()> {
+    fn eval_while(&mut self, while_: &While) -> ShellResult<ControlFlow> {
         while self.eval_expr(&while_.condition)?.is_truthy() {
             match self.eval_block(&while_.body)? {
                 ControlFlow::Break => break,
                 ControlFlow::Continue => continue,
+                ControlFlow::Return => return Ok(ControlFlow::Return),
                 ControlFlow::Value(_) => {}
             }
         }
-        Ok(())
+        Ok(ControlFlow::Value(Value::Null))
     }
 
     fn eval_block(&mut self, block: &[Stmt]) -> ShellResult<ControlFlow> {
@@ -855,6 +864,67 @@ impl Shell {
         Ok(())
     }
 
+    fn run_func(&mut self, cmd: &Command, func: &Def, stderr: &mut File) -> ShellResult<()> {
+        self.env.push_scope();
+        let matches = match clap::Command::new(cmd.name.to_string())
+            .no_binary_name(true)
+            .args(func.args.0.iter().map(|arg| {
+                match arg {
+                    DefArg::Positional { name } => clap::Arg::new(name.to_string()).required(true),
+                    DefArg::Named {
+                        name,
+                        alias,
+                        default,
+                    } => {
+                        let mut arg = clap::Arg::new(name.to_string())
+                            .default_value(default.to_string())
+                            .required(false)
+                            .long(name.to_string());
+                        if let Some(alias) = alias {
+                            arg = arg.short(*alias);
+                        }
+                        arg
+                    }
+                    DefArg::Boolean { name, alias } => clap::Arg::new(name.to_string())
+                        .required(false)
+                        .action(clap::ArgAction::SetTrue)
+                        .long(name.to_string())
+                        .short(*alias),
+                }
+            }))
+            .try_get_matches_from(
+                cmd.args
+                    .iter()
+                    .map(|arg| -> ShellResult<String> { Ok(self.eval_expr(arg)?.to_string()) })
+                    .collect::<ShellResult<Vec<_>>>()?,
+            ) {
+            Ok(matches) => matches,
+            Err(err) => {
+                write!(stderr, "{err}").expect("write to stderr failed!");
+                return Err(());
+            }
+        };
+        for arg in &func.args.0 {
+            let (name, value) = match arg {
+                DefArg::Positional { name } | DefArg::Named { name, .. } => {
+                    let p = matches.get_one::<String>(name).unwrap();
+                    (name.clone(), Value::String(p.into()))
+                }
+                DefArg::Boolean { name, .. } => {
+                    let value = matches.get_flag(name);
+                    (name.clone(), Value::Bool(value))
+                }
+            };
+            self.env.set(name, value);
+        }
+        if let Err(err) = self.eval_block(&func.body) {
+            self.env.pop_scope();
+            return Err(err);
+        }
+        self.env.pop_scope();
+        Ok(())
+    }
+
     fn print_err(&mut self, err: ShellError) {
         let mut stderr = unsafe { OpenFileDescriptor::new(self.stderr) };
         writeln!(stderr, "shwasi: {err}").expect("write to stderr failed!");
@@ -886,6 +956,7 @@ impl Default for Shell {
 enum ControlFlow {
     Break,
     Continue,
+    Return,
     Value(Value),
 }
 
