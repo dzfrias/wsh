@@ -28,7 +28,7 @@ pub fn source(
     // Automatically detect if the file is a wasm file. If it is, we can run it directly. This
     // check involves reading the first 4 bytes of the file for the special wasm magic number.
     if contents.len() >= 4 && &contents[0..4] == MAGIC {
-        // SAFETY: `stdin` is a valid raw fd because it can from IntoRawFileDescriptor
+        // SAFETY: `stdin` is a valid raw fd because it came from a File
         unsafe {
             shell.env.prepare_wasi(
                 args,
@@ -50,6 +50,8 @@ pub fn source(
         start
             .call(shell.env.store_mut(), ())
             .context("error running wasm file")?;
+        // We don't need one-off `source`s to be kept in the store, it just wastes memory
+        instance.free(shell.env.store_mut());
         return Ok(());
     }
 

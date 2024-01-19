@@ -18,7 +18,7 @@ use self::ops::*;
 use crate::{
     store::{Addr, Func, Global},
     value::{Value, ValueUntyped},
-    Error, Instance, Ref, Store,
+    Error, Instance, Ref, Store, StoreField,
 };
 
 /// The WebAssembly virtual machine that this crate uses internally.
@@ -904,7 +904,7 @@ impl<'s> Vm<'s> {
 }
 
 pub fn eval_const_expr(
-    globals: &[Global],
+    globals: &StoreField<Global>,
     module_globals: &[Addr<Global>],
     module_funcs: &[Addr<Func>],
     expr: &InitExpr,
@@ -914,9 +914,7 @@ pub fn eval_const_expr(
         InitExpr::I64Const(i64) => (*i64).into(),
         InitExpr::F32Const(f32) => f32::from_bits(f32.raw()).into(),
         InitExpr::F64Const(f64) => f64::from_bits(f64.raw()).into(),
-        InitExpr::ConstGlobalGet(idx) => globals[module_globals[*idx as usize].as_usize()]
-            .value
-            .into(),
+        InitExpr::ConstGlobalGet(idx) => globals[module_globals[*idx as usize]].value.into(),
         InitExpr::RefNull(_) => None.into(),
         InitExpr::RefFunc(idx) => Some(module_funcs[*idx as usize].as_usize() as u32).into(),
     }

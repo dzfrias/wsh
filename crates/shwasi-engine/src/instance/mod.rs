@@ -26,17 +26,18 @@ pub const PAGE_SIZE: usize = 65536;
 /// An instance of a WebAssembly [`Module`].
 ///
 /// These are cheap to clone, and should be passed around freely.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Instance {
     inner: Arc<InstanceInner>,
 }
 
 /// Inner representation of an [`Instance`].
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq)]
 struct InstanceInner {
     types: Vec<FuncType>,
     exports: Vec<Export>,
 
+    imports: Vec<ExternVal>,
     func_addrs: Vec<Addr<Func>>,
     table_addrs: Vec<Addr<Table>>,
     mem_addrs: Vec<Addr<Memory>>,
@@ -93,6 +94,7 @@ impl Instance {
                 .into());
             }
 
+            inst.imports.push(extern_val);
             match extern_val {
                 ExternVal::Func(addr) => inst.func_addrs.push(addr),
                 ExternVal::Table(addr) => inst.table_addrs.push(addr),
@@ -102,12 +104,24 @@ impl Instance {
         }
         let imported_globals = inst.global_addrs.clone();
 
-        // Put types in the instance
         inst.types = module.types;
 
-        // Allocate indices, as FuncInst's can only be put in store after module is put in an Rc
         let fsi_min = store.functions.len();
-        let fsi_max = fsi_min + module.functions.len();
+        let mut fsi_max = fsi_min + module.functions.len();
+        // This is pretty horrific. We need to allocate the addresses **before** the instance is
+        // put in an Arc, because functions require an Instance. To get around this, we
+        // pre-add the addresses to the instance to where they _should_ be. For now, this works,
+        // but this could EASILY break if the allocation strategy got slightly more complex, and
+        // relies on a lot of implementation details.
+        for i in store
+            .functions
+            .all_free()
+            .into_iter()
+            .take(module.functions.len())
+        {
+            inst.func_addrs.push(Addr::new(i));
+            fsi_max -= 1;
+        }
         for addr in fsi_min..fsi_max {
             inst.func_addrs.push(Addr::new(addr));
         }
@@ -319,6 +333,46 @@ impl Instance {
     pub fn get_mem<'a>(&self, store: &'a mut Store) -> Option<&'a mut Memory> {
         let mem_addr = self.mem_addrs().first()?;
         Some(&mut store.memories[*mem_addr])
+    }
+
+    /// Drop everything in the store related to this Instance.
+    pub fn free(self, store: &mut Store) {
+        for addr in self
+            .func_addrs()
+            .iter()
+            .filter(|addr| !self.inner.imports.contains(&ExternVal::Func(**addr)))
+        {
+            store.functions.free(*addr);
+        }
+        for data in self.data_addrs() {
+            store.datas.free(*data);
+        }
+        for mem in self
+            .mem_addrs()
+            .iter()
+            .filter(|addr| !self.inner.imports.contains(&ExternVal::Mem(**addr)))
+        {
+            store.memories.free(*mem);
+        }
+        for global in self
+            .global_addrs()
+            .iter()
+            .filter(|addr| !self.inner.imports.contains(&ExternVal::Global(**addr)))
+        {
+            store.globals.free(*global);
+        }
+        for elem in self.elem_addrs() {
+            store.elems.free(*elem);
+        }
+        for tbl in self
+            .table_addrs()
+            .iter()
+            .filter(|addr| !self.inner.imports.contains(&ExternVal::Table(**addr)))
+        {
+            store.tables.free(*tbl);
+        }
+
+        store.instances.retain(|_, inst| inst != &self);
     }
 }
 
