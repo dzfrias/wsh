@@ -28,6 +28,7 @@ use std::{
 };
 
 use itertools::Itertools;
+use path_absolutize::Absolutize;
 use shwasi_wasi::{
     Errno, ErrorExt, FdFlags, FileType, OFlags, OpenResult, ReaddirCursor, ReaddirEntity, WasiDir,
     WasiError, WasiFile,
@@ -574,21 +575,21 @@ impl MemDir {
 
     /// Unlink a file at `path`.
     pub fn unlink(&self, path: &str) -> Result<(), MemFsError> {
-        let path = self.borrow().path.join(path);
+        let path = self.absolute(path);
         self.borrow().fs.unlink(path)?;
         Ok(())
     }
 
     /// Create a directory at `path`.
     pub fn create_dir(&self, path: &str) -> Result<MemDir, MemFsError> {
-        let path = self.borrow().path.join(path);
+        let path = self.absolute(path);
         let dir = self.borrow().fs.create_dir(path)?;
         Ok(dir)
     }
 
     /// Remove a directory at `path`.
     pub fn remove_dir(&self, path: &str) -> Result<(), MemFsError> {
-        let path = self.borrow().path.join(path);
+        let path = self.absolute(path);
         self.borrow().fs.remove_dir(path)?;
 
         Ok(())
@@ -603,7 +604,7 @@ impl MemDir {
         write: bool,
         fd_flags: FdFlags,
     ) -> Result<Entry, MemFsError> {
-        let path = self.borrow().path().join(path);
+        let path = self.absolute(path);
         self.borrow().fs.open(path, oflags, read, write, fd_flags)
     }
 
@@ -617,25 +618,11 @@ impl MemDir {
             && path.components().count() - 1 == self.borrow().path().components().count()
     }
 
-    fn create(
-        &self,
-        path: &str,
-        fd_flags: FdFlags,
-        oflags: OFlags,
-        read: bool,
-    ) -> Result<MemFile, MemFsError> {
-        let path = self.borrow().path.join(path);
-        let f = self
-            .borrow()
-            .fs
-            .create_file(path, oflags.contains(OFlags::EXCLUSIVE))?;
-
-        // All OFlags::CREATE opens have write or append already set
-        f.open(fd_flags, true, read);
-        if oflags.contains(OFlags::TRUNCATE) {
-            f.truncate();
-        }
-        Ok(f.clone())
+    fn absolute(&self, path: impl AsRef<Path>) -> PathBuf {
+        path.as_ref()
+            .absolutize_from(self.borrow().path())
+            .unwrap()
+            .to_path_buf()
     }
 
     pub fn borrow(&self) -> RwLockReadGuard<MemDirInner> {
@@ -1185,5 +1172,21 @@ mod tests {
         assert_eq!(Path::new("/hi"), dir.borrow().path());
         assert_eq!(Path::new("/hi.txt"), file.borrow().path());
         assert_eq!(3, fs.entry_count());
+    }
+
+    #[test]
+    fn get_with_parent_path() {
+        let fs = MemFs::new();
+        let dir = fs.create_dir("/hello").unwrap();
+        fs.create_file("/hello.txt", false).unwrap();
+        assert!(dir
+            .open(
+                "../hello.txt",
+                OFlags::empty(),
+                true,
+                false,
+                FdFlags::empty(),
+            )
+            .is_ok());
     }
 }

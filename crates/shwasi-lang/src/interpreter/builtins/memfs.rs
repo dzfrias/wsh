@@ -7,6 +7,7 @@ use std::{
 
 use anyhow::{bail, Context, Result};
 use clap::{Args as ClapArgs, Parser, Subcommand, ValueEnum};
+use path_absolutize::Absolutize;
 
 use crate::{
     interpreter::{
@@ -62,7 +63,7 @@ fn diff(shell: &mut Shell, io_streams: &mut IoStreams, args: Show) -> Result<()>
     }
     let (additions, modifications, removals) = get_status(shell);
     let path = std::env::current_dir()
-        .map(|dir| Cow::Owned(dir.join(&args.path)))
+        .map(|dir| Cow::Owned(args.path.absolutize_from(dir).unwrap().to_path_buf()))
         .unwrap_or(Cow::Borrowed(&args.path));
     let Some((path, diff_ty)) = additions
         .into_iter()
