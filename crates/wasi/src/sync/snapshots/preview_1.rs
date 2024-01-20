@@ -33,7 +33,7 @@ fn run_in_dummy_executor<F: std::future::Future>(f: F) -> Result<F::Output, Erro
     match f.as_mut().poll(&mut cx) {
         std::task::Poll::Ready(val) => Ok(val),
         std::task::Poll::Pending => {
-            Err(ErrorKind::WasiError(anyhow::anyhow!("cannot wait on pending future")).into())
+            Err(ErrorKind::Custom(anyhow::anyhow!("cannot wait on pending future")).into())
         }
     }
 }
@@ -60,7 +60,7 @@ macro_rules! impl_add_to_linker_for_funcs {
                         HostFunc::wrap(move |module: Instance, store: &mut Store, $($arg : $typ,)*| -> Result<$ret, Error> {
                             let result = async {
                                 let memory = module.get_mem(store).ok_or_else(|| {
-                                    ErrorKind::WasiError(anyhow::anyhow!("no memory found"))
+                                    ErrorKind::Custom(anyhow::anyhow!("no memory found"))
                                 })?;
                                 let guest_memory = ShwasiGuestMemory::new(&memory.data);
                                 wasi_common::snapshots::preview_1::wasi_snapshot_preview1::$fname(
@@ -69,7 +69,7 @@ macro_rules! impl_add_to_linker_for_funcs {
                                     $($arg,)*
                                 )
                                 .await
-                                .map_err(|e| ErrorKind::WasiError(e).into())
+                                .map_err(|e| ErrorKind::Custom(e).into())
                             };
                             run_in_dummy_executor(result)?
                         }),

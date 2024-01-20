@@ -56,8 +56,8 @@ pub enum ErrorKind {
         got: Vec<ValType>,
     },
 
-    #[error("wasi error: {0}")]
-    WasiError(anyhow::Error),
+    #[error("error: {0}")]
+    Custom(anyhow::Error),
 }
 
 /// A convenience type alias for `Result<T, Error>`.

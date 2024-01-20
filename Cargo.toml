@@ -14,6 +14,8 @@ clap = { version = "4.4.6", features = ["derive"] }
 dhat = { version = "0.3.2", optional = true }
 shwasi-lang = { path = "crates/shwasi-lang" }
 shwasi-engine = { path = "crates/shwasi-engine", default-features = false }
+shwasi-parser = { path = "crates/shwasi-parser" }
+shwasi-wasi = { path = "crates/wasi" }
 shwasi-cmp = { path = "crates/shwasi-cmp" }
 dirs = "5.0.1"
 reedline.workspace = true

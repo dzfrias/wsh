@@ -6,7 +6,7 @@ mod private {
     pub trait Sealed {}
 }
 
-pub trait IntoHostFunc<Params, Results>: Send + Sync {
+pub trait IntoHostFunc<Params, Results> {
     #[doc(hidden)]
     type Params: WasmParams;
     #[doc(hidden)]
@@ -18,7 +18,7 @@ pub trait IntoHostFunc<Params, Results>: Send + Sync {
 
 impl<F, R> IntoHostFunc<(), R> for F
 where
-    F: FnMut(Instance, &mut Store) -> R + Send + Sync + 'static,
+    F: FnMut(Instance, &mut Store) -> R + 'static,
     R: WasmResults,
 {
     type Params = ();
@@ -62,7 +62,7 @@ macro_rules! impl_host_func {
         paste::paste! {
             impl<F, $([<T $T>]),*, R> IntoHostFunc<($([<T $T>]),* ,), R> for F
             where
-                F: FnMut(Instance, &mut Store, $([<T $T>]),*) -> R + Send + Sync + 'static,
+                F: FnMut(Instance, &mut Store, $([<T $T>]),*) -> R + 'static,
                 R: WasmResults,
                 ($([<T $T>],)*): WasmParams,
                 $(

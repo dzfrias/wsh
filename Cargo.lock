@@ -2072,6 +2072,7 @@ dependencies = [
  "shwasi-engine",
  "shwasi-lang",
  "shwasi-parser",
+ "shwasi-wasi",
  "tempdir",
  "test-log",
  "tracing",

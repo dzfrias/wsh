@@ -1,7 +1,7 @@
 mod into_host_func;
 mod wasm_func;
 
-use std::sync::Arc;
+use std::rc::Rc;
 
 use shwasi_parser::{
     validate, Code, ElementKind, ExternalKind, FuncType, GlobalType, ImportKind, InstrBuffer,
@@ -28,7 +28,7 @@ pub const PAGE_SIZE: usize = 65536;
 /// These are cheap to clone, and should be passed around freely.
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Instance {
-    inner: Arc<InstanceInner>,
+    inner: Rc<InstanceInner>,
 }
 
 /// Inner representation of an [`Instance`].
@@ -192,7 +192,7 @@ impl Instance {
         }));
 
         let inst = Instance {
-            inner: Arc::new(inst),
+            inner: Rc::new(inst),
         };
 
         // Allocate functions into store

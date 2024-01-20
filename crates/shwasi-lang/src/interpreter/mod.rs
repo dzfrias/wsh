@@ -21,6 +21,7 @@ use filedescriptor::{
     AsRawFileDescriptor, FileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor,
     RawFileDescriptor,
 };
+use shwasi_engine::{HostFunc, Instance, Store};
 use shwasi_parser::ValType;
 use smol_str::SmolStr;
 #[cfg(unix)]
@@ -122,6 +123,49 @@ impl Shell {
     pub(self) unsafe fn stderr(&mut self, stderr: RawFileDescriptor) {
         self.stderr = stderr;
         self.env.wasi_stderr(stderr);
+    }
+
+    #[allow(clippy::result_unit_err)]
+    pub fn load(&mut self, src: &str, name: &str, export: &str) -> ShellResult<()> {
+        let buf = Lexer::new(src).lex();
+        let mut program = match Parser::new(&buf).parse() {
+            Ok(program) => program,
+            Err(err) => {
+                let mut stderr = unsafe { OpenFileDescriptor::new(self.stderr) };
+                err.write_to(src, name, &mut stderr);
+                self.set_status(1);
+                return Err(());
+            }
+        };
+        let def_names = program
+            .defs
+            .iter()
+            .map(|def| def.name.clone())
+            .collect::<Vec<_>>();
+        self.env.add_funcs(std::mem::take(&mut program.defs));
+        for def_name in &def_names {
+            let def = self.env.get_func(def_name).unwrap();
+            // TODO: this is quite ugly and not idiomatic. Just abuses raw pointers to get around
+            // ownership rules so the closure can have a mutable access to `self`. This should be
+            // safe, because Shell owns the store, so it's impossible for the closure to execute if
+            // `self` doesn't exist. Either way, this is abusing an escape hatch. The only other
+            // way I know how to do this is to wrap `Shell` in an `Rc<RefCell<..>>`, which doesn't
+            // use `unsafe`, but pretty much ruins all the existing shell code and would require a
+            // huge rewrite for such a small ask.
+            let s = self as *mut Shell;
+            self.env.store_mut().define(
+                export,
+                def_name,
+                HostFunc::wrap(move |_: Instance, _: &mut Store| unsafe {
+                    let mut stderr =
+                        File::from_raw_file_descriptor(std::io::stderr().as_raw_file_descriptor());
+                    let _ = (*s).run_func(&[], &def, &mut stderr).is_err();
+                    stderr.into_raw_file_descriptor();
+                }),
+            );
+        }
+
+        Ok(())
     }
 
     fn eval_stmt(&mut self, stmt: &Stmt) -> ShellResult<ControlFlow> {
@@ -254,6 +298,14 @@ impl Shell {
                 .map_err(|err| {
                     self.print_err(err);
                 })?;
+        // We create a thread to do reads here so that we always make progress on io. Deadlocks
+        // might occur when pipes gets completely filled, and this thread makes sure that doesn't
+        // happen.
+        let handle = std::thread::spawn(move || -> io::Result<Vec<u8>> {
+            let mut output = vec![];
+            read_end.read_to_end(&mut output)?;
+            Ok(output)
+        });
         let stderr_fd = unsafe { OpenFileDescriptor::new(self.stderr) };
         let stderr_dup = self.dup_fd(stderr_fd)?;
         // SAFETY: `write_end` is a newly created pipe, so this shold be fine. `run_pipeline`
@@ -266,14 +318,12 @@ impl Shell {
                 None,
             )?;
         }
-        let mut out = vec![];
         // This should not block as long as `run_pipeline` closes `write_end`
-        read_end
-            .read_to_end(&mut out)
+        let out = handle
+            .join()
+            .unwrap()
             .map_err(ShellError::PipeError)
-            .map_err(|err| {
-                self.print_err(err);
-            })?;
+            .map_err(|err| self.print_err(err))?;
         let mut out = String::from_utf8_lossy(&out).to_string();
         while out.ends_with('\n') || out.ends_with('\r') {
             out.truncate(out.len() - 1);
@@ -421,7 +471,7 @@ impl Shell {
         let mut stderr = File::from_raw_file_descriptor(stderr);
 
         if let Some(func) = self.env.get_func(&Ident::new(&cmd.name)) {
-            self.run_func(cmd, &func, &mut stderr)?;
+            self.run_func(&cmd.args, &func, &mut stderr)?;
             return Ok(0);
         }
 
@@ -864,9 +914,9 @@ impl Shell {
         Ok(())
     }
 
-    fn run_func(&mut self, cmd: &Command, func: &Def, stderr: &mut File) -> ShellResult<()> {
+    fn run_func(&mut self, args: &[Expr], func: &Def, stderr: &mut File) -> ShellResult<()> {
         self.env.push_scope();
-        let matches = match clap::Command::new(cmd.name.to_string())
+        let matches = match clap::Command::new(func.name.to_string())
             .no_binary_name(true)
             .args(func.args.0.iter().map(|arg| {
                 match arg {
@@ -893,8 +943,7 @@ impl Shell {
                 }
             }))
             .try_get_matches_from(
-                cmd.args
-                    .iter()
+                args.iter()
                     .map(|arg| -> ShellResult<String> { Ok(self.eval_expr(arg)?.to_string()) })
                     .collect::<ShellResult<Vec<_>>>()?,
             ) {
