@@ -38,7 +38,9 @@ members = [
 ]
 
 [profile.release]
-debug = 1
+debug = true
+strip = "none"
+split-debuginfo = "packed"
 
 [dev-dependencies]
 assert_cmd.workspace = true

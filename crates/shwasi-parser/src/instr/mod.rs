@@ -56,7 +56,7 @@ pub enum BlockType {
 ///
 /// Note that `end` does not appear in the spec. It is used to keep track of the end of the block,
 /// and is an index into the [`InstrBuffer`].
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Block {
     pub ty: BlockType,
     pub end: usize,
@@ -64,8 +64,8 @@ pub struct Block {
 
 /// Internally used in order to encode instructions efficiently in the buffer.
 #[derive(Debug, Clone)]
-struct InstrInfo {
-    opcode: Opcode,
+pub struct InstrInfo {
+    pub opcode: Opcode,
     /// The payload of the instruction. This is used to encode the immediates of an instruction.
     ///
     /// Instructions with no immediates will have a payload of 0. Instructions with a **four-bytes**
@@ -73,7 +73,7 @@ struct InstrInfo {
     ///
     /// Otherwise, `payload` is a pointer to a different vector in the buffer that contains the
     /// information.
-    payload: u32,
+    pub payload: u32,
 }
 
 impl InstrBuffer {
@@ -384,6 +384,17 @@ impl InstrBuffer {
         Some(unsafe { self.get_unchecked(idx) })
     }
 
+    /// This is not the recommended way to access items in the buffer, and only should be used for
+    /// the most critical performance cases. See `get` and `get_unchecked` for variants that return
+    /// `Instruction`s.
+    ///
+    /// # Safety
+    /// This function has undefined behavior when `idx >= self.len()`.
+    #[inline(always)]
+    pub unsafe fn get_info_unchecked(&self, idx: usize) -> &InstrInfo {
+        unsafe { self.infos.get_unchecked(idx) }
+    }
+
     /// Get an instruction from the buffer.
     ///
     /// # Safety
@@ -536,10 +547,10 @@ impl InstrBuffer {
             Opcode::I64TruncSatF64S => Instruction::I64TruncSatF64S,
             Opcode::I64TruncSatF64U => Instruction::I64TruncSatF64U,
 
-            Opcode::Block => Instruction::Block(self.blocks[info.payload as usize]),
-            Opcode::Loop => Instruction::Loop(self.blocks[info.payload as usize]),
+            Opcode::Block => Instruction::Block(self.blocks[info.payload as usize].clone()),
+            Opcode::Loop => Instruction::Loop(self.blocks[info.payload as usize].clone()),
             Opcode::If => {
-                let (block, else_) = self.block_elses[info.payload as usize];
+                let (block, else_) = self.block_elses[info.payload as usize].clone();
                 Instruction::If { block, else_ }
             }
 
@@ -773,6 +784,51 @@ impl InstrBuffer {
             }
             _ => panic!("cannot patch else of {}", info.opcode),
         }
+    }
+
+    /// # Safety
+    /// This function should only be called with memory instructions.
+    #[inline(always)]
+    pub unsafe fn get_memarg(&self, payload: u32) -> MemArg {
+        unsafe { std::mem::transmute(*self.u64s.get_unchecked(payload as usize)) }
+    }
+
+    /// # Safety
+    /// This function should only be called with block instructions.
+    #[inline(always)]
+    pub unsafe fn get_block(&self, payload: u32) -> &Block {
+        unsafe { self.blocks.get_unchecked(payload as usize) }
+    }
+
+    /// # Safety
+    /// This function should only be called with the [`Opcode::If`] instruction.
+    #[inline(always)]
+    pub unsafe fn get_block_else(&self, payload: u32) -> &(Block, Option<usize>) {
+        unsafe { self.block_elses.get_unchecked(payload as usize) }
+    }
+
+    /// # Safety
+    /// This function should only be called with instructions that involve two u32's as their data.
+    #[inline(always)]
+    pub unsafe fn get_pair(&self, payload: u32) -> (u32, u32) {
+        let u64 = self.u64s[payload as usize];
+        let p1 = (u64 >> 32) as u32;
+        let p2 = (u64 & 0xFFFFFFFF) as u32;
+        (p2, p1)
+    }
+
+    /// # Safety
+    /// This function should only be called with the [`Opcode::BrTable`] instruction.
+    #[inline(always)]
+    pub unsafe fn get_br_table(&self, payload: u32) -> BrTable {
+        unsafe { self.br_tables.get_unchecked(payload as usize) }.clone()
+    }
+
+    /// # Safety
+    /// This function should only be called with u64 instructions.
+    #[inline(always)]
+    pub unsafe fn get_u64(&self, payload: u32) -> u64 {
+        unsafe { *self.u64s.get_unchecked(payload as usize) }
     }
 
     #[inline(always)]
