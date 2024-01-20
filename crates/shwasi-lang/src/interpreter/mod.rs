@@ -389,28 +389,24 @@ impl Shell {
             };
             self.stderr(stderr);
             let stderr = unsafe { OpenFileDescriptor::new(stderr) };
-            let Ok(result) = self.run_command(
+            let result = self.run_command(
                 cmd,
                 &pipeline.env,
                 stdout,
                 stderr.into_raw_file_descriptor(),
                 stdin.take(),
                 pipes.is_none(),
-            ) else {
-                self.stdout(old_stdout);
-                self.stderr(old_stderr);
-                if let Some((out, _)) = pipes {
-                    stdin = Some(out);
-                }
-                last_result = self.last_status;
-                continue;
-            };
+            );
             self.stdout(old_stdout);
             self.stderr(old_stderr);
-
             if let Some((out, _)) = pipes {
                 stdin = Some(out);
             }
+
+            let Ok(result) = result else {
+                last_result = self.last_status;
+                continue;
+            };
 
             #[cfg(unix)]
             {
@@ -521,8 +517,8 @@ impl Shell {
             command.stdin(stdin);
         }
 
-        let out = command
-            .output()
+        let mut child = command
+            .spawn()
             .map_err(|err| match err.kind() {
                 io::ErrorKind::NotFound => {
                     self.set_status(127);
@@ -533,17 +529,23 @@ impl Shell {
             .map_err(|err| {
                 self.print_err(err);
             })?;
+        // Final command in pipeline
+        if to_tty {
+            let out = child.wait().unwrap();
+            #[cfg(unix)]
+            let out = out
+                .code()
+                .or_else(|| out.signal().map(|s| s + 128))
+                .unwrap_or(0);
+            #[cfg(windows)]
+            let out = out.status.code().unwrap();
 
-        #[cfg(unix)]
-        let out = out
-            .status
-            .code()
-            .or_else(|| out.status.signal().map(|s| s + 128))
-            .unwrap_or(0);
-        #[cfg(windows)]
-        let out = out.status.code().unwrap();
+            return Ok(out);
+        }
 
-        Ok(out)
+        // TODO: I'm sure that this is not correct. Commands in a pipe should definitely not always
+        // have a 0 status...
+        Ok(0)
     }
 
     fn eval_alias_assign(
