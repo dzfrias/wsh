@@ -7,7 +7,7 @@ use std::mem;
 use num_enum::TryFromPrimitive;
 #[cfg(all(target_arch = "aarch64", feature = "jit"))]
 use rustc_hash::FxHashMap;
-use shwasi_parser::{BlockType, InitExpr, InstrBuffer, Instruction, MemArg, NumLocals};
+use shwasi_parser::{BlockType, InitExpr, InstrBuffer, Instruction, MemArg};
 use thiserror::Error;
 #[cfg(debug_assertions)]
 use tracing::trace;
@@ -190,15 +190,15 @@ impl<'s> Vm<'s> {
         // reference out of convenience.
         match &mut unsafe { &mut *f } {
             Func::Module(f) => {
+                let pushed_locals = f
+                    .code
+                    .locals
+                    .iter()
+                    .map(|local| local.num as usize)
+                    .sum::<usize>();
                 // Args should already be on the stack (due to validation), so push locals
-                let mut pushed_locals = 0;
-                for NumLocals { num, locals_type } in &f.code.locals {
-                    for _ in 0..*num {
-                        // Locals are initialized to their default value
-                        self.push(ValueUntyped::type_default(*locals_type));
-                        pushed_locals += 1;
-                    }
-                }
+                self.stack
+                    .resize(self.stack.len() + pushed_locals, ValueUntyped::default());
 
                 // Base pointer, used to get locals and arguments
                 let bp = self.stack.len() - f.ty.0.len() - pushed_locals;
@@ -394,9 +394,7 @@ impl<'s> Vm<'s> {
                     }
                 }
                 I::Br { depth } => {
-                    for _ in 0..depth {
-                        self.labels.pop();
-                    }
+                    self.labels.truncate(self.labels.len() - depth as usize);
                     // Due to validation, there must be at least one label on the stack, so unwrap
                     // is safe here.
                     let label = self.labels.last().unwrap();
@@ -410,9 +408,7 @@ impl<'s> Vm<'s> {
                         .depths
                         .get(i as usize)
                         .unwrap_or(&br_table.default_depth);
-                    for _ in 0..depth {
-                        self.labels.pop();
-                    }
+                    self.labels.truncate(self.labels.len() - depth as usize);
                     let label = self.labels.last().unwrap();
                     ip = label.ra;
                     self.clear_block(label.stack_height, label.arity);
@@ -421,9 +417,7 @@ impl<'s> Vm<'s> {
                 I::BrIf { depth } => {
                     let cond = self.pop::<bool>();
                     if cond {
-                        for _ in 0..depth {
-                            self.labels.pop();
-                        }
+                        self.labels.truncate(self.labels.len() - depth as usize);
                         let label = self.labels.last().unwrap();
                         ip = label.ra;
                         self.clear_block(label.stack_height, label.arity);
@@ -663,12 +657,14 @@ impl<'s> Vm<'s> {
                     unsafe { self.call_raw(*f_addr) }?;
                 }
                 I::LocalGet { idx } => {
-                    let val = self.stack[self.frame.bp + idx as usize];
+                    // SAFETY: due to validation, this access must be valid
+                    let val = unsafe { *self.stack.get_unchecked(self.frame.bp + idx as usize) };
                     self.push(val);
                 }
                 I::LocalSet { idx } => {
                     let val = self.pop();
-                    self.stack[self.frame.bp + idx as usize] = val;
+                    // SAFETY: due to validation, this access must be valid
+                    *unsafe { self.stack.get_unchecked_mut(self.frame.bp + idx as usize) } = val;
                 }
                 I::LocalTee { idx } => {
                     self.stack[self.frame.bp + (idx as usize)] = *self.stack.last().unwrap();

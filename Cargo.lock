@@ -2119,7 +2119,6 @@ dependencies = [
  "anyhow",
  "ariadne",
  "atty",
- "cap-std 2.0.1",
  "clap",
  "diffy",
  "dirs 5.0.1",
@@ -2165,6 +2164,7 @@ name = "shwasi-wasi"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "cap-std 2.0.1",
  "shwasi-engine",
  "wasi-cap-std-sync",
  "wasi-common",

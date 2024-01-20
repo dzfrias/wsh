@@ -1,7 +1,9 @@
 [package]
 name = "shwasi"
 version = "0.1.0"
+authors = ["Diego Frias <styx5242@gmail.com>"]
 edition = "2021"
+default-run = "shwasi"
 
 [[test]]
 name = "integration"

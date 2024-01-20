@@ -10,6 +10,7 @@ wasmtime-wasi = "16.0.0"
 wiggle = { version = "16.0.0", default-features = false, features = ["wiggle_metadata"] }
 shwasi-engine = { path = "../shwasi-engine" }
 wasi-cap-std-sync = "16.0.0"
+cap-std = "2.0.1"
 
 [lints]
 workspace = true

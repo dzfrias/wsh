@@ -12,7 +12,7 @@ use std::{
 
 use filedescriptor::{AsRawFileDescriptor, FromRawFileDescriptor, RawFileDescriptor};
 use shwasi_engine::{Instance, Store, WasmFuncUntyped};
-use shwasi_wasi::{sync::file::File, WasiCtxBuilder, WasiDir, WasiError, WasiFile};
+use shwasi_wasi::{cap_std, sync::file::File, WasiCtxBuilder, WasiDir, WasiError, WasiFile};
 use smol_str::SmolStr;
 
 use crate::{

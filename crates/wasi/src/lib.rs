@@ -16,3 +16,11 @@ pub use wasi_common::{
     WasiDir, WasiFile,
 };
 pub use wasmtime_wasi::{sync::WasiCtxBuilder, WasiCtx};
+
+pub mod cap_std {
+    pub use ::cap_std::*;
+}
+
+pub mod wiggle {
+    pub use ::wiggle::*;
+}

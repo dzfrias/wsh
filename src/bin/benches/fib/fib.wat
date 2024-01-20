@@ -1,0 +1,22 @@
+(module
+  (import "bench" "start" (func $bench_start))
+  (import "bench" "end" (func $bench_end))
+
+  (func $fib (export "fib") (param i32) (result i32)
+    (if (i32.lt_u (local.get 0) (i32.const 2))
+      (return (local.get 0))
+    )
+    (i32.sub (local.get 0) (i32.const 2))
+    (call $fib)
+    (i32.sub (local.get 0) (i32.const 1))
+    (call $fib)
+    (i32.add)
+  )
+
+  (func (export "_start")
+    (call $bench_start)
+    (call $fib (i32.const 30))
+    (drop)
+    (call $bench_end)
+  )
+)
