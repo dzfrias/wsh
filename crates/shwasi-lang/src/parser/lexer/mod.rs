@@ -126,6 +126,13 @@ impl<'src> Lexer<'src> {
                         push!(PercentWrite);
                     }
                 }
+                '^' if self
+                    .peek()
+                    .is_some_and(|c| is_ident_char(c) && !c.is_ascii_digit()) =>
+                {
+                    self.next();
+                    push!(Ident(token::Ident::new(self.consume_ident())));
+                }
                 '$' => {
                     push!(Dollar);
                     if self
@@ -874,6 +881,20 @@ mod tests {
             Token::String("hello".into()),
             Token::Space,
             Token::End,
+            Token::Eof
+        );
+        assert_eq!(expect, buf);
+    }
+
+    #[test]
+    fn escape_idents() {
+        let input = "echo ^end";
+        let lexer = Lexer::new(input);
+        let buf = lexer.lex();
+        let expect = token_buf!(
+            Token::String("echo".into()),
+            Token::Space,
+            Token::Ident(Ident::new("end")),
             Token::Eof
         );
         assert_eq!(expect, buf);
