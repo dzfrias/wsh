@@ -310,7 +310,7 @@ impl<'s> Vm<'s> {
         macro_rules! store {
             ($encode:ty, $offset:expr) => {{
                 let val = self.pop::<$encode>();
-                let offset = self.pop::<u32>() + $offset;
+                let offset = self.pop::<u32>().saturating_add($offset);
                 self.store(offset, val.to_le_bytes())?;
             }};
         }
