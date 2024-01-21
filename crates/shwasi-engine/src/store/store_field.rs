@@ -42,6 +42,11 @@ impl<T> StoreField<T> {
         }
     }
 
+    pub fn reserve(&mut self, additional: usize) {
+        self.inner.reserve(additional);
+        self.free.reserve(additional);
+    }
+
     /// Get an iterator yielding all indices into the store that are free.
     pub fn all_free(&self) -> impl IntoIterator<Item = usize> + '_ {
         self.free.iter_ones()

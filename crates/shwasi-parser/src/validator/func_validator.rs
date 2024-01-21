@@ -131,7 +131,7 @@ impl<'a> FuncValidator<'a> {
             .get(func.index as usize)
             .context("code section type not found")?;
         // Locals begin with function parameters
-        self.current_func.locals = ty.0.clone();
+        self.current_func.locals = ty.0.to_vec();
         self.current_func
             .locals
             // Should be flattened because `code.locals` contains the number of locals of a

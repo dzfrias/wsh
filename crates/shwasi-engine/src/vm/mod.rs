@@ -947,7 +947,7 @@ mod tests {
         ([$($ret:ident),*] => [$($instr:expr),* $(,)?] $(with locals [$($local:ident * $n:expr),*])?, [$($val:expr),* $(,)?]) => {
             let mut store = Store::default();
             let module = Module {
-                types: vec![FuncType(vec![], vec![$(ValType::$ret),*])],
+                types: vec![FuncType(vec![].into(), vec![$(ValType::$ret),*].into())],
                 functions: vec![Function { index: 0 }],
                 codes: vec![Code {
                     body: vec![

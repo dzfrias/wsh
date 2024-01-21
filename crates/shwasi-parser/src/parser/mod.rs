@@ -237,7 +237,9 @@ impl<'a> Parser<'a> {
             };
 
             debug!("read type {params:?} -> {results:?}");
-            self.module.types.push(FuncType(params, results));
+            self.module
+                .types
+                .push(FuncType(params.into(), results.into()));
         }
 
         Ok(())

@@ -40,7 +40,7 @@ impl WasmFuncUntyped {
                 .all(|(a, b)| a == &b)
         {
             return Err(ErrorKind::FunctionArgsMismatch {
-                want: func.ty().0.clone(),
+                want: func.ty().0.to_vec(),
                 got: args.iter().map(|v| v.ty()).collect(),
             }
             .into());

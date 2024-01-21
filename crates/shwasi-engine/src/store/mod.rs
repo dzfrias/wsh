@@ -123,7 +123,7 @@ impl HostFunc {
 #[derive(Debug)]
 pub struct ModuleFunc {
     pub(crate) ty: FuncType,
-    pub(crate) code: Code,
+    pub(crate) code: Box<Code>,
     pub(crate) inst: Instance,
 }
 

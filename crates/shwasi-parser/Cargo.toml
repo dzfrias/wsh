@@ -24,6 +24,7 @@ byteorder = "1.5.0"
 wasm-leb128 = { path = "../wasm-leb128" }
 itertools = "0.11.0"
 rayon = "1.8.0"
+thin-vec = "0.2.13"
 
 [dev-dependencies]
 test-log.workspace = true

@@ -1,6 +1,6 @@
 #![allow(non_upper_case_globals)]
 
-use std::fmt;
+use std::{fmt, sync::Arc};
 
 use itertools::Itertools;
 use num_enum::TryFromPrimitive;
@@ -92,12 +92,12 @@ pub enum ValType {
 }
 
 /// A function type.
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct FuncType(
     /// The parameters of the function.
-    pub Vec<ValType>,
+    pub Arc<[ValType]>,
     /// The return values of the function.
-    pub Vec<ValType>,
+    pub Arc<[ValType]>,
 );
 
 /// An import.

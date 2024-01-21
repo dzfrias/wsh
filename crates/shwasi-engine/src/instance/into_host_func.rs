@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use shwasi_parser::FuncType;
 
 use crate::{store::HostFunc, Instance, Store, WasmParams, WasmResults, WasmType};
@@ -26,7 +28,7 @@ where
 
     fn into_host_func(mut self) -> HostFunc {
         HostFunc {
-            ty: FuncType(vec![], vec![]),
+            ty: FuncType(Arc::new([]), Arc::new([])),
             code: Box::new(move |vm| {
                 let res = self(vm.get_module(), vm.get_store());
                 res.into_values()

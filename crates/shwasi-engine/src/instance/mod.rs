@@ -108,6 +108,7 @@ impl Instance {
 
         let fsi_min = store.functions.len();
         let mut fsi_max = fsi_min + module.functions.len();
+        inst.func_addrs.reserve_exact(fsi_max - fsi_min);
         // This is pretty horrific. We need to allocate the addresses **before** the instance is
         // put in an Arc, because functions require an Instance. To get around this, we
         // pre-add the addresses to the instance to where they _should_ be. For now, this works,
@@ -135,6 +136,7 @@ impl Instance {
                     data: vec![0; init],
                 })
             }));
+        store.globals.reserve(module.globals.len());
         inst.global_addrs
             .extend(module.globals.into_iter().map(|global| {
                 let value = vm::eval_const_expr(
@@ -148,6 +150,7 @@ impl Instance {
                     value: value.into_typed(global.kind.content_type),
                 })
             }));
+        store.tables.reserve(module.tables.len());
         inst.table_addrs.extend(
             module
                 .tables
@@ -168,6 +171,7 @@ impl Instance {
                     },
                 }
             }));
+        store.elems.reserve(module.elements.len());
         inst.elem_addrs.extend(module.elements.iter().map(|elem| {
             let inst = Element {
                 elems: elem
@@ -186,6 +190,7 @@ impl Instance {
             };
             store.elems.alloc(inst)
         }));
+        store.datas.reserve(module.datas.len());
         inst.data_addrs.extend(module.datas.iter().map(|data| {
             let inst = Data(data.data.to_owned());
             store.datas.alloc(inst)
@@ -196,6 +201,7 @@ impl Instance {
         };
 
         // Allocate functions into store
+        store.functions.reserve(module.functions.len());
         for (i, func) in module.functions.into_iter().enumerate() {
             let ty = &inst.types()[func.index as usize];
             let code = std::mem::replace(
@@ -207,7 +213,7 @@ impl Instance {
             );
             let func_inst = Func::Module(ModuleFunc {
                 ty: ty.clone(),
-                code,
+                code: Box::new(code),
                 inst: inst.clone(),
             });
             store.functions.alloc(func_inst);

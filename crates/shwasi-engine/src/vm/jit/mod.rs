@@ -992,8 +992,8 @@ mod tests {
         let compiler = Compiler::new(Instance::default(), &store);
         let executable = compiler
             .compile(&ModuleFunc {
-                ty: FuncType(vec![ValType::I32], vec![ValType::I32]),
-                code,
+                ty: FuncType(vec![ValType::I32].into(), vec![ValType::I32].into()),
+                code: Box::new(code),
                 inst: Instance::default(),
             })
             .unwrap();
@@ -1018,8 +1018,11 @@ mod tests {
         let compiler = Compiler::new(Instance::default(), &store);
         let executable = compiler
             .compile(&ModuleFunc {
-                ty: FuncType(vec![ValType::I32, ValType::I32], vec![ValType::I32]),
-                code,
+                ty: FuncType(
+                    vec![ValType::I32, ValType::I32].into(),
+                    vec![ValType::I32].into(),
+                ),
+                code: Box::new(code),
                 inst: Instance::default(),
             })
             .unwrap();
@@ -1045,8 +1048,8 @@ mod tests {
         let compiler = Compiler::new(Instance::default(), &store);
         let executable = compiler
             .compile(&ModuleFunc {
-                ty: FuncType(vec![], vec![ValType::I32, ValType::I32]),
-                code,
+                ty: FuncType(vec![].into(), vec![ValType::I32, ValType::I32].into()),
+                code: Box::new(code),
                 inst: Instance::default(),
             })
             .unwrap();
@@ -1073,8 +1076,8 @@ mod tests {
         let compiler = Compiler::new(Instance::default(), &store);
         let executable = compiler
             .compile(&ModuleFunc {
-                ty: FuncType(vec![], vec![ValType::I32]),
-                code,
+                ty: FuncType(vec![].into(), vec![ValType::I32].into()),
+                code: Box::new(code),
                 inst: Instance::default(),
             })
             .unwrap();
@@ -1109,8 +1112,8 @@ mod tests {
         let compiler = Compiler::new(Instance::default(), &store);
         let executable = compiler
             .compile(&ModuleFunc {
-                ty: FuncType(vec![ValType::I32], vec![ValType::I32]),
-                code,
+                ty: FuncType(vec![ValType::I32].into(), vec![ValType::I32].into()),
+                code: Box::new(code),
                 inst: Instance::default(),
             })
             .unwrap();
@@ -1142,8 +1145,8 @@ mod tests {
         let compiler = Compiler::new(Instance::default(), &store);
         let executable = compiler
             .compile(&ModuleFunc {
-                ty: FuncType(vec![], vec![ValType::I32]),
-                code,
+                ty: FuncType(vec![].into(), vec![ValType::I32].into()),
+                code: Box::new(code),
                 inst: Instance::default(),
             })
             .unwrap();
@@ -1168,8 +1171,8 @@ mod tests {
         let compiler = Compiler::new(Instance::default(), &store);
         let executable = compiler
             .compile(&ModuleFunc {
-                ty: FuncType(vec![], vec![ValType::I32]),
-                code,
+                ty: FuncType(vec![].into(), vec![ValType::I32].into()),
+                code: Box::new(code),
                 inst: Instance::default(),
             })
             .unwrap();
@@ -1202,8 +1205,8 @@ mod tests {
         let compiler = Compiler::new(Instance::default(), &store);
         let executable = compiler
             .compile(&ModuleFunc {
-                ty: FuncType(vec![ValType::I32; 5], vec![ValType::I32; 5]),
-                code,
+                ty: FuncType(vec![ValType::I32; 5].into(), vec![ValType::I32; 5].into()),
+                code: Box::new(code),
                 inst: Instance::default(),
             })
             .unwrap();

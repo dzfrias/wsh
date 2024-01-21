@@ -4,6 +4,7 @@ mod opcode;
 use std::{fmt, iter::FusedIterator, mem, ops::Range, sync::Arc};
 
 use num_enum::TryFromPrimitive;
+use thin_vec::{thin_vec, ThinVec};
 
 pub use self::instruction::Instruction;
 pub use self::opcode::{is_prefix_byte, Opcode};
@@ -12,11 +13,12 @@ use crate::{module::ValType, RefType, F32, F64};
 /// A buffer containing [`Instruction`]s.
 #[derive(Clone, Default)]
 pub struct InstrBuffer {
-    infos: Vec<InstrInfo>,
-    br_tables: Vec<BrTable>,
-    u64s: Vec<u64>,
-    blocks: Vec<Block>,
-    block_elses: Vec<(Block, Option<usize>)>,
+    // We use ThinVec here to keep InstrBuffer small. This helps save on allocations.
+    infos: ThinVec<InstrInfo>,
+    br_tables: ThinVec<BrTable>,
+    u64s: ThinVec<u64>,
+    blocks: ThinVec<Block>,
+    block_elses: ThinVec<(Block, Option<usize>)>,
 }
 
 /// A memory argument for a load or store instruction.
@@ -80,18 +82,18 @@ impl InstrBuffer {
     /// Create a new, empty [`InstrBuffer`].
     pub fn new() -> Self {
         Self {
-            infos: vec![],
-            br_tables: vec![],
-            u64s: vec![],
-            blocks: vec![],
-            block_elses: vec![],
+            infos: thin_vec![],
+            br_tables: thin_vec![],
+            u64s: thin_vec![],
+            blocks: thin_vec![],
+            block_elses: thin_vec![],
         }
     }
 
     /// Create a new [`InstrBuffer`] with the given [`Instruction`] capacity.
     pub fn with_capacity(cap: usize) -> Self {
         Self {
-            infos: Vec::with_capacity(cap),
+            infos: ThinVec::with_capacity(cap),
             ..Self::new()
         }
     }
