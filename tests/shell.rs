@@ -289,7 +289,7 @@ shell_test!(
 );
 shell_test!(
     memfs_readdir,
-    "allow --virtual\ntouch nice.txt\ntouch hi.txt\nsource .($WASM_PATH + \"/read_dir.wasm\")",
+    "allow --virtual\ntouch nice.txt\ntouch hi.txt\nsource .($WASM_PATH + \"/read_dir.wasm\")\nmemfs",
     "./hi.txt\n./memfs_readdir.tmp\n./nice.txt"
 );
 shell_test!(

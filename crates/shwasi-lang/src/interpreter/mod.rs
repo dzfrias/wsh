@@ -95,6 +95,8 @@ impl Shell {
             }
         }
 
+        self.env.mem_fs.gc_step();
+
         // Reset stdout to the original stdout. This is necessary for operations like `source`,
         // where the user may have redirected stdout somewhere else temporarily.
         unsafe { self.stdout(io::stdout().as_raw_file_descriptor()) };

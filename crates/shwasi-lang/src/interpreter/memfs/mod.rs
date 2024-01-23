@@ -360,6 +360,42 @@ impl MemFs {
         })
     }
 
+    /// Increment the garbage collector.
+    pub fn gc_step(&self) {
+        // Right now, the garbage collector just checks if the age of a file is at or above GC_AGE.
+        // This is a pretty simplistic condition, so maybe other things can be factored in as well,
+        // like size.
+        const GC_AGE: u32 = 5;
+
+        self.borrow_mut().step += 1;
+        let borrow = self.borrow();
+        let to_cleanup = borrow
+            .path_table
+            .values()
+            .filter_map(|entry| match entry {
+                Entry::File(file)
+                    // We need to make sure to only clean up files that are not being pointed to by
+                    // anything else, and haven't been written to yet.
+                    if Arc::strong_count(&file.0) == 1
+                        && !file.did_write()
+                        && file.age() >= GC_AGE =>
+                {
+                    Some(file.borrow().path().to_path_buf())
+                }
+                _ => None,
+            })
+            .collect_vec();
+
+        drop(borrow);
+        for file in to_cleanup {
+            self.borrow_mut().path_table.remove(&file);
+        }
+    }
+
+    pub fn current_step(&self) -> u32 {
+        self.borrow().step
+    }
+
     fn try_unremove(&self, path: impl AsRef<Path>) {
         let mut borrow = self.borrow_mut();
         let Some(pos) = borrow
@@ -475,6 +511,7 @@ impl_weak! {
     fn load(path: impl AsRef<Path>) -> Result<Entry, MemFsError>;
     fn rename(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Result<(), MemFsError>;
     fn open(path: impl AsRef<Path>, oflags: OFlags, read: bool, write: bool, fd_flags: FdFlags) -> Result<Entry, MemFsError>;
+    fn current_step() -> u32;
 }
 
 impl WeakMemFs {
@@ -508,6 +545,7 @@ struct MemFsInner {
     // deallocated. A garbage collector, of sorts.
     path_table: HashMap<PathBuf, Entry>,
     current_inode: u64,
+    step: u32,
 }
 
 /// An in-memory directory in the file system.
@@ -650,6 +688,8 @@ pub struct MemFileInner {
     read: bool,
     fd_flags: FdFlags,
     path: PathBuf,
+    did_write: bool,
+    lifetime: u32,
 }
 
 impl io::Write for MemFile {
@@ -665,6 +705,7 @@ impl io::Write for MemFile {
 impl MemFile {
     /// Clear the file buffer.
     pub fn truncate(&self) {
+        self.borrow_mut().did_write = true;
         self.borrow_mut().data.get_mut().clear();
     }
 
@@ -689,6 +730,16 @@ impl MemFile {
         borrow.write = write || fd_flags.contains(FdFlags::APPEND);
     }
 
+    /// Returns `true` if the inner contents of the file were modified by WASI
+    pub fn did_write(&self) -> bool {
+        self.borrow().did_write
+    }
+
+    /// Returns the age of the file (in GC steps)
+    pub fn age(&self) -> u32 {
+        self.borrow().fs.current_step() - self.borrow().lifetime
+    }
+
     /// Returns `true` if the file was opened in read mode.
     pub fn can_read(&self) -> bool {
         self.borrow().read
@@ -709,6 +760,7 @@ impl MemFile {
     }
 
     fn with_contents(fs: WeakMemFs, path: impl AsRef<Path>, inode: u64, contents: Vec<u8>) -> Self {
+        let step = fs.current_step();
         Self(Arc::new(RwLock::new(MemFileInner {
             fs,
             inode,
@@ -717,11 +769,18 @@ impl MemFile {
             read: false,
             fd_flags: FdFlags::empty(),
             path: path.as_ref().to_path_buf(),
+            did_write: false,
+            lifetime: step,
         })))
     }
 
     fn empty(fs: WeakMemFs, path: impl AsRef<Path>, inode: u64) -> Self {
         Self::with_contents(fs, path, inode, vec![])
+    }
+
+    fn update_lifetime(&self) {
+        let step = self.borrow().fs.current_step();
+        self.borrow_mut().lifetime = step;
     }
 
     fn append(&self) {
@@ -759,11 +818,13 @@ impl WasiFile for MemFile {
         if fdflags.intersects(FdFlags::DSYNC | FdFlags::SYNC | FdFlags::RSYNC) {
             return Err(WasiError::not_supported().context("SYNC family of fd flags"));
         }
+        self.update_lifetime();
         self.borrow_mut().fd_flags = fdflags;
         Ok(())
     }
 
     async fn get_fdflags(&self) -> Result<FdFlags, WasiError> {
+        self.update_lifetime();
         Ok(self.borrow().fd_flags)
     }
 
@@ -771,6 +832,7 @@ impl WasiFile for MemFile {
         if !self.can_read() {
             return Err(WasiError::badf().context("read vectored"));
         }
+        self.update_lifetime();
 
         let n = self.borrow_mut().data.read_vectored(bufs)?;
         Ok(n.try_into()?)
@@ -784,6 +846,7 @@ impl WasiFile for MemFile {
         if !self.can_read() {
             return Err(WasiError::badf().context("read vectored at"));
         }
+        self.update_lifetime();
 
         let mut handle = self.borrow_mut();
         let old = handle.data.position();
@@ -797,7 +860,9 @@ impl WasiFile for MemFile {
         if !self.can_write() {
             return Err(WasiError::badf().context("write vectored"));
         }
+        self.update_lifetime();
 
+        self.borrow_mut().did_write = true;
         let n = self.borrow_mut().data.write_vectored(bufs)?;
         Ok(n.try_into()?)
     }
@@ -810,7 +875,9 @@ impl WasiFile for MemFile {
         if !self.can_write() {
             return Err(WasiError::badf().context("write vectored at"));
         }
+        self.update_lifetime();
 
+        self.borrow_mut().did_write = true;
         let mut handle = self.borrow_mut();
         let old = handle.data.position();
         handle.data.set_position(offset);
@@ -820,6 +887,7 @@ impl WasiFile for MemFile {
     }
 
     async fn seek(&self, pos: std::io::SeekFrom) -> Result<u64, WasiError> {
+        self.update_lifetime();
         Ok(self.borrow_mut().data.seek(pos)?)
     }
 
@@ -827,6 +895,7 @@ impl WasiFile for MemFile {
         if !self.can_read() {
             return Err(WasiError::badf().context("peek"));
         }
+        self.update_lifetime();
 
         let n = self.borrow_mut().data.peek(buf)?;
         Ok(n.try_into()?)

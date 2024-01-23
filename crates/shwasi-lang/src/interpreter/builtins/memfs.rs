@@ -139,6 +139,9 @@ fn get_status(shell: &mut Shell) -> (Vec<PathBuf>, Vec<PathBuf>, Vec<(PathBuf, E
                 additions.push(path.to_path_buf());
                 return;
             }
+            if !file.did_write() {
+                return;
+            }
             modifications.push(path.to_path_buf());
         }
         memfs::Entry::Directory(dir) => {
