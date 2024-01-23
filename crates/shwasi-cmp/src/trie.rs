@@ -119,6 +119,7 @@ impl Trie {
     }
 
     pub fn prefix_list(&self, prefix: &str) -> Vec<String> {
+        let mut traversed_word = String::new();
         let mut current = &self.root;
         let mut i = 0;
         while i < prefix.len() {
@@ -126,6 +127,7 @@ impl Trie {
             let first = first_char(word);
             if let Some(edge) = current.children.get(&first) {
                 current = &edge.to;
+                traversed_word.push_str(&edge.text);
                 i += edge.text.len();
             } else {
                 return vec![];
@@ -133,7 +135,7 @@ impl Trie {
         }
 
         let mut matches = vec![];
-        let mut stack = vec![(current, prefix.to_owned())];
+        let mut stack = vec![(current, traversed_word)];
         while let Some((node, word)) = stack.pop() {
             if node.terminal {
                 matches.push(word.clone());
@@ -211,5 +213,25 @@ mod tests {
     fn empty_trie() {
         let trie = Trie::new();
         assert!(trie.prefix_list("hello").is_empty());
+    }
+
+    #[test]
+    fn directory() {
+        let mut trie = Trie::new();
+        trie.insert("README.md");
+        trie.insert("args.wasm");
+        trie.insert("env.wasm");
+        trie.insert("fib.wasm");
+        trie.insert("hello_wasi.wasm");
+        trie.insert("new_dir.wasm");
+        trie.insert("new_file.wasm");
+        trie.insert("read_dir.wasm");
+        trie.insert("rename.wasm");
+        trie.insert("rm.wasm");
+        trie.insert("rm_dir.wasm");
+        trie.insert("stdin.wasm");
+        dbg!(&trie);
+
+        assert_eq!(vec!["read_dir.wasm".to_owned()], trie.prefix_list("rea"));
     }
 }
