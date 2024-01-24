@@ -2,8 +2,8 @@ use std::{cell::OnceCell, fs, path::PathBuf, rc::Rc};
 
 use anyhow::Result;
 use clap::Parser;
-use shwasi_engine::{HostFunc, Instance, Store};
-use shwasi_wasi::{cap_std, WasiCtxBuilder};
+use wsh_engine::{HostFunc, Instance, Store};
+use wsh_wasi::{cap_std, WasiCtxBuilder};
 
 #[derive(Debug, Parser)]
 struct Args {
@@ -40,10 +40,10 @@ fn main() -> Result<()> {
     );
     let dir = cap_std::fs::Dir::open_ambient_dir(".", cap_std::ambient_authority())?;
     let mut ctx = WasiCtxBuilder::new().preopened_dir(dir, ".")?.build();
-    shwasi_wasi::sync::snapshots::preview_1::link(&mut store, &mut ctx);
+    wsh_wasi::sync::snapshots::preview_1::link(&mut store, &mut ctx);
 
     let binary = fs::read(args.file)?;
-    let module = shwasi_parser::Parser::new(&binary).read_module()?;
+    let module = wsh_parser::Parser::new(&binary).read_module()?;
     let instance = Instance::instantiate(&mut store, module)?;
     let start = instance.get_func::<(), ()>(&store, "_start")?;
     start.call(&mut store, ())?;

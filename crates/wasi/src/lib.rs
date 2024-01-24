@@ -18,9 +18,9 @@ pub use wasi_common::{
 pub use wasmtime_wasi::{sync::WasiCtxBuilder, WasiCtx};
 
 pub mod cap_std {
-    pub use ::cap_std::*;
+    pub use cap_std::*;
 }
 
 pub mod wiggle {
-    pub use ::wiggle::*;
+    pub use wiggle::*;
 }

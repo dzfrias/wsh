@@ -1,9 +1,9 @@
 [package]
-name = "shwasi"
+name = "wsh"
 version = "0.1.0"
 authors = ["Diego Frias <styx5242@gmail.com>"]
 edition = "2021"
-default-run = "shwasi"
+default-run = "wsh"
 
 [[test]]
 name = "integration"
@@ -14,24 +14,24 @@ anyhow.workspace = true
 tracing-subscriber.workspace = true
 clap = { version = "4.4.6", features = ["derive"] }
 dhat = { version = "0.3.2", optional = true }
-shwasi-lang = { path = "crates/shwasi-lang" }
-shwasi-engine = { path = "crates/shwasi-engine", default-features = false }
-shwasi-parser = { path = "crates/shwasi-parser" }
-shwasi-wasi = { path = "crates/wasi" }
-shwasi-cmp = { path = "crates/shwasi-cmp" }
+wsh-lang = { path = "crates/wsh-lang" }
+wsh-engine = { path = "crates/wsh-engine", default-features = false }
+wsh-parser = { path = "crates/wsh-parser" }
+wsh-wasi = { path = "crates/wasi" }
+wsh-cmp = { path = "crates/wsh-cmp" }
 dirs = "5.0.1"
 reedline.workspace = true
 
 [features]
 dhat-heap = ["dhat"]
-jit = ["shwasi-engine/jit"]
+jit = ["wsh-engine/jit"]
 
 [workspace]
 members = [
-    "crates/shwasi-parser",
-    "crates/shwasi-engine",
-    "crates/shwasi-lang",
-    "crates/shwasi-cmp",
+    "crates/wsh-parser",
+    "crates/wsh-engine",
+    "crates/wsh-lang",
+    "crates/wsh-cmp",
     "crates/dumbwasm",
     "crates/wasm-leb128",
     "crates/wasi",
@@ -48,8 +48,8 @@ insta.workspace = true
 paste.workspace = true
 test-log.workspace = true
 tracing.workspace = true
-shwasi-parser = { path = "crates/shwasi-parser" }
-shwasi-engine = { path = "crates/shwasi-engine" }
+wsh-parser = { path = "crates/wsh-parser" }
+wsh-engine = { path = "crates/wsh-engine" }
 wast = "67.0.1"
 tempdir = "0.3.7"
 

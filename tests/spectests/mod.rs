@@ -1,14 +1,14 @@
 use std::{collections::HashMap, fs, path::Path};
 
 use anyhow::{bail, ensure, Context, Result};
-use shwasi_engine::{Global, HostFunc, Instance, Memory, Store, Table, Value};
-use shwasi_parser::{validate, Limit, Parser, RefType, TableType};
 use tracing::info;
 use wast::{
     core::{HeapType, Module, NanPattern, WastArgCore, WastRetCore},
     token::{Id, Index, Span},
     QuoteWat, WastArg, WastDirective, WastExecute, WastInvoke, WastRet, Wat,
 };
+use wsh_engine::{Global, HostFunc, Instance, Memory, Store, Table, Value};
+use wsh_parser::{validate, Limit, Parser, RefType, TableType};
 
 pub fn run_spectest(name: &str) -> Result<()> {
     let file = Path::new("tests/spectests/testsuite")

@@ -1,6 +1,6 @@
 use std::{env, fs};
 
-use shwasi_cmp::source::Source;
+use wsh_cmp::source::Source;
 
 #[derive(Debug)]
 pub struct FileSuggest;

@@ -1,0 +1,22 @@
+---
+source: crates/wsh-parser/tests/tests.rs
+expression: pretty_fmt(&module)
+---
+types
+---
+0: () -> (f64)
+
+functions
+---
+0: func (0)
+
+codes
+---
+0: locals: []
+loop f64
+  unreachable
+end
+end
+
+
+

@@ -1,0 +1,79 @@
+---
+source: crates/wsh-lang/src/parser/mod.rs
+expression: ast
+---
+Ast {
+    defs: [],
+    statements: [
+        Pipeline(
+            Pipeline {
+                env: [],
+                commands: [
+                    Command {
+                        name: "echo",
+                        args: [
+                            String(
+                                "hi",
+                            ),
+                        ],
+                        merge_stderr: false,
+                    },
+                ],
+                write: Some(
+                    PipelineEnd {
+                        kind: Write,
+                        expr: String(
+                            "file.txt",
+                        ),
+                    },
+                ),
+            },
+        ),
+        Pipeline(
+            Pipeline {
+                env: [],
+                commands: [
+                    Command {
+                        name: "echo",
+                        args: [
+                            String(
+                                "hello world",
+                            ),
+                        ],
+                        merge_stderr: false,
+                    },
+                    Command {
+                        name: "wc",
+                        args: [
+                            String(
+                                "-w",
+                            ),
+                        ],
+                        merge_stderr: false,
+                    },
+                    Command {
+                        name: "xargs",
+                        args: [],
+                        merge_stderr: false,
+                    },
+                ],
+                write: Some(
+                    PipelineEnd {
+                        kind: Write,
+                        expr: Infix(
+                            InfixExpr {
+                                lhs: String(
+                                    "test",
+                                ),
+                                rhs: String(
+                                    ".txt",
+                                ),
+                                op: Add,
+                            },
+                        ),
+                    },
+                ),
+            },
+        ),
+    ],
+}

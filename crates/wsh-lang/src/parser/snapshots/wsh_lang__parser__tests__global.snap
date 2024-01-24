@@ -1,0 +1,22 @@
+---
+source: crates/wsh-lang/src/parser/mod.rs
+expression: ast
+---
+Ast {
+    defs: [],
+    statements: [
+        Assign(
+            Assign {
+                name: Ident(
+                    "x",
+                ),
+                expr: Ident(
+                    Ident(
+                        "hi",
+                    ),
+                ),
+                global: true,
+            },
+        ),
+    ],
+}

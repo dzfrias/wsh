@@ -1,0 +1,33 @@
+---
+source: crates/wsh-lang/src/parser/mod.rs
+expression: ast
+---
+Ast {
+    defs: [],
+    statements: [
+        Pipeline(
+            Pipeline {
+                env: [],
+                commands: [
+                    Command {
+                        name: "echo",
+                        args: [
+                            String(
+                                "hi",
+                            ),
+                        ],
+                        merge_stderr: false,
+                    },
+                ],
+                write: Some(
+                    PipelineEnd {
+                        kind: Append,
+                        expr: String(
+                            "file.txt",
+                        ),
+                    },
+                ),
+            },
+        ),
+    ],
+}

@@ -1,0 +1,58 @@
+---
+source: crates/wsh-lang/src/parser/mod.rs
+expression: ast
+---
+Ast {
+    defs: [],
+    statements: [
+        Pipeline(
+            Pipeline {
+                env: [],
+                commands: [
+                    Command {
+                        name: "echo",
+                        args: [
+                            Infix(
+                                InfixExpr {
+                                    lhs: Number(
+                                        1.0,
+                                    ),
+                                    rhs: Infix(
+                                        InfixExpr {
+                                            lhs: Infix(
+                                                InfixExpr {
+                                                    lhs: Number(
+                                                        2.0,
+                                                    ),
+                                                    rhs: Number(
+                                                        3.0,
+                                                    ),
+                                                    op: Mul,
+                                                },
+                                            ),
+                                            rhs: Infix(
+                                                InfixExpr {
+                                                    lhs: Number(
+                                                        4.0,
+                                                    ),
+                                                    rhs: Number(
+                                                        5.0,
+                                                    ),
+                                                    op: Sub,
+                                                },
+                                            ),
+                                            op: Div,
+                                        },
+                                    ),
+                                    op: Add,
+                                },
+                            ),
+                        ],
+                        merge_stderr: false,
+                    },
+                ],
+                write: None,
+            },
+        ),
+    ],
+}

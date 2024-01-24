@@ -61,9 +61,9 @@ macro_rules! dumbwasm_test_failing {
     ($name:ident, $input:expr) => {
         #[test]
         fn $name() {
-            use ::assert_cmd::Command;
-            use ::std::{fs::File, io::Write};
-            use ::tempdir::TempDir;
+            use assert_cmd::Command;
+            use std::{fs::File, io::Write};
+            use tempdir::TempDir;
 
             let dir = TempDir::new(stringify!($name)).expect("could not create temp dir");
             let mut f = File::create(dir.path().join("input.dumbwasm"))

@@ -12,9 +12,9 @@ use reedline::{
     ColumnarMenu, DefaultPrompt, Emacs, FileBackedHistory, KeyCode, KeyModifiers, Reedline,
     ReedlineEvent, ReedlineMenu, Signal,
 };
-use shwasi_cmp::completer::Completer;
-use shwasi_lang::Shell;
 use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
+use wsh_cmp::completer::Completer;
+use wsh_lang::Shell;
 
 use crate::cli::Cli;
 use file_suggest::FileSuggest;

@@ -1,9 +1,0 @@
----
-source: crates/shwasi-parser/tests/tests.rs
-expression: pretty_fmt(&module)
----
-globals
----
-0: global mut f64 f64.const 10
-
-

@@ -1,0 +1,66 @@
+---
+source: crates/wsh-lang/src/parser/mod.rs
+expression: ast
+---
+Ast {
+    defs: [],
+    statements: [
+        If(
+            If {
+                condition: Infix(
+                    InfixExpr {
+                        lhs: Ident(
+                            Ident(
+                                "x",
+                            ),
+                        ),
+                        rhs: Number(
+                            10.0,
+                        ),
+                        op: Eq,
+                    },
+                ),
+                body: [
+                    Pipeline(
+                        Pipeline {
+                            env: [],
+                            commands: [
+                                Command {
+                                    name: "echo",
+                                    args: [
+                                        String(
+                                            "hi",
+                                        ),
+                                    ],
+                                    merge_stderr: false,
+                                },
+                            ],
+                            write: None,
+                        },
+                    ),
+                ],
+                else_: Some(
+                    [
+                        Pipeline(
+                            Pipeline {
+                                env: [],
+                                commands: [
+                                    Command {
+                                        name: "echo",
+                                        args: [
+                                            String(
+                                                "nice",
+                                            ),
+                                        ],
+                                        merge_stderr: false,
+                                    },
+                                ],
+                                write: None,
+                            },
+                        ),
+                    ],
+                ),
+            },
+        ),
+    ],
+}

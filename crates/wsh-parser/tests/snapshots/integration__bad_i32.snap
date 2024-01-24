@@ -1,0 +1,10 @@
+---
+source: crates/wsh-parser/tests/tests.rs
+expression: pretty_fmt(&module)
+---
+globals
+---
+0: global i32 i32.const 3086810364
+1: global i32 i32.const 0
+
+

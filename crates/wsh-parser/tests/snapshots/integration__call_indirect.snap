@@ -1,0 +1,36 @@
+---
+source: crates/wsh-parser/tests/tests.rs
+expression: pretty_fmt(&module)
+---
+types
+---
+0: () -> ()
+1: () -> (f64)
+2: (f64) -> ()
+
+functions
+---
+0: func (1)
+
+tables
+---
+0: table 1000000..1000000 funcref
+
+datas
+---
+0: data: bytes: []
+1: data: bytes: []
+
+codes
+---
+0: locals: [i32 (1)]
+local.get 0
+call_indirect 1 (type) 0 (table)
+f64.abs
+unreachable
+end
+
+
+data count: 2
+
+

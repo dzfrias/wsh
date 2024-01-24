@@ -1,0 +1,23 @@
+---
+source: crates/wsh-parser/tests/tests.rs
+expression: pretty_fmt(&module)
+---
+types
+---
+0: () -> ()
+
+functions
+---
+0: func (0)
+
+codes
+---
+0: locals: []
+memory.size
+memory.grow
+memory.copy
+memory.fill
+end
+
+
+

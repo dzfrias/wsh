@@ -25,7 +25,7 @@ macro_rules! impl_read_unsigned_leb128 {
         where
             T: ::std::io::Read + ?Sized,
         {
-            use ::byteorder::ReadBytesExt;
+            use byteorder::ReadBytesExt;
 
             let byte = decoder.read_u8()?;
             if (byte & 0x80) == 0 {
@@ -65,7 +65,7 @@ macro_rules! impl_read_signed_leb128 {
         where
             T: ::std::io::Read + ?Sized,
         {
-            use ::byteorder::ReadBytesExt;
+            use byteorder::ReadBytesExt;
 
             let mut result = 0;
             let mut shift = 0;

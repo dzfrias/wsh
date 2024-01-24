@@ -1,0 +1,9 @@
+---
+source: crates/wsh-parser/tests/tests.rs
+expression: pretty_fmt(&module)
+---
+imports
+---
+0: import "" "" (table 0.. funcref)
+
+

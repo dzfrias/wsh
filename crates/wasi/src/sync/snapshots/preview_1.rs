@@ -4,12 +4,12 @@
 //! for the original file.
 
 use crate::ShwasiGuestMemory;
-use shwasi_engine::{Error, ErrorKind, HostFunc, Instance, Store};
 use std::{
     pin::Pin,
     task::{Context, RawWaker, RawWakerVTable, Waker},
 };
 use wasi_common::WasiCtx;
+use wsh_engine::{Error, ErrorKind, HostFunc, Instance, Store};
 
 /// Creates a dummy `RawWaker`. We can only create Wakers from `RawWaker`s
 fn dummy_raw_waker() -> RawWaker {

@@ -2,9 +2,9 @@ macro_rules! shell_test {
     ($name:ident, $input:expr, $expect:expr, $expect_stderr:expr) => {
         #[test]
         fn $name() {
-            use ::assert_cmd::Command;
-            use ::std::{env, fs::File, io::Write};
-            use ::tempdir::TempDir;
+            use assert_cmd::Command;
+            use std::{env, fs::File, io::Write};
+            use tempdir::TempDir;
 
             // Auxiliary environment variable for test usage.
             env::set_var("SHWASI_ENV", "test");
@@ -43,9 +43,9 @@ macro_rules! shell_test {
     (@fail $name:ident, $input:expr) => {
         #[test]
         fn $name() {
-            use ::assert_cmd::Command;
-            use ::std::{env, fs::File, io::Write};
-            use ::tempdir::TempDir;
+            use assert_cmd::Command;
+            use std::{env, fs::File, io::Write};
+            use tempdir::TempDir;
 
             env::set_var("SHWASI_ENV", "test");
             env::set_var("WASM_PATH", env::current_dir().unwrap().join("tests/wasm"));
@@ -92,7 +92,7 @@ shell_test!(
 shell_test!(
     merge_file_redirects,
     "echo .(!1) %> merge_file.txt\n.x = `cat merge_file.txt`\nrm merge_file.txt\necho .x",
-    "shwasi: type error: `!` `number`"
+    "wsh: type error: `!` `number`"
 );
 // Disabling this test on Windows because I'm not sure what to do. In the CI, the test fails as a
 // result of:
@@ -114,7 +114,7 @@ shell_test!(
 shell_test!(
     merge_append_file_redirects,
     "echo .(!1) %>> merge_t.txt\necho .(!1) %>> merge_t.txt\n.x = `cat merge_t.txt`\nrm merge_t.txt\necho .x",
-    "shwasi: type error: `!` `number`\nshwasi: type error: `!` `number`"
+    "wsh: type error: `!` `number`\nwsh: type error: `!` `number`"
 );
 shell_test!(alias_with_args, "alias foo = echo\nfoo hi", "hi");
 shell_test!(
@@ -140,14 +140,14 @@ shell_test!(
     no_fail_fast_on_errs,
     "__UNDEFINED\necho .?",
     @stdout "127",
-    @stderr "shwasi: command not found: __UNDEFINED"
+    @stderr "wsh: command not found: __UNDEFINED"
 );
 // Should fail as a result of `__should_not_be_defined` not being a valid command. Note that this
 // CAN possibly fail if the user has a command named `__should_not_be_defined` in their PATH.
 shell_test!(
     recursive_alias,
     "alias __should_not_be_defined = __should_not_be_defined\n__should_not_be_defined",
-    @stderr "shwasi: command not found: __should_not_be_defined"
+    @stderr "wsh: command not found: __should_not_be_defined"
 );
 shell_test!(
     shell_errors_are_piped_properly,
@@ -173,7 +173,7 @@ shell_test!(
 shell_test!(
     functions_do_not_leak_scope,
     "def f do .x = 1 end\nf\necho .x",
-    @stderr "shwasi: unbound: `x`"
+    @stderr "wsh: unbound: `x`"
 );
 shell_test!(global_vars, "def f do .hello := 1 end\nf\necho .hello", "1");
 
@@ -182,7 +182,7 @@ shell_test!(
     wasm_unload,
     "load .($WASM_PATH + \"/fib.wasm\")\nunload\nfib 10",
     @stdout "unloaded 1 modules",
-    @stderr "shwasi: command not found: fib"
+    @stderr "wsh: command not found: fib"
 );
 shell_test!(
     wasm_piping,
@@ -192,7 +192,7 @@ shell_test!(
 shell_test!(
     wasm_bad_args,
     "load .($WASM_PATH + \"/fib.wasm\")\nfib hello",
-    @stderr "shwasi: cannot pass string to wasm function `fib`"
+    @stderr "wsh: cannot pass string to wasm function `fib`"
 );
 shell_test!(
     source_wasi,
@@ -240,7 +240,7 @@ shell_test!(
 shell_test!(
     wasi_stdin_merge,
     "echo .(!1) %| source .($WASM_PATH + \"/stdin.wasm\")",
-    "Got: shwasi: type error: `!` `number`\n"
+    "Got: wsh: type error: `!` `number`\n"
 );
 shell_test!(
     wasi_env_vars,

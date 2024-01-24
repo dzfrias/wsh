@@ -1,5 +1,5 @@
 [package]
-name = "shwasi-wasi"
+name = "wsh-wasi"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,7 +8,7 @@ anyhow.workspace = true
 wasi-common = "16.0.0"
 wasmtime-wasi = "16.0.0"
 wiggle = { version = "16.0.0", default-features = false, features = ["wiggle_metadata"] }
-shwasi-engine = { path = "../shwasi-engine" }
+wsh-engine = { path = "../wsh-engine" }
 wasi-cap-std-sync = "16.0.0"
 cap-std = "2.0.1"
 

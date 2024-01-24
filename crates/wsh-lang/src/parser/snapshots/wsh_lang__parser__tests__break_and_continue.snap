@@ -1,0 +1,30 @@
+---
+source: crates/wsh-lang/src/parser/mod.rs
+expression: ast
+---
+Ast {
+    defs: [],
+    statements: [
+        While(
+            While {
+                condition: Infix(
+                    InfixExpr {
+                        lhs: Ident(
+                            Ident(
+                                "x",
+                            ),
+                        ),
+                        rhs: Number(
+                            10.0,
+                        ),
+                        op: Eq,
+                    },
+                ),
+                body: [
+                    Break,
+                    Continue,
+                ],
+            },
+        ),
+    ],
+}

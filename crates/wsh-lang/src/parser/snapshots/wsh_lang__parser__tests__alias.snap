@@ -1,0 +1,34 @@
+---
+source: crates/wsh-lang/src/parser/mod.rs
+expression: ast
+---
+Ast {
+    defs: [],
+    statements: [
+        AliasAssign(
+            AliasAssign {
+                name: "foo",
+                pipeline: Pipeline {
+                    env: [],
+                    commands: [
+                        Command {
+                            name: "echo",
+                            args: [
+                                String(
+                                    "hi",
+                                ),
+                            ],
+                            merge_stderr: false,
+                        },
+                        Command {
+                            name: "cat",
+                            args: [],
+                            merge_stderr: false,
+                        },
+                    ],
+                    write: None,
+                },
+            },
+        ),
+    ],
+}
