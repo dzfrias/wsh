@@ -1,14 +1,17 @@
 <div align="center">
-  <h1>wsh</h1>
+  <h1><code>wsh</code></h1>
   <p>
-    <strong>A WebAssembly-based shell.</strong>
+    <strong>
+      A <a href="https://webassembly.org/">WebAssembly</a>-based shell.
+    </strong>
   </p>
 </div>
 
 ## Why WebAssembly?
 
-wsh brings a WebAssembly sandbox straight to the shell, providing an interactive
-interface for manipulating and restricting Wasm executables. This includes:
+`wsh` brings a [WebAssembly](https://webassembly.org/) sandbox straight to the
+shell, providing an interactive interface for manipulating and restricting Wasm
+executables. This includes:
 
 - Sandboxed disk access
 - An in-memory file system
@@ -16,7 +19,7 @@ interface for manipulating and restricting Wasm executables. This includes:
 - Wasm linking overrides
 - All cross platform!
 
-These capabilities open the door to a number of things:
+These capabilities open the door to a number of things, like:
 
 - Run untrusted executables safely on a user machine
 - Diff changes executables attempt to make
@@ -24,9 +27,9 @@ These capabilities open the door to a number of things:
 - Change program behavior post-compilation
 - Share the binaries to any system!
 
-wsh empowers a WebAssembly-oriented workflow, taking advantage of the security,
-portability, and module interface that Wasm provides. Start building with Wasm,
-and enjoy the benefits with wsh **today**!
+`wsh` empowers a WebAssembly-oriented workflow, taking advantage of the
+security, portability, and module interface that Wasm provides. Start building
+with Wasm, and enjoy the benefits with `wsh` **today**!
 
 ## Project status
 
@@ -35,5 +38,6 @@ still under consideration. Some POSIX-style shell functionality does not exist
 yet, and some syntax/API decisions still need to be made.
 
 That being said, Wasm functionality aims to be as polished as possible. The
-embedded Wasm runtime passes the full specifcation testsuite, and work was
-done to make the runtime performant.
+embedded Wasm runtime passes the full
+[specifcation testsuite](https://github.com/WebAssembly/testsuite/), and work
+was done to make the runtime performant.
