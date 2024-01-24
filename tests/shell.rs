@@ -7,7 +7,7 @@ macro_rules! shell_test {
             use tempdir::TempDir;
 
             // Auxiliary environment variable for test usage.
-            env::set_var("SHWASI_ENV", "test");
+            env::set_var("WSH_ENV", "test");
             env::set_var("WASM_PATH", env::current_dir().unwrap().join("tests/wasm"));
             let tmp_dir =
                 TempDir::new(stringify!($name)).expect("error creating temporary directory");
@@ -47,7 +47,7 @@ macro_rules! shell_test {
             use std::{env, fs::File, io::Write};
             use tempdir::TempDir;
 
-            env::set_var("SHWASI_ENV", "test");
+            env::set_var("WSH_ENV", "test");
             env::set_var("WASM_PATH", env::current_dir().unwrap().join("tests/wasm"));
 
             let tmp_dir =
@@ -122,7 +122,7 @@ shell_test!(
     "alias foo = echo\nfoo hi | wc -c | xargs",
     "3"
 );
-shell_test!(get_environment_variables, "echo $SHWASI_ENV", "test");
+shell_test!(get_environment_variables, "echo $WSH_ENV", "test");
 // Could fail if the user has $FOO_NO_ASSIGN set in their environment.
 shell_test!(environment_variables_default, "echo $FOO_NO_ASSIGN", "");
 shell_test!(
