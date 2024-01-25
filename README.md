@@ -33,7 +33,8 @@ and enjoy the benefits with `wsh` **today**!
 This project is still in infancy. There are many aspects of the shell that are
 still under consideration. Some POSIX-style shell functionality does not exist
 yet, and some syntax/API decisions still need to be made. That being said, the
-Wasm functionality aims to be as polished as possible. The embedded Wasm runtime
+Wasm functionality aims to be as polished as possible. The
+[embedded Wasm runtime](https://github.com/dzfrias/wsh/tree/main/crates/wsh-engine)
 passes the full
 [specifcation testsuite](https://github.com/WebAssembly/testsuite/), and work
 was done to make the runtime performant.
