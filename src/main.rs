@@ -61,6 +61,7 @@ fn run_file(interpreter: &mut Shell, input: impl AsRef<Path>) -> Result<()> {
 }
 
 fn start_repl() -> Result<()> {
+    println!("Welcome to wsh, the WebAssembly shell!\n");
     let mut shell = Shell::new();
     let home_dir = dirs::home_dir();
     let mut line_editor = line_editor(home_dir.as_ref().map(|home| home.join(".wsi_history")))?;
@@ -69,7 +70,10 @@ fn start_repl() -> Result<()> {
     }
 
     loop {
-        let prompt = DefaultPrompt::default();
+        let prompt = DefaultPrompt::new(
+            reedline::DefaultPromptSegment::WorkingDirectory,
+            reedline::DefaultPromptSegment::Empty,
+        );
         let sig = line_editor.read_line(&prompt);
         match sig {
             Ok(Signal::Success(input)) => {
