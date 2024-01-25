@@ -1,11 +1,24 @@
-# Summary
+# Introduction
 
-[Summary](../../README.md)
+[Introduction](../../README.md)
 
-# Getting Started
-
-- [Installing](installing.md)
-
-# Reference Guide
-
-# Contributing
+- [Getting Started](./getting-started/index.md)
+  - [Installing](./getting-started/installing.md)
+  - [A Tour of wsh](./getting-started/tour.md)
+- [Using the Shell](./using/index.md)
+  - [Programming](./using/programming/index.md)
+    - [Numbers](./using/programming/numbers.md)
+    - [Strings](./using/programming/strings.md)
+    - [Conditions](./using/programming/conditions.md)
+    - [Loops](./using/programming/loops.md)
+    - [Functions](./using/programming/functions.md)
+  - [WebAssembly](./using/webassembly/index.md)
+    - [Sandboxing](./using/webassembly/sandboxing.md)
+    - [Loading](./using/webassembly/loading.md)
+    - [memfs](./using/webassembly/memfs.md)
+    - [Linking](./using/webassembly/linking.md)
+  - [Environment](./using/environment.md)
+  - [Configuration](./using/configuation.md)
+  - [Built-ins](./using/builtins.md)
+- [POSIX Migration](./posix-migration.md)
+- [Project Status](./status.md)
