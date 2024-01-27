@@ -1,0 +1,36 @@
+command ::= expr {expr}
+pipeline ::= command {redirect command} [file_redirect expr]
+redirect ::= '|' | '%|'
+file_redirect ::= '>' | '>>' | '%>' | '%>>'
+
+statement ::=
+    | pipeline
+    | 'if' expr 'then' block ['else' block] 'end'
+    | 'while' expr 'do' block 'end'
+    | 'break'
+    | 'continue'
+    | 'return'
+    | 'alias' NAME '=' pipeline
+    | 'export' ENV '=' expr
+    | 'export' NAME '=' expr
+    | function
+
+block ::= {statement}
+
+function ::= 'def' NAME [':' arg {arg}] 'do' block 'end'
+arg ::= NAME | NAME '|' CHAR ['=' expr]
+
+expr ::= 
+    | 'false' 
+    | 'true' 
+    | NUMBER 
+    | STRING
+    | NAME
+    | ENV
+    | expr binop expr
+    | unop expr
+    | '?'
+    | '`' pipeline '`'
+
+binop ::= '+' | '-' | '/' | '*' | '==' | '!=' | '>' | '<' | '>=' | '<='
+unop ::= '!' | '-' | '+'
