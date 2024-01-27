@@ -9,8 +9,11 @@ After installing the binary, you may start it up `wsh`:
 ```
 $ wsh
 Welcome to wsh, the WebAssembly shell!
+
 ~/code $
 ```
+
+`wsh` is compatible with **all** major operating systems and architectures.
 
 ## Using `cargo`
 

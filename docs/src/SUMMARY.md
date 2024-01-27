@@ -1,11 +1,12 @@
 # Introduction
 
-[Introduction](../../README.md)
+[Introduction](./intro.md)
 
 - [Getting Started](./getting-started/index.md)
   - [Installing](./getting-started/installing.md)
   - [A Tour of wsh](./getting-started/tour.md)
 - [Using the Shell](./using/index.md)
+  - [Running Commands](./using/running-commands.md)
   - [Programming](./using/programming/index.md)
     - [Numbers](./using/programming/numbers.md)
     - [Strings](./using/programming/strings.md)

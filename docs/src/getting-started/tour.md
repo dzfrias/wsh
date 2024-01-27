@@ -2,7 +2,7 @@
 
 On a base level, `wsh` aims to be similar to
 [bash](https://www.gnu.org/software/bash/) and
-[zsh](https://zsh.sourceforge.io/). Everyday usage will resemble the
+[zsh](https://zsh.sourceforge.io/). Every-day usage will resemble the
 aforementioned languages quite a bit. However, `wsh` differs a lot in its
 [programmatic features](../using/programming/index.md). `wsh` can resemble that
 of a modern scripting language, if needed. You'll find that the control flow,
@@ -45,18 +45,7 @@ $ cat `echo Cargo.toml`
 ...
 ```
 
-Redirect the stderr of a command with a `%` right before any redirection
-operator:
-
-```
-$ cd directory_does_not_exist %| wc -w
-       13
-$ cd directory_does_not_exist %> stderr.txt
-$ cat stderr.txt
-cd: error moving to directory: No such file or directory (os error 2)
-```
-
-Create an alias with the `alias` key word:
+Create an [alias](../using/configuation.md) with the `alias` key word:
 
 ```
 $ alias foo = echo I don't want to type this again
@@ -66,13 +55,14 @@ I don't want to type this again
 
 Hopefully, these tools are enough to get you started using `wsh`! See the
 [POSIX migration](../posix-migration.md) chapter for some more differences
-between `wsh` and traditional shells.
+between `wsh` and traditional shells. You can read a more detailed dive into
+running commands in [this chapter](../using/running-commands.md).
 
 ## wsh as a scripting language
 
 While a lot of the every-day usage experience will be similar to that of
-traditional shells, `wsh` stands out in it's more advanced features. You can use
-the `.` special token to escape to a more programmatically powerful language:
+traditional shells, `wsh` has a powerful escape hatch. You can use the `.`
+character to escape to a language akin to a regular scripting language:
 
 ```
 $ .x = 10
@@ -85,7 +75,7 @@ $ .(1 + "1")
 2
 ```
 
-For the full power of the scripting language, create a new file, `example.wsh`.
+For the full power of language, create a new file, `example.wsh`.
 
 ```
 echo hello from this script!
