@@ -1,0 +1,16 @@
+---
+source: crates/wsh-lang/src/parser/v2/mod.rs
+expression: ast
+---
+ROOT
+  PIPELINE
+    COMMAND
+      STRING `echo`
+      BINOP `+`
+        IDENT `hi`
+        BINOP `+`
+          STRING `/`
+          BINOP `+`
+            ENV_VAR `HELLO`
+            STRING `/world`
+

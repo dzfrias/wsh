@@ -1,0 +1,14 @@
+---
+source: crates/wsh-lang/src/parser/v2/mod.rs
+expression: ast
+---
+ROOT
+  PIPELINE
+    COMMAND
+      STRING `echo`
+      BINOP `<=`
+        BINOP `+`
+          NUMBER `1`
+          NUMBER `1`
+        NUMBER `2`
+

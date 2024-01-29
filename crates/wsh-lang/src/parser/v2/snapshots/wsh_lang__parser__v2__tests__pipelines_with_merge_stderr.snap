@@ -1,0 +1,14 @@
+---
+source: crates/wsh-lang/src/parser/v2/mod.rs
+expression: ast
+---
+ROOT
+  PIPELINE
+    COMMAND (merge_stderr=true)
+      STRING `echo`
+      STRING `hi`
+    COMMAND (merge_stderr=true)
+      STRING `cat`
+    WRITE
+      STRING `hello.txt`
+

@@ -1,0 +1,12 @@
+---
+source: crates/wsh-lang/src/parser/v2/mod.rs
+expression: "String::from_utf8(buf).unwrap()"
+---
+Error: expected rparen to close grouped expression
+   ╭─[<test>:1:14]
+   │
+ 1 │ echo .(2 + 10
+   │       ───┬───  
+   │          ╰───── this grouped expression
+───╯
+

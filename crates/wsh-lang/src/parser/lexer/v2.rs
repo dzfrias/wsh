@@ -1,19 +1,40 @@
 use std::{collections::VecDeque, str::Chars};
 use tracing::trace;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Token<'src> {
     start: usize,
     kind: TokenKind<'src>,
 }
 
 impl<'src> Token<'src> {
+    /// The offset pointing to the start of the token.
     pub fn start(&self) -> usize {
         self.start
     }
 
+    /// The [`TokenKind`] of the token.
     pub fn kind(&self) -> TokenKind<'src> {
         self.kind
+    }
+
+    /// The size of the token.
+    pub fn size(&self) -> usize {
+        self.kind().size()
+    }
+
+    /// The offset pointing to the end of the token, not inclusive.
+    pub fn end(&self) -> usize {
+        self.start() + self.size()
+    }
+}
+
+impl Default for Token<'_> {
+    fn default() -> Self {
+        Self {
+            start: 0,
+            kind: TokenKind::Eof,
+        }
     }
 }
 
@@ -39,7 +60,6 @@ pub enum TokenKind<'src> {
     Semicolon,
     Space,
     QuestionMark,
-    Dollar,
     Tilde,
     Colon,
     ColonAssign,
@@ -91,6 +111,52 @@ impl TokenKind<'_> {
         };
         Some(kw)
     }
+
+    /// Get the expected size of the token in as a string.
+    pub fn size(&self) -> usize {
+        match self {
+            TokenKind::Eof | TokenKind::Space => 0,
+            TokenKind::Assign
+            | TokenKind::LParen
+            | TokenKind::RParen
+            | TokenKind::Plus
+            | TokenKind::Minus
+            | TokenKind::Star
+            | TokenKind::Slash
+            | TokenKind::Semicolon
+            | TokenKind::Invalid
+            | TokenKind::Bang
+            | TokenKind::Pipe
+            | TokenKind::Backtick
+            | TokenKind::QuestionMark
+            | TokenKind::Gt
+            | TokenKind::Lt
+            | TokenKind::Write
+            | TokenKind::Tilde
+            | TokenKind::Colon => 1,
+            TokenKind::Eq
+            | TokenKind::Ne
+            | TokenKind::If
+            | TokenKind::Le
+            | TokenKind::Ge
+            | TokenKind::Append
+            | TokenKind::PercentPipe
+            | TokenKind::PercentWrite
+            | TokenKind::PercentAppend
+            | TokenKind::Do
+            | TokenKind::ColonAssign => 2,
+            TokenKind::End | TokenKind::Def => 3,
+            TokenKind::Then | TokenKind::Else | TokenKind::BoolTrue => 4,
+            TokenKind::BoolFalse | TokenKind::While | TokenKind::Break => 5,
+            TokenKind::Return => 6,
+            TokenKind::Continue => 8,
+            TokenKind::Ident(s)
+            | TokenKind::String(s)  // TODO: this doesn't work with strings with quotes
+            | TokenKind::BadNumber(s)
+            | TokenKind::Number(s) => s.len(),
+            TokenKind::BadString(s) | TokenKind::EnvVar(s) => s.len() + 1,
+        }
+    }
 }
 
 /// The current mode of the lexer. This will decide how certain characters are treated.
@@ -112,7 +178,7 @@ impl LexMode {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Lexer<'src> {
     src: &'src str,
     chars: Chars<'src>,
@@ -147,8 +213,14 @@ impl<'src> Lexer<'src> {
     ///    echo + 10
     /// should all be strings. In strict mode, they should be special. The context for whether to
     /// get the next token in strict or normal mode depends on the parsing state.
-    #[must_use]
     pub fn next_token(&mut self, mut mode: LexMode) -> Token<'src> {
+        if self.pos > self.src.len() {
+            return Token {
+                start: self.pos - 1,
+                kind: TokenKind::Eof,
+            };
+        }
+
         /// Helper macro to consume a token and return a new one
         macro_rules! consume_and {
             ($t:ident) => {{
@@ -195,7 +267,7 @@ impl<'src> Lexer<'src> {
             '(' if mode.is_strict() => TokenKind::LParen,
             ')' if mode.is_strict() => TokenKind::RParen,
             i if i.is_ascii_digit() && mode.is_strict() => {
-                let n = self.consume_unquoted_str();
+                let n = self.consume_while(|c| c.is_ascii_alphanumeric() || c == '.');
                 consume_next = false;
                 if n.parse::<f64>().is_err() {
                     TokenKind::BadNumber(n)
@@ -209,7 +281,7 @@ impl<'src> Lexer<'src> {
                 match TokenKind::from_kw(s) {
                     Some(t) => t,
                     None if s == "true" => TokenKind::BoolTrue,
-                    None if s == "false" => TokenKind::BoolTrue,
+                    None if s == "false" => TokenKind::BoolFalse,
                     None => TokenKind::Ident(s),
                 }
             }
@@ -253,7 +325,7 @@ impl<'src> Lexer<'src> {
             '$' => {
                 self.consume();
                 consume_next = false;
-                TokenKind::Ident(self.consume_ident())
+                TokenKind::EnvVar(self.consume_ident())
             }
 
             // --Whitespace--
@@ -313,6 +385,25 @@ impl<'src> Lexer<'src> {
         Token { start: pos, kind }
     }
 
+    /// Peek the next token in the text, skipping whitepsace.
+    pub fn peek_token(&mut self, mode: LexMode) -> Token<'src> {
+        let clone = self.clone();
+        let mut t = self.next_token(mode);
+        while t.kind() == TokenKind::Space {
+            t = self.next_token(mode);
+        }
+        *self = clone;
+        t
+    }
+
+    /// Peek the next token in the text.
+    pub fn peek_token_raw(&mut self, mode: LexMode) -> Token<'src> {
+        let clone = self.clone();
+        let t = self.next_token(mode);
+        *self = clone;
+        t
+    }
+
     /// Advance the lexer by one character.
     fn consume(&mut self) {
         self.pos += self.current.len_utf8();
@@ -346,7 +437,9 @@ impl<'src> Lexer<'src> {
     }
 
     fn consume_unquoted_str(&mut self) -> &'src str {
-        self.consume_while(|c| !c.is_whitespace() && !matches!(c, ';' | '|' | '%' | '>' | '`'))
+        self.consume_while(|c| {
+            !c.is_whitespace() && !matches!(c, ';' | '|' | '%' | '>' | '`' | '$')
+        })
     }
 
     fn consume_quoted_str(&mut self) -> (&'src str, bool) {
@@ -588,5 +681,11 @@ mod tests {
             Normal Space,
             Normal BadString("bad"),
         ]
+    );
+
+    lexer_test!(
+        tilde,
+        "~/code co~de",
+        [Normal Tilde, Normal String("/code"), Normal Space, Normal String("co~de")]
     );
 }

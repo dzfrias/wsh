@@ -1,0 +1,11 @@
+---
+source: crates/wsh-lang/src/parser/v2/mod.rs
+expression: ast
+---
+ROOT
+  ASSIGNMENT
+      IDENT `x`
+      BINOP `+`
+        NUMBER `1`
+        NUMBER `1`
+

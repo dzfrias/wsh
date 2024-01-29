@@ -1,0 +1,11 @@
+---
+source: crates/wsh-lang/src/parser/v2/mod.rs
+expression: ast
+---
+ROOT
+  PIPELINE
+    COMMAND
+      STRING `echo`
+      STRING `hello`
+      STRING `world`
+

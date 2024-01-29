@@ -1,6 +1,7 @@
 pub mod ast;
 mod error;
 mod lexer;
+pub mod v2;
 
 pub use self::error::*;
 use crate::{
