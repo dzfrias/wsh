@@ -8,7 +8,9 @@ use tracing::debug;
 use self::error::*;
 use crate::{
     parser::lexer::v2::{LexMode, Lexer, Token, TokenKind},
-    v2::ast::{Ast, NodeArray, NodeIndex, NodeInfo, NodeInfoKind, PipelineEnd, PipelineEndKind},
+    v2::ast::{
+        Ast, DataArray, EnvSet, NodeHandle, NodeInfo, NodeInfoKind, PipelineEnd, PipelineEndKind,
+    },
 };
 
 /// The original text of wsh's input, along with a source name.
@@ -43,7 +45,7 @@ impl Source {
 
         Report::build(ReportKind::Error, self.name(), error.offset())
             .with_message(error.msg())
-            .with_labels(error.labels().into_iter().map(|label| {
+            .with_labels(error.labels().iter().map(|label| {
                 Label::new((self.name(), label.range.clone()))
                     .with_message(&label.msg)
                     .with_color(Color::Blue)
@@ -92,7 +94,7 @@ impl<'src> Parser<'src> {
             }
             self.next_token();
         }
-        let arr = ast.serialize::<NodeArray>(stmts);
+        let arr = DataArray::from_iter(&mut ast, stmts.iter().copied());
         ast.add(NodeInfo {
             kind: NodeInfoKind::Root,
             offset: 0,
@@ -104,7 +106,7 @@ impl<'src> Parser<'src> {
         Ok(ast)
     }
 
-    fn parse_stmt(&mut self, ast: &mut Ast) -> Result<NodeIndex> {
+    fn parse_stmt(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
         debug!("began parsing statement");
         let s = match self.current.kind() {
             TokenKind::Ident(_) if self.peek_strict().kind() == TokenKind::Assign => {
@@ -116,7 +118,7 @@ impl<'src> Parser<'src> {
         Ok(s)
     }
 
-    fn parse_pipeline(&mut self, ast: &mut Ast) -> Result<NodeIndex> {
+    fn parse_pipeline(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
         debug!("began parsing pipeline");
 
         if let TokenKind::String(s) = self.current.kind() {
@@ -148,15 +150,15 @@ impl<'src> Parser<'src> {
                 self.next_token();
                 let file = self.parse_expr(ast, Precedence::Lowest)?;
                 let end = PipelineEnd { kind, file };
-                (
-                    NodeInfoKind::PipelineWithEnd,
-                    ast.serialize::<PipelineEnd>(end).raw(),
-                )
+                // TODO: parse env
+                let env_handle = DataArray::from_iter(ast, std::iter::empty::<EnvSet>());
+                let data = ast.serialize((end, env_handle));
+                (NodeInfoKind::PipelineWithEnd, data.raw())
             }
             _ => (NodeInfoKind::Pipeline, 0),
         };
         let cmds_len = cmds.len();
-        let data = ast.serialize::<NodeArray>(cmds);
+        let data = DataArray::from_iter(ast, cmds.iter().copied());
         let node = ast.add(NodeInfo {
             kind,
             offset,
@@ -168,7 +170,7 @@ impl<'src> Parser<'src> {
         Ok(node)
     }
 
-    fn parse_assignment(&mut self, ast: &mut Ast) -> Result<NodeIndex> {
+    fn parse_assignment(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
         debug!("began parsing assignment");
         let TokenKind::Ident(name) = self.current.kind() else {
             panic!("BUG: should not call on non-ident!");
@@ -191,7 +193,7 @@ impl<'src> Parser<'src> {
         Ok(node)
     }
 
-    fn parse_export(&mut self, ast: &mut Ast) -> Result<NodeIndex> {
+    fn parse_export(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
         debug!("began parsing export");
         let start = self.current.start() as u32;
         self.mode = LexMode::Strict;
@@ -225,7 +227,7 @@ impl<'src> Parser<'src> {
         Ok(node)
     }
 
-    fn parse_cmd(&mut self, ast: &mut Ast) -> Result<NodeIndex> {
+    fn parse_cmd(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
         debug!("began parsing command");
         let mut exprs = vec![self.parse_expr(ast, Precedence::Lowest)?];
         while !matches!(
@@ -252,7 +254,7 @@ impl<'src> Parser<'src> {
             "successfully parsed command, got {} exprs and merge_stderr={merge_stderr}",
             exprs.len()
         );
-        let data = ast.serialize::<NodeArray>(exprs);
+        let data = DataArray::from_iter(ast, exprs.iter().copied());
         let node = ast.add(NodeInfo {
             kind: NodeInfoKind::Command,
             offset: self.current.start() as u32,
@@ -263,7 +265,7 @@ impl<'src> Parser<'src> {
         Ok(node)
     }
 
-    fn parse_expr(&mut self, ast: &mut Ast, precedence: Precedence) -> Result<NodeIndex> {
+    fn parse_expr(&mut self, ast: &mut Ast, precedence: Precedence) -> Result<NodeHandle> {
         // This function contains the heart of the recursive descent parser! This uses the Pratt
         // parsing algorithm.
         debug!("began parsing expr");
@@ -329,7 +331,7 @@ impl<'src> Parser<'src> {
         Ok(expr)
     }
 
-    fn parse_infix(&mut self, ast: &mut Ast, lhs: NodeIndex) -> Result<NodeIndex> {
+    fn parse_infix(&mut self, ast: &mut Ast, lhs: NodeHandle) -> Result<NodeHandle> {
         debug!("began parsing infix expr");
         let binop = match self.current.kind() {
             TokenKind::Plus => NodeInfoKind::Add,
@@ -358,7 +360,7 @@ impl<'src> Parser<'src> {
         Ok(infix)
     }
 
-    fn parse_prefix(&mut self, ast: &mut Ast) -> Result<NodeIndex> {
+    fn parse_prefix(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
         debug!("began parsing infix expr");
         let unop = match self.current.kind() {
             TokenKind::Minus => NodeInfoKind::Neg,
@@ -378,7 +380,7 @@ impl<'src> Parser<'src> {
         Ok(prefix)
     }
 
-    fn parse_number(&mut self, ast: &mut Ast) -> NodeIndex {
+    fn parse_number(&mut self, ast: &mut Ast) -> NodeHandle {
         let TokenKind::Number(n) = self.current.kind() else {
             panic!("should not call on non-number token!");
         };
@@ -395,7 +397,7 @@ impl<'src> Parser<'src> {
         })
     }
 
-    fn parse_string_like(&mut self, ast: &mut Ast, kind: NodeInfoKind) -> NodeIndex {
+    fn parse_string_like(&mut self, ast: &mut Ast, kind: NodeInfoKind) -> NodeHandle {
         let (TokenKind::Ident(s) | TokenKind::EnvVar(s) | TokenKind::String(s)) =
             self.current.kind()
         else {
@@ -411,7 +413,7 @@ impl<'src> Parser<'src> {
         })
     }
 
-    fn parse_bool(&mut self, ast: &mut Ast) -> NodeIndex {
+    fn parse_bool(&mut self, ast: &mut Ast) -> NodeHandle {
         let p1 = match self.current.kind() {
             TokenKind::BoolTrue => 1,
             TokenKind::BoolFalse => 0,
@@ -426,7 +428,7 @@ impl<'src> Parser<'src> {
         })
     }
 
-    fn parse_last_status(&mut self, ast: &mut Ast) -> NodeIndex {
+    fn parse_last_status(&mut self, ast: &mut Ast) -> NodeHandle {
         debug_assert!(matches!(self.current.kind(), TokenKind::QuestionMark));
         debug!("parsed last status");
         ast.add(NodeInfo {
@@ -437,7 +439,7 @@ impl<'src> Parser<'src> {
         })
     }
 
-    fn parse_home_dir(&mut self, ast: &mut Ast) -> NodeIndex {
+    fn parse_home_dir(&mut self, ast: &mut Ast) -> NodeHandle {
         debug_assert!(matches!(self.current.kind(), TokenKind::Tilde));
         debug!("parsed last status");
         ast.add(NodeInfo {
@@ -448,7 +450,7 @@ impl<'src> Parser<'src> {
         })
     }
 
-    fn parse_grouped_expr(&mut self, ast: &mut Ast) -> Result<NodeIndex> {
+    fn parse_grouped_expr(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
         debug_assert!(matches!(self.current.kind(), TokenKind::LParen));
         debug!("began parsing grouped expr");
         let lparen_pos = self.current.start();

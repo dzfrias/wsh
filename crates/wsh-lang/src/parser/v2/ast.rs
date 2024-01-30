@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{iter::FusedIterator, ops::Deref};
+use std::{iter::FusedIterator, marker::PhantomData, ops::Deref};
 
 use smol_str::SmolStr;
 
@@ -33,11 +33,11 @@ pub enum NodeKind {
     Export(Export),
 
     // Expressions
-    String(AstString),
+    String(StringHandle),
     Number(Number),
     Boolean(Boolean),
-    Ident(Ident),
-    EnvVar(EnvVar),
+    Ident(IdentHandle),
+    EnvVar(EnvVarHandle),
     Binop(Binop),
     Unop(Unop),
     LastStatus(LastStatus),
@@ -46,34 +46,41 @@ pub enum NodeKind {
 
 #[derive(Debug)]
 pub struct Root {
-    pub stmts: NodeArray,
+    pub stmts: DataHandle<DataArray<NodeHandle>>,
 }
 
 #[derive(Debug)]
 pub struct Command {
-    pub exprs: NodeArray,
+    pub exprs: DataHandle<DataArray<NodeHandle>>,
     pub merge_stderr: bool,
 }
 
 #[derive(Debug)]
 pub struct Pipeline {
-    pub cmds: NodeArray,
+    pub cmds: DataHandle<DataArray<NodeHandle>>,
     pub end: Option<PipelineEnd>,
-}
-
-#[derive(Debug)]
-pub struct Assignment {
-    pub name: Ident,
-    pub value: NodeIndex,
+    pub env: DataHandle<DataArray<EnvSet>>,
 }
 
 #[derive(Debug)]
 pub struct PipelineEnd {
     pub kind: PipelineEndKind,
-    pub file: NodeIndex,
+    pub file: NodeHandle,
 }
 
 #[derive(Debug)]
+pub struct Assignment {
+    pub name: IdentHandle,
+    pub value: NodeHandle,
+}
+
+#[derive(Debug)]
+pub struct EnvSet {
+    pub name: IdentHandle,
+    pub value: NodeHandle,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum PipelineEndKind {
     Write,
@@ -82,20 +89,20 @@ pub enum PipelineEndKind {
 
 #[derive(Debug)]
 pub struct Binop {
-    pub lhs: NodeIndex,
-    pub rhs: NodeIndex,
+    pub lhs: NodeHandle,
+    pub rhs: NodeHandle,
     pub op: BinopKind,
 }
 
 #[derive(Debug)]
 pub struct Export {
-    pub name: Ident,
-    pub value: NodeIndex,
+    pub name: IdentHandle,
+    pub value: NodeHandle,
 }
 
 #[derive(Debug)]
 pub struct Unop {
-    pub expr: NodeIndex,
+    pub expr: NodeHandle,
     pub op: UnopKind,
 }
 
@@ -134,15 +141,6 @@ pub struct HomeDir;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Number(f64);
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
-pub struct NodeIndex(u32);
-
-impl NodeIndex {
-    pub(super) fn raw(self) -> u32 {
-        self.0
-    }
-}
 
 #[derive(Debug, Clone, Hash, PartialEq)]
 pub struct EnvVar(Ident);
@@ -192,9 +190,13 @@ impl Deref for Ident {
 }
 
 #[derive(Debug)]
-pub struct NodeArray {
-    ptr: DataIndex,
+pub struct DataArray<T>
+where
+    T: ExactSizeDeserialize,
+{
+    ptr: DataHandle<T>,
     len: u32,
+    _phantom: PhantomData<T>,
 }
 
 impl Ast {
@@ -207,8 +209,35 @@ impl Ast {
         }
     }
 
-    /// Get a node from the AST, at the given node index.
-    pub fn get(&self, node: NodeIndex) -> Node {
+    /// Get the root node of the AST.
+    pub fn root(&self) -> Root {
+        let NodeKind::Root(root) = self.get_node(NodeHandle(self.nodes.len() as u32 - 1)).kind
+        else {
+            panic!("root should always be the last node!");
+        };
+
+        root
+    }
+
+    /// Add a node to the AST. This will return a handle to the node.
+    // TODO: make unsafe
+    pub(super) fn add(&mut self, node: NodeInfo) -> NodeHandle {
+        self.nodes.push(node);
+        NodeHandle(self.nodes.len() as u32 - 1)
+    }
+
+    /// Serialize a given object. This is useful for adding nodes to the AST.
+    pub(super) fn serialize<T: Serialize>(&mut self, data: T) -> DataHandle<T> {
+        data.serialize(self)
+    }
+
+    /// Allocate a string, return a handle to it.
+    pub(super) fn alloc_string(&mut self, s: &str) -> StringHandle {
+        self.strings.push(AstString::new(s));
+        StringHandle(self.strings.len() as u32 - 1)
+    }
+
+    fn get_node(&self, node: NodeHandle) -> Node {
         let NodeInfo {
             kind,
             offset,
@@ -219,68 +248,51 @@ impl Ast {
         macro_rules! binop {
             ($kind:ident) => {{
                 NodeKind::Binop(Binop {
-                    lhs: NodeIndex(p1),
-                    rhs: NodeIndex(p2),
+                    lhs: NodeHandle(p1),
+                    rhs: NodeHandle(p2),
                     op: BinopKind::$kind,
                 })
             }};
         }
 
         let node_kind = match kind {
-            NodeInfoKind::Root => {
-                let stmts = self.deserialize::<NodeArray>(DataIndex(p1));
-                NodeKind::Root(Root { stmts })
-            }
-            NodeInfoKind::Command => {
-                let exprs = self.deserialize::<NodeArray>(DataIndex(p1));
-                NodeKind::Command(Command {
-                    exprs,
-                    merge_stderr: p2 == 1,
-                })
-            }
-            NodeInfoKind::Pipeline => {
-                let cmds = self.deserialize::<NodeArray>(DataIndex(p1));
-                NodeKind::Pipeline(Pipeline { cmds, end: None })
-            }
+            NodeInfoKind::Root => NodeKind::Root(Root {
+                stmts: DataHandle::new(p1),
+            }),
+            NodeInfoKind::Command => NodeKind::Command(Command {
+                exprs: DataHandle::new(p1),
+                merge_stderr: p2 == 1,
+            }),
+            NodeInfoKind::Pipeline => NodeKind::Pipeline(Pipeline {
+                cmds: DataHandle::new(p1),
+                env: DataHandle::new(p2),
+                end: None,
+            }),
             NodeInfoKind::PipelineWithEnd => {
-                let cmds = self.deserialize::<NodeArray>(DataIndex(p1));
-                let end = self.deserialize::<PipelineEnd>(DataIndex(p2));
+                let (end, env) =
+                    DataHandle::<(PipelineEnd, DataHandle<DataArray<EnvSet>>)>::new(p2).deref(self);
                 NodeKind::Pipeline(Pipeline {
-                    cmds,
+                    cmds: DataHandle::new(p1),
                     end: Some(end),
+                    env,
                 })
             }
-            NodeInfoKind::Assignment => {
-                let name = self.strings[p1 as usize].clone();
-                NodeKind::Assignment(Assignment {
-                    name: Ident(name),
-                    value: NodeIndex(p2),
-                })
-            }
-            NodeInfoKind::Export => {
-                let name = self.strings[p1 as usize].clone();
-                NodeKind::Export(Export {
-                    name: Ident(name),
-                    value: NodeIndex(p2),
-                })
-            }
+            NodeInfoKind::Assignment => NodeKind::Assignment(Assignment {
+                name: IdentHandle(p1),
+                value: NodeHandle(p2),
+            }),
+            NodeInfoKind::Export => NodeKind::Export(Export {
+                name: IdentHandle(p1),
+                value: NodeHandle(p2),
+            }),
 
             NodeInfoKind::Number => {
                 let raw = (p2 as u64) | (p1 as u64) << 32;
                 NodeKind::Number(Number(f64::from_bits(raw)))
             }
-            NodeInfoKind::String => {
-                let s = self.strings[p1 as usize].clone();
-                NodeKind::String(s)
-            }
-            NodeInfoKind::EnvVar => {
-                let s = self.strings[p1 as usize].clone();
-                NodeKind::EnvVar(EnvVar(Ident(s)))
-            }
-            NodeInfoKind::Ident => {
-                let s = self.strings[p1 as usize].clone();
-                NodeKind::Ident(Ident(s))
-            }
+            NodeInfoKind::String => NodeKind::String(StringHandle(p1)),
+            NodeInfoKind::EnvVar => NodeKind::EnvVar(EnvVarHandle(p1)),
+            NodeInfoKind::Ident => NodeKind::Ident(IdentHandle(p1)),
             NodeInfoKind::Boolean => NodeKind::Boolean(if p1 == 0 {
                 Boolean::False
             } else {
@@ -300,15 +312,15 @@ impl Ast {
             NodeInfoKind::Eq => binop!(Eq),
             NodeInfoKind::Ne => binop!(Ne),
             NodeInfoKind::Neg => NodeKind::Unop(Unop {
-                expr: NodeIndex(p1),
+                expr: NodeHandle(p1),
                 op: UnopKind::Neg,
             }),
             NodeInfoKind::Bang => NodeKind::Unop(Unop {
-                expr: NodeIndex(p1),
+                expr: NodeHandle(p1),
                 op: UnopKind::Bang,
             }),
             NodeInfoKind::Sign => NodeKind::Unop(Unop {
-                expr: NodeIndex(p1),
+                expr: NodeHandle(p1),
                 op: UnopKind::Sign,
             }),
         };
@@ -319,40 +331,9 @@ impl Ast {
         }
     }
 
-    /// Get the root node of the AST.
-    pub fn root(&self) -> Root {
-        let NodeKind::Root(root) = self.get(NodeIndex(self.nodes.len() as u32 - 1)).kind else {
-            panic!("root should always be the last node!");
-        };
-
-        root
-    }
-
-    /// Add a node to the AST. This will return a handle to the node.
-    // TODO: make unsafe
-    pub(super) fn add(&mut self, node: NodeInfo) -> NodeIndex {
-        self.nodes.push(node);
-        NodeIndex(self.nodes.len() as u32 - 1)
-    }
-
-    /// Serialize a given object. This is useful for adding nodes to the AST.
-    pub(super) fn serialize<T: Serialize>(&mut self, data: T::From) -> DataIndex {
-        T::to_ast(data, self)
-    }
-
-    /// Allocate a string, return a handle to it.
-    pub(super) fn alloc_string(&mut self, s: &str) -> StringIndex {
-        self.strings.push(AstString::new(s));
-        StringIndex(self.strings.len() as u32 - 1)
-    }
-
-    fn alloc_data(&mut self, data: u32) -> DataIndex {
+    fn alloc_data(&mut self, data: u32) -> u32 {
         self.extra_data.push(data);
-        DataIndex(self.extra_data.len() as u32 - 1)
-    }
-
-    fn deserialize<T: Deserialize>(&self, idx: DataIndex) -> T {
-        T::from_ast(self, idx)
+        self.extra_data.len() as u32 - 1
     }
 }
 
@@ -362,120 +343,282 @@ impl Default for Ast {
     }
 }
 
-pub(super) trait Serialize {
-    type From;
-
-    fn to_ast(from: Self::From, ast: &mut Ast) -> DataIndex;
+pub(super) trait Serialize: Sized {
+    fn serialize(&self, ast: &mut Ast) -> DataHandle<Self>;
 }
 
-trait Deserialize {
-    fn from_ast(ast: &Ast, index: DataIndex) -> Self;
+pub trait Deserialize: Sized {
+    fn deserialize(ast: &Ast, index: DataHandle<Self>) -> Self;
+}
+
+/// AST types that have a statically known size in the `extra_data` store should implement this,
+/// and give their size in u32s.
+pub trait ExactSizeDeserialize: Deserialize {
+    fn size() -> usize;
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
-pub(super) struct StringIndex(u32);
+pub struct StringHandle(u32);
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
-pub(super) struct DataIndex(u32);
+pub struct IdentHandle(u32);
 
-impl StringIndex {
-    pub fn raw(self) -> u32 {
-        self.0
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+pub struct EnvVarHandle(u32);
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub struct DataHandle<T>(u32, PhantomData<T>);
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+pub struct NodeHandle(u32);
+
+impl<T> Clone for DataHandle<T> {
+    fn clone(&self) -> Self {
+        *self
     }
 }
 
-impl DataIndex {
-    pub fn raw(self) -> u32 {
+impl<T> Copy for DataHandle<T> {}
+
+impl StringHandle {
+    pub(super) fn raw(self) -> u32 {
         self.0
+    }
+    pub fn deref(self, ast: &Ast) -> &AstString {
+        &ast.strings[self.raw() as usize]
     }
 }
 
-impl NodeArray {
-    pub fn iter<'ast>(&self, ast: &'ast Ast) -> NodeArrayIter<'ast> {
-        NodeArrayIter {
+impl<T> DataHandle<T> {
+    fn new(raw: u32) -> Self {
+        Self(raw, PhantomData)
+    }
+    pub(super) fn raw(self) -> u32 {
+        self.0
+    }
+    pub fn deref(self, ast: &Ast) -> T
+    where
+        T: Deserialize,
+    {
+        T::deserialize(ast, self)
+    }
+}
+
+impl IdentHandle {
+    pub(super) fn raw(self) -> u32 {
+        self.0
+    }
+    pub fn deref(self, ast: &Ast) -> &Ident {
+        let s = &ast.strings[self.raw() as usize];
+        // SAFETY: the internal structure of an Ident is the same as an AstString
+        unsafe { std::mem::transmute(s) }
+    }
+}
+
+impl EnvVarHandle {
+    pub(super) fn raw(self) -> u32 {
+        self.0
+    }
+    pub fn deref(self, ast: &Ast) -> &EnvVar {
+        let s = &ast.strings[self.raw() as usize];
+        // SAFETY: the internal structure of an EnvVar is the same as an AstString
+        unsafe { std::mem::transmute(s) }
+    }
+}
+
+impl NodeHandle {
+    pub(super) fn raw(self) -> u32 {
+        self.0
+    }
+    pub fn deref(self, ast: &Ast) -> Node {
+        ast.get_node(self)
+    }
+}
+
+impl<T: ExactSizeDeserialize> DataArray<T> {
+    pub fn iter<'ast>(&self, ast: &'ast Ast) -> DataArrayIter<'ast, T> {
+        DataArrayIter {
             ast,
             current: self.ptr,
             end: self.ptr.0 + self.len,
+            _phantom: PhantomData,
         }
     }
 }
 
-impl Deserialize for NodeArray {
-    fn from_ast(ast: &Ast, index: DataIndex) -> Self {
+impl<T: ExactSizeDeserialize> Deserialize for DataArray<T> {
+    fn deserialize(ast: &Ast, index: DataHandle<DataArray<T>>) -> Self {
         let len = ast.extra_data[index.0 as usize];
         Self {
-            ptr: DataIndex(index.raw() + 1),
+            ptr: DataHandle::new(index.raw() + 1),
             len,
+            _phantom: PhantomData,
         }
     }
 }
 
-impl Serialize for NodeArray {
-    type From = Vec<NodeIndex>;
-
-    fn to_ast(from: Self::From, ast: &mut Ast) -> DataIndex {
-        let i = ast.alloc_data(from.len() as u32);
-        if from.is_empty() {
+impl<T: ExactSizeDeserialize> DataArray<T> {
+    pub(super) fn from_iter<I>(ast: &mut Ast, iter: I) -> DataHandle<Self>
+    where
+        I: ExactSizeIterator<Item = T>,
+        T: Serialize,
+    {
+        let i = ast.alloc_data(iter.len() as u32);
+        if iter.len() == 0 {
             ast.alloc_data(0);
-            return i;
+            return DataHandle::new(i);
         }
-        for idx in from {
-            ast.alloc_data(idx.raw());
+        for t in iter {
+            ast.serialize(t);
         }
-        i
+        DataHandle::new(i)
+    }
+}
+
+impl<T, U> Deserialize for (T, U)
+where
+    T: ExactSizeDeserialize,
+    U: ExactSizeDeserialize,
+{
+    fn deserialize(ast: &Ast, index: DataHandle<Self>) -> Self {
+        let idx = DataHandle::new(index.raw());
+        let t = T::deserialize(ast, idx);
+        let idx = DataHandle::new(index.raw() + T::size() as u32);
+        let u = U::deserialize(ast, idx);
+        (t, u)
+    }
+}
+
+impl<T, U> Serialize for (T, U)
+where
+    T: Serialize,
+    U: Serialize,
+{
+    fn serialize(&self, ast: &mut Ast) -> DataHandle<Self> {
+        let i = self.0.serialize(ast);
+        self.1.serialize(ast);
+        DataHandle::new(i.raw())
     }
 }
 
 impl Serialize for PipelineEnd {
-    type From = PipelineEnd;
-
-    fn to_ast(from: Self::From, ast: &mut Ast) -> DataIndex {
-        let kind = ast.alloc_data(from.kind as u32);
-        ast.alloc_data(from.file.raw());
-        kind
+    fn serialize(&self, ast: &mut Ast) -> DataHandle<Self> {
+        let kind = self.kind as u32;
+        let i = ast.alloc_data(kind);
+        ast.alloc_data(self.file.raw());
+        DataHandle::new(i)
     }
 }
 
 impl Deserialize for PipelineEnd {
-    fn from_ast(ast: &Ast, index: DataIndex) -> Self {
-        let kind = match ast.extra_data[index.raw() as usize] {
+    fn deserialize(ast: &Ast, index: DataHandle<Self>) -> Self {
+        let data = ast.extra_data[index.raw() as usize];
+        let kind = match data {
             0 => PipelineEndKind::Write,
             1 => PipelineEndKind::Append,
-            _ => unreachable!(),
+            _ => panic!("invalid deserialization"),
         };
-        let file = NodeIndex(ast.extra_data[index.raw() as usize + 1]);
-        Self { kind, file }
+        let handle = ast.extra_data[index.raw() as usize + 1];
+        Self {
+            kind,
+            file: NodeHandle(handle),
+        }
+    }
+}
+
+impl ExactSizeDeserialize for PipelineEnd {
+    fn size() -> usize {
+        2
+    }
+}
+
+impl<T> Deserialize for DataHandle<T> {
+    fn deserialize(ast: &Ast, index: DataHandle<Self>) -> Self {
+        Self::new(ast.extra_data[index.raw() as usize])
+    }
+}
+
+impl<T> Serialize for DataHandle<T> {
+    fn serialize(&self, ast: &mut Ast) -> DataHandle<Self> {
+        DataHandle::new(ast.alloc_data(self.raw()))
+    }
+}
+
+impl<T> ExactSizeDeserialize for DataHandle<T> {
+    fn size() -> usize {
+        1
+    }
+}
+
+impl Deserialize for NodeHandle {
+    fn deserialize(ast: &Ast, index: DataHandle<Self>) -> Self {
+        Self(ast.extra_data[index.raw() as usize])
+    }
+}
+
+impl ExactSizeDeserialize for NodeHandle {
+    fn size() -> usize {
+        1
+    }
+}
+
+impl Serialize for NodeHandle {
+    fn serialize(&self, ast: &mut Ast) -> DataHandle<Self> {
+        DataHandle::new(ast.alloc_data(self.raw()))
+    }
+}
+
+impl Serialize for EnvSet {
+    fn serialize(&self, ast: &mut Ast) -> DataHandle<Self> {
+        let i = ast.alloc_data(self.name.raw());
+        ast.alloc_data(self.value.raw());
+        DataHandle::new(i)
+    }
+}
+
+impl Deserialize for EnvSet {
+    fn deserialize(ast: &Ast, index: DataHandle<Self>) -> Self {
+        let name = ast.extra_data[index.raw() as usize];
+        let value = ast.extra_data[index.raw() as usize + 1];
+        Self {
+            name: IdentHandle(name),
+            value: NodeHandle(value),
+        }
+    }
+}
+
+impl ExactSizeDeserialize for EnvSet {
+    fn size() -> usize {
+        2
     }
 }
 
 #[derive(Debug)]
-pub struct NodeArrayIter<'ast> {
+pub struct DataArrayIter<'ast, T>
+where
+    T: ExactSizeDeserialize,
+{
     ast: &'ast Ast,
-    current: DataIndex,
+    current: DataHandle<T>,
     end: u32,
+    _phantom: PhantomData<T>,
 }
 
-impl<'ast> Iterator for NodeArrayIter<'ast> {
-    type Item = NodeIndex;
+impl<'ast, T: ExactSizeDeserialize> Iterator for DataArrayIter<'ast, T> {
+    type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.current.0 == self.end {
             return None;
         }
 
-        let idx = self
-            .ast
-            .extra_data
-            .get(self.current.0 as usize)
-            .copied()
-            .map(NodeIndex)
-            .expect("all extra data indices should be valid by construction!");
-        self.current = DataIndex(self.current.0 + 1);
-        Some(idx)
+        let t = T::deserialize(self.ast, self.current);
+        self.current = DataHandle::new(self.current.0 + T::size() as u32);
+        Some(t)
     }
 }
 
-impl FusedIterator for NodeArrayIter<'_> {}
+impl<T: ExactSizeDeserialize> FusedIterator for DataArrayIter<'_, T> {}
 
 #[derive(Debug, Clone)]
 pub(super) struct NodeInfo {
@@ -487,14 +630,14 @@ pub(super) struct NodeInfo {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) enum NodeInfoKind {
-    /// `a; b; c ...`. `[a, b, c, ..] = NodeArray<Stmt>[p1]`
+    /// `a; b; c ...`. `[a, b, c, ..] = DataArray<Stmt>[p1]`
     Root,
 
-    /// `a b c ... (%)d?`. `[a, b, c, ...] = NodeArray<Expr>[p1], `d = Bool[p2]`
+    /// `a b c ... (%)d?`. `[a, b, c, ...] = DataArray<Expr>[p1], `d = Bool[p2]`
     Command,
-    /// `a | b | c ...`. `[a, b, c, ..] = NodeArray<Expr>[p1]`
+    /// `a | b | c ...`. `[a, b, c, ..] = DataArray<Expr>[p1]`
     Pipeline,
-    /// `a | b | c ... > d`. `[a, b, c, ..] = NodeArray<Expr>[p1], d = PipelineEnd[p2]`
+    /// `a | b | c ... > d`. `[a, b, c, ..] = DataArray<Expr>[p1], d = PipelineEnd[p2]`
     PipelineWithEnd,
     /// `a = p2`. `a = String[p1]`
     Assignment,
@@ -559,76 +702,51 @@ impl Node {
     }
 }
 
-impl fmt::Display for Ast {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fn write_node(
-            f: &mut fmt::Formatter<'_>,
-            ast: &Ast,
-            node: NodeIndex,
-            mut indent: usize,
-        ) -> fmt::Result {
-            let node = ast.get(node).kind;
-            writeln!(f, "{:indent$}{node}", "")?;
-            indent += 2;
-            match node {
-                NodeKind::Command(Command { exprs: nodes, .. })
-                | NodeKind::Root(Root { stmts: nodes })
-                | NodeKind::Pipeline(Pipeline {
-                    cmds: nodes,
-                    end: None,
-                }) => {
-                    for node in nodes.iter(ast) {
-                        write_node(f, ast, node, indent)?;
-                    }
-                }
-                NodeKind::Pipeline(Pipeline {
-                    cmds,
-                    end: Some(end),
-                }) => {
-                    for node in cmds.iter(ast) {
-                        write_node(f, ast, node, indent)?;
-                    }
-                    writeln!(f, "{:indent$}{}", "", end.kind)?;
-                    write_node(f, ast, end.file, indent + 2)?;
-                }
-                NodeKind::Assignment(Assignment { name, value })
-                | NodeKind::Export(Export { name, value }) => {
-                    indent += 2;
-                    writeln!(f, "{:indent$}{name}", "")?;
-                    write_node(f, ast, value, indent)?;
-                }
-                NodeKind::Binop(Binop { lhs, rhs, op: _ }) => {
-                    write_node(f, ast, lhs, indent)?;
-                    write_node(f, ast, rhs, indent)?;
-                }
-                NodeKind::Unop(Unop { expr, op: _ }) => {
-                    write_node(f, ast, expr, indent)?;
-                }
-                _ => {}
-            }
+/// A special formatter for AST nodes. This is just a wrapper around [`std::fmt::Formatter`], but
+/// has `indent` and `unindent` methods that allow for visual nesting.
+struct AstFormatter<'a, 'b> {
+    fmt: &'a mut fmt::Formatter<'b>,
+    indent: usize,
+}
 
-            Ok(())
-        }
+impl AstFormatter<'_, '_> {
+    pub fn indent(&mut self) {
+        self.indent += 2;
+    }
 
-        let mut indent = 0;
-        let root = self.root();
-        writeln!(f, "{root}")?;
-        indent += 2;
-        for node in root.stmts.iter(self) {
-            write_node(f, self, node, indent)?;
-        }
+    pub fn unindent(&mut self) {
+        self.indent -= 2;
+    }
 
-        Ok(())
+    pub fn writeln<D>(&mut self, d: D) -> fmt::Result
+    where
+        D: fmt::Display,
+    {
+        let indent = self.indent;
+        writeln!(self.fmt, "{:indent$}{d}", "")
     }
 }
 
-impl fmt::Display for NodeKind {
+/// The main trait used to display nodes of the AST. Every node should implement this.
+trait AstDisplay {
+    fn ast_fmt(&self, ast: &Ast, f: &mut AstFormatter) -> fmt::Result;
+}
+
+impl fmt::Display for Ast {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut ast_fmt = AstFormatter { fmt: f, indent: 0 };
+        let root = self.root();
+        root.ast_fmt(self, &mut ast_fmt)
+    }
+}
+
+impl AstDisplay for Node {
+    fn ast_fmt(&self, ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
         macro_rules! fmt {
             ($($kind:ident),*) => {
-                match self {
+                match &self.kind {
                     $(
-                        NodeKind::$kind(o) => o.fmt(f),
+                        NodeKind::$kind(o) => o.ast_fmt(ast, f),
                      )*
                 }
             };
@@ -640,32 +758,54 @@ impl fmt::Display for NodeKind {
     }
 }
 
-impl fmt::Display for Root {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "ROOT")
-    }
-}
-
-impl fmt::Display for Command {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "COMMAND")?;
-        if self.merge_stderr {
-            write!(f, " (merge_stderr=true)")?;
+impl AstDisplay for Root {
+    fn ast_fmt(&self, ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        f.writeln("ROOT")?;
+        f.indent();
+        for stmt in self.stmts.deref(ast).iter(ast) {
+            let node = ast.get_node(stmt);
+            node.ast_fmt(ast, f)?;
         }
-
+        f.unindent();
         Ok(())
     }
 }
 
-impl fmt::Display for Binop {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "BINOP `{}`", self.op)
+impl AstDisplay for Command {
+    fn ast_fmt(&self, ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        if self.merge_stderr {
+            f.writeln("COMMAND (merge_stderr=true)")?;
+        } else {
+            f.writeln("COMMAND")?;
+        }
+        f.indent();
+        for expr in self.exprs.deref(ast).iter(ast) {
+            let node = ast.get_node(expr);
+            node.ast_fmt(ast, f)?;
+        }
+        f.unindent();
+        Ok(())
     }
 }
 
-impl fmt::Display for Unop {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "UNOP `{}`", self.op)
+impl AstDisplay for Binop {
+    fn ast_fmt(&self, ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        f.writeln(format_args!("BINOP `{}`", self.op))?;
+        f.indent();
+        ast.get_node(self.lhs).ast_fmt(ast, f)?;
+        ast.get_node(self.rhs).ast_fmt(ast, f)?;
+        f.unindent();
+        Ok(())
+    }
+}
+
+impl AstDisplay for Unop {
+    fn ast_fmt(&self, ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        f.writeln(format_args!("UNOP `{}`", self.op))?;
+        f.indent();
+        ast.get_node(self.expr).ast_fmt(ast, f)?;
+        f.unindent();
+        Ok(())
     }
 }
 
@@ -696,78 +836,111 @@ impl fmt::Display for UnopKind {
     }
 }
 
-impl fmt::Display for Number {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "NUMBER `{}`", self.0)
+impl AstDisplay for Number {
+    fn ast_fmt(&self, _ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        f.writeln(format_args!("NUMBER `{}`", self.0))
     }
 }
 
-impl fmt::Display for AstString {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "STRING `{}`", self.0)
+impl AstDisplay for AstString {
+    fn ast_fmt(&self, _ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        f.writeln(format_args!("STRING `{}`", self.0))
     }
 }
 
-impl fmt::Display for Ident {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "IDENT `{}`", self.0 .0)
+impl AstDisplay for Ident {
+    fn ast_fmt(&self, _ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        f.writeln(format_args!("IDENT `{}`", &*self.0))
     }
 }
 
-impl fmt::Display for Pipeline {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "PIPELINE")
-    }
-}
-
-impl fmt::Display for PipelineEndKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            PipelineEndKind::Write => write!(f, "WRITE"),
-            PipelineEndKind::Append => write!(f, "APPEND"),
+impl AstDisplay for Pipeline {
+    fn ast_fmt(&self, ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        f.writeln("PIPELINE")?;
+        f.indent();
+        for cmd in self.cmds.deref(ast).iter(ast) {
+            ast.get_node(cmd).ast_fmt(ast, f)?;
         }
+        if let Some(end) = &self.end {
+            f.writeln(match end.kind {
+                PipelineEndKind::Write => "WRITE",
+                PipelineEndKind::Append => "APPEND",
+            })?;
+            f.indent();
+            ast.get_node(end.file).ast_fmt(ast, f)?;
+            f.unindent();
+        }
+        f.unindent();
+        Ok(())
     }
 }
 
-impl fmt::Display for Boolean {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
+impl AstDisplay for Boolean {
+    fn ast_fmt(&self, _ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        f.writeln(format_args!(
             "BOOLEAN `{}`",
             match self {
-                Boolean::True => true,
-                Boolean::False => false,
+                Boolean::True => "true",
+                Boolean::False => "false",
             }
-        )
+        ))
     }
 }
 
-impl fmt::Display for LastStatus {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "LAST_STATUS")
+impl AstDisplay for LastStatus {
+    fn ast_fmt(&self, _ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        f.writeln("LAST_STATUS")
     }
 }
 
-impl fmt::Display for HomeDir {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "HOME_DIR")
+impl AstDisplay for HomeDir {
+    fn ast_fmt(&self, _ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        f.writeln("HOME_DIR")
     }
 }
 
-impl fmt::Display for EnvVar {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "ENV_VAR `{}`", self.0 .0 .0)
+impl AstDisplay for EnvVar {
+    fn ast_fmt(&self, _ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        f.writeln(format_args!("ENV_VAR `{}`", &*self.0))
     }
 }
 
-impl fmt::Display for Assignment {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "ASSIGNMENT")
+impl AstDisplay for Assignment {
+    fn ast_fmt(&self, ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        f.writeln("ASSIGNMENT")?;
+        f.indent();
+        self.name.deref(ast).ast_fmt(ast, f)?;
+        ast.get_node(self.value).ast_fmt(ast, f)?;
+        f.unindent();
+        Ok(())
     }
 }
 
-impl fmt::Display for Export {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "EXPORT")
+impl AstDisplay for Export {
+    fn ast_fmt(&self, ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        f.writeln("EXPORT")?;
+        f.indent();
+        self.name.deref(ast).ast_fmt(ast, f)?;
+        self.value.deref(ast).ast_fmt(ast, f)?;
+        f.unindent();
+        Ok(())
+    }
+}
+
+impl AstDisplay for StringHandle {
+    fn ast_fmt(&self, ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        (*self).deref(ast).ast_fmt(ast, f)
+    }
+}
+
+impl AstDisplay for IdentHandle {
+    fn ast_fmt(&self, ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        (*self).deref(ast).ast_fmt(ast, f)
+    }
+}
+
+impl AstDisplay for EnvVarHandle {
+    fn ast_fmt(&self, ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        (*self).deref(ast).ast_fmt(ast, f)
     }
 }

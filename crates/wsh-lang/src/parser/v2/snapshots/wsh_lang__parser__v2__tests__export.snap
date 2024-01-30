@@ -4,10 +4,10 @@ expression: ast
 ---
 ROOT
   EXPORT
-      IDENT `HELLO`
-      BINOP `+`
-        NUMBER `1`
-        NUMBER `1`
+    IDENT `HELLO`
+    BINOP `+`
+      NUMBER `1`
+      NUMBER `1`
   PIPELINE
     COMMAND
       STRING `echo`

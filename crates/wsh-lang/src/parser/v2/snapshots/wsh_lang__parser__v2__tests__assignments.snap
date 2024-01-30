@@ -4,8 +4,8 @@ expression: ast
 ---
 ROOT
   ASSIGNMENT
-      IDENT `x`
-      BINOP `+`
-        NUMBER `1`
-        NUMBER `1`
+    IDENT `x`
+    BINOP `+`
+      NUMBER `1`
+      NUMBER `1`
 
