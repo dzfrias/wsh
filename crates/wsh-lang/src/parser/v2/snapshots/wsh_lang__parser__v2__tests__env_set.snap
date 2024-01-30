@@ -1,0 +1,17 @@
+---
+source: crates/wsh-lang/src/parser/v2/mod.rs
+expression: ast
+---
+ROOT
+  PIPELINE
+    COMMAND
+      STRING `cargo`
+      STRING `test`
+    ENV
+      ENV_SET
+        IDENT `RUST_LOG`
+        STRING `trace`
+      ENV_SET
+        IDENT `RUST_BACKTRACE`
+        STRING `1`
+

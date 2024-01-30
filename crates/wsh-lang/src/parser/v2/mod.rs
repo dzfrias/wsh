@@ -94,7 +94,7 @@ impl<'src> Parser<'src> {
             }
             self.next_token();
         }
-        let arr = DataArray::from_iter(&mut ast, stmts.iter().copied());
+        let arr = DataArray::from_iter(&mut ast, stmts);
         ast.add(NodeInfo {
             kind: NodeInfoKind::Root,
             offset: 0,
@@ -120,6 +120,25 @@ impl<'src> Parser<'src> {
 
     fn parse_pipeline(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
         debug!("began parsing pipeline");
+
+        let mut env = vec![];
+        while matches!(self.current.kind(), TokenKind::EnvVar(_))
+            && self.peek_strict().kind() == TokenKind::Assign
+        {
+            let TokenKind::EnvVar(name) = self.current.kind() else {
+                unreachable!()
+            };
+            debug!("got env set with name: {name}");
+            let name = ast.alloc_ident(name);
+            self.mode = LexMode::Strict;
+            self.next_token();
+            self.mode = LexMode::Normal;
+            self.next_token();
+            let value = self.parse_expr(ast, Precedence::Lowest)?;
+            env.push(EnvSet { name, value });
+            debug!("parsed env set");
+            self.next_token();
+        }
 
         if let TokenKind::String(s) = self.current.kind() {
             // Special commands that get dedicated nodes in the AST
@@ -150,15 +169,17 @@ impl<'src> Parser<'src> {
                 self.next_token();
                 let file = self.parse_expr(ast, Precedence::Lowest)?;
                 let end = PipelineEnd { kind, file };
-                // TODO: parse env
-                let env_handle = DataArray::from_iter(ast, std::iter::empty::<EnvSet>());
+                let env_handle = DataArray::from_iter(ast, env);
                 let data = ast.serialize((end, env_handle));
                 (NodeInfoKind::PipelineWithEnd, data.raw())
             }
-            _ => (NodeInfoKind::Pipeline, 0),
+            _ => {
+                let env_handle = DataArray::from_iter(ast, env);
+                (NodeInfoKind::Pipeline, env_handle.raw())
+            }
         };
         let cmds_len = cmds.len();
-        let data = DataArray::from_iter(ast, cmds.iter().copied());
+        let data = DataArray::from_iter(ast, cmds);
         let node = ast.add(NodeInfo {
             kind,
             offset,
@@ -254,7 +275,7 @@ impl<'src> Parser<'src> {
             "successfully parsed command, got {} exprs and merge_stderr={merge_stderr}",
             exprs.len()
         );
-        let data = DataArray::from_iter(ast, exprs.iter().copied());
+        let data = DataArray::from_iter(ast, exprs);
         let node = ast.add(NodeInfo {
             kind: NodeInfoKind::Command,
             offset: self.current.start() as u32,
@@ -566,6 +587,7 @@ mod tests {
     parser_test!(implicit_concat, "echo .hi/$HELLO/world");
     parser_test!(home_dir, "echo ~/code");
     parser_test!(export, "export HELLO = 1 + 1\necho hi");
+    parser_test!(env_set, "$RUST_LOG=trace $RUST_BACKTRACE=1 cargo test");
 
     parser_test!(@fail export_no_assign, "export HELLO == 1 + 1");
     parser_test!(@fail export_not_ident, "export $HELLO = 1 + 1");

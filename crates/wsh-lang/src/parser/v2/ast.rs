@@ -231,10 +231,20 @@ impl Ast {
         data.serialize(self)
     }
 
-    /// Allocate a string, return a handle to it.
+    /// Allocate a string, returning a handle to it.
     pub(super) fn alloc_string(&mut self, s: &str) -> StringHandle {
         self.strings.push(AstString::new(s));
         StringHandle(self.strings.len() as u32 - 1)
+    }
+
+    /// Allocate an ident, returning a handle to it.
+    pub(super) fn alloc_ident(&mut self, s: &str) -> IdentHandle {
+        IdentHandle(self.alloc_string(s).raw())
+    }
+
+    /// Allocate an env var, returning a handle to it.
+    pub(super) fn alloc_env(&mut self, s: &str) -> EnvVarHandle {
+        EnvVarHandle(self.alloc_string(s).raw())
     }
 
     fn get_node(&self, node: NodeHandle) -> Node {
@@ -351,6 +361,12 @@ pub trait Deserialize: Sized {
     fn deserialize(ast: &Ast, index: DataHandle<Self>) -> Self;
 }
 
+impl<T: Serialize> Serialize for &T {
+    fn serialize(&self, ast: &mut Ast) -> DataHandle<Self> {
+        DataHandle::new((*self).serialize(ast).raw())
+    }
+}
+
 /// AST types that have a statically known size in the `extra_data` store should implement this,
 /// and give their size in u32s.
 pub trait ExactSizeDeserialize: Deserialize {
@@ -435,17 +451,6 @@ impl NodeHandle {
     }
 }
 
-impl<T: ExactSizeDeserialize> DataArray<T> {
-    pub fn iter<'ast>(&self, ast: &'ast Ast) -> DataArrayIter<'ast, T> {
-        DataArrayIter {
-            ast,
-            current: self.ptr,
-            end: self.ptr.0 + self.len,
-            _phantom: PhantomData,
-        }
-    }
-}
-
 impl<T: ExactSizeDeserialize> Deserialize for DataArray<T> {
     fn deserialize(ast: &Ast, index: DataHandle<DataArray<T>>) -> Self {
         let len = ast.extra_data[index.0 as usize];
@@ -458,11 +463,30 @@ impl<T: ExactSizeDeserialize> Deserialize for DataArray<T> {
 }
 
 impl<T: ExactSizeDeserialize> DataArray<T> {
-    pub(super) fn from_iter<I>(ast: &mut Ast, iter: I) -> DataHandle<Self>
+    pub fn iter<'ast>(&self, ast: &'ast Ast) -> DataArrayIter<'ast, T> {
+        DataArrayIter {
+            ast,
+            current: self.ptr,
+            end: self.ptr.0 + self.len * T::size() as u32,
+            _phantom: PhantomData,
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.len as usize
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    pub(super) fn from_iter<I, U>(ast: &mut Ast, iter: I) -> DataHandle<Self>
     where
-        I: ExactSizeIterator<Item = T>,
+        I: IntoIterator<Item = T, IntoIter = U>,
+        U: ExactSizeIterator<Item = T>,
         T: Serialize,
     {
+        let iter = iter.into_iter();
         let i = ast.alloc_data(iter.len() as u32);
         if iter.len() == 0 {
             ast.alloc_data(0);
@@ -868,6 +892,18 @@ impl AstDisplay for Pipeline {
             })?;
             f.indent();
             ast.get_node(end.file).ast_fmt(ast, f)?;
+            f.unindent();
+        }
+        if !self.env.deref(ast).is_empty() {
+            f.writeln("ENV")?;
+            f.indent();
+            for env_set in self.env.deref(ast).iter(ast) {
+                f.writeln("ENV_SET")?;
+                f.indent();
+                env_set.name.deref(ast).ast_fmt(ast, f)?;
+                env_set.value.deref(ast).ast_fmt(ast, f)?;
+                f.unindent();
+            }
             f.unindent();
         }
         f.unindent();
