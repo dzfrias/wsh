@@ -101,12 +101,15 @@ impl<'src> Parser<'src> {
             self.next_token();
         }
         let arr = DataArray::from_iter(&mut ast, stmts);
-        ast.add(NodeInfo {
-            kind: NodeInfoKind::Root,
-            offset: 0,
-            p1: arr.raw(),
-            p2: 0,
-        });
+        // SAFETY: Root's data is a pointer to AST statements, which is provided by `arr`
+        unsafe {
+            ast.add(NodeInfo {
+                kind: NodeInfoKind::Root,
+                offset: 0,
+                p1: arr.raw(),
+                p2: 0,
+            })
+        };
 
         debug!("finished parsing into AST");
         Ok(ast)
@@ -180,6 +183,7 @@ impl<'src> Parser<'src> {
                 let file = self.parse_expr(ast, Precedence::Lowest)?;
                 let end = PipelineEnd { kind, file };
                 let env_handle = DataArray::from_iter(ast, env);
+                // Pointer to a tuple of data containing the end kind and the environment array
                 let data = ast.serialize((end, env_handle));
                 (NodeInfoKind::PipelineWithEnd, data.raw())
             }
@@ -190,12 +194,16 @@ impl<'src> Parser<'src> {
         };
         let cmds_len = cmds.len();
         let data = DataArray::from_iter(ast, cmds);
-        let node = ast.add(NodeInfo {
-            kind,
-            offset,
-            p1: data.raw(),
-            p2,
-        });
+        // SAFETY: Both variants of pipeliens (with end and without) are provided with their
+        // necessary handles.
+        let node = unsafe {
+            ast.add(NodeInfo {
+                kind,
+                offset,
+                p1: data.raw(),
+                p2,
+            })
+        };
 
         debug!("finished parsing pipline with {cmds_len} commands");
         Ok(node)
@@ -214,12 +222,15 @@ impl<'src> Parser<'src> {
         self.next_token();
         let value = self.parse_expr(ast, Precedence::Lowest)?;
         self.mode = LexMode::Normal;
-        let node = ast.add(NodeInfo {
-            kind: NodeInfoKind::Assignment,
-            offset,
-            p1: name.raw(),
-            p2: value.raw(),
-        });
+        // SAFETY: Assignment takes an ident handle and an expression handle, which are provided.
+        let node = unsafe {
+            ast.add(NodeInfo {
+                kind: NodeInfoKind::Assignment,
+                offset,
+                p1: name.raw(),
+                p2: value.raw(),
+            })
+        };
         debug!("successfully parsed assignment");
         Ok(node)
     }
@@ -248,12 +259,15 @@ impl<'src> Parser<'src> {
         self.next_token();
         let value = self.parse_expr(ast, Precedence::Lowest)?;
         self.mode = LexMode::Normal;
-        let node = ast.add(NodeInfo {
-            kind: NodeInfoKind::Export,
-            offset: start,
-            p1: name.raw(),
-            p2: value.raw(),
-        });
+        // SAFETY: Export takes an ident handle and a node handle, which have been provided.
+        let node = unsafe {
+            ast.add(NodeInfo {
+                kind: NodeInfoKind::Export,
+                offset: start,
+                p1: name.raw(),
+                p2: value.raw(),
+            })
+        };
         debug!("successfully parsed export");
         Ok(node)
     }
@@ -280,12 +294,16 @@ impl<'src> Parser<'src> {
         } else {
             (NodeInfoKind::If, body.raw())
         };
-        let node = ast.add(NodeInfo {
-            kind,
-            offset: start as u32,
-            p1: condition.raw(),
-            p2,
-        });
+        // SAFETY: the two variants of If (with else and without) have their proper handles
+        // provided.
+        let node = unsafe {
+            ast.add(NodeInfo {
+                kind,
+                offset: start as u32,
+                p1: condition.raw(),
+                p2,
+            })
+        };
         debug!("sucessfully parsed if statement");
         Ok(node)
     }
@@ -305,12 +323,16 @@ impl<'src> Parser<'src> {
         self.enter_scope(Scope::Loop);
         let body = self.parse_block(ast, false)?;
         self.pop_scope();
-        let node = ast.add(NodeInfo {
-            kind: NodeInfoKind::While,
-            offset: start as u32,
-            p1: condition.raw(),
-            p2: body.raw(),
-        });
+        // SAFETY: While takes a node handle and a pointer to an array of body statements, which
+        // are provided.
+        let node = unsafe {
+            ast.add(NodeInfo {
+                kind: NodeInfoKind::While,
+                offset: start as u32,
+                p1: condition.raw(),
+                p2: body.raw(),
+            })
+        };
 
         debug!("successfully parsed while statement");
         Ok(node)
@@ -390,12 +412,16 @@ impl<'src> Parser<'src> {
             exprs.len()
         );
         let data = DataArray::from_iter(ast, exprs);
-        let node = ast.add(NodeInfo {
-            kind: NodeInfoKind::Command,
-            offset: self.current.start() as u32,
-            p1: data.raw(),
-            p2: merge_stderr as u32,
-        });
+        // SAFETY: Command takes a handle to an array of expressions, and a boolean denoting if
+        // it's stderr should be merged to stdout, which have been provided.
+        let node = unsafe {
+            ast.add(NodeInfo {
+                kind: NodeInfoKind::Command,
+                offset: self.current.start() as u32,
+                p1: data.raw(),
+                p2: merge_stderr as u32,
+            })
+        };
 
         Ok(node)
     }
@@ -455,12 +481,15 @@ impl<'src> Parser<'src> {
         {
             self.next_token();
             let next = self.parse_expr(ast, Precedence::Lowest)?;
-            expr = ast.add(NodeInfo {
-                kind: NodeInfoKind::Add,
-                offset: start as u32,
-                p1: expr.raw(),
-                p2: next.raw(),
-            });
+            // SAFETY: Add takes expression handles for both data segments, which are provided
+            expr = unsafe {
+                ast.add(NodeInfo {
+                    kind: NodeInfoKind::Add,
+                    offset: start as u32,
+                    p1: expr.raw(),
+                    p2: next.raw(),
+                })
+            };
         }
 
         debug!("sucessfully parsed expr");
@@ -485,12 +514,15 @@ impl<'src> Parser<'src> {
         let prec = Precedence::from(self.current.kind());
         self.next_token();
         let rhs = self.parse_expr(ast, prec)?;
-        let infix = ast.add(NodeInfo {
-            kind: binop,
-            offset: self.current.start() as u32,
-            p1: lhs.raw(),
-            p2: rhs.raw(),
-        });
+        // SAFETY: binary operations take two expression handles, which have been provided
+        let infix = unsafe {
+            ast.add(NodeInfo {
+                kind: binop,
+                offset: self.current.start() as u32,
+                p1: lhs.raw(),
+                p2: rhs.raw(),
+            })
+        };
 
         debug!("got infix with op: {binop:?}");
         Ok(infix)
@@ -506,12 +538,15 @@ impl<'src> Parser<'src> {
         };
         self.next_token();
         let expr = self.parse_expr(ast, Precedence::Prefix)?;
-        let prefix = ast.add(NodeInfo {
-            kind: unop,
-            offset: self.current.start() as u32,
-            p1: expr.raw(),
-            p2: 0,
-        });
+        // SAFETY: unary operations take one expression, which has been provided
+        let prefix = unsafe {
+            ast.add(NodeInfo {
+                kind: unop,
+                offset: self.current.start() as u32,
+                p1: expr.raw(),
+                p2: 0,
+            })
+        };
         debug!("got unop with op: {unop:?}");
         Ok(prefix)
     }
@@ -525,12 +560,15 @@ impl<'src> Parser<'src> {
         let p1 = (raw >> 32) as u32;
         let p2 = (raw & 0xFFFFFFFF) as u32;
         debug!("found number: {f}");
-        ast.add(NodeInfo {
-            kind: NodeInfoKind::Number,
-            offset: self.current.start() as u32,
-            p1,
-            p2,
-        })
+        // SAFETY: Numbers have their 64-bit float split across `p1` and `p2`, which has been done
+        unsafe {
+            ast.add(NodeInfo {
+                kind: NodeInfoKind::Number,
+                offset: self.current.start() as u32,
+                p1,
+                p2,
+            })
+        }
     }
 
     fn parse_capture(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
@@ -544,12 +582,15 @@ impl<'src> Parser<'src> {
         let pipeline = self.parse_pipeline(ast)?;
         self.mode = old;
         self.pop_scope();
-        let node = ast.add(NodeInfo {
-            kind: NodeInfoKind::Capture,
-            offset: start as u32,
-            p1: pipeline.raw(),
-            p2: 0,
-        });
+        // SAFETY: captures take a handle to the pipeline they point to, which has been provided
+        let node = unsafe {
+            ast.add(NodeInfo {
+                kind: NodeInfoKind::Capture,
+                offset: start as u32,
+                p1: pipeline.raw(),
+                p2: 0,
+            })
+        };
         self.expect_next(TokenKind::Backtick, "expected closing backtick")
             .attach(Label::new(start..=start, "for this backtick"))?;
         debug!("successfully parsed capture");
@@ -569,12 +610,15 @@ impl<'src> Parser<'src> {
             ));
         }
         debug!("got break statement");
-        let node = ast.add(NodeInfo {
-            kind: NodeInfoKind::Break,
-            offset: self.current.start() as u32,
-            p1: 0,
-            p2: 0,
-        });
+        // SAFETY: Break takes nothing
+        let node = unsafe {
+            ast.add(NodeInfo {
+                kind: NodeInfoKind::Break,
+                offset: self.current.start() as u32,
+                p1: 0,
+                p2: 0,
+            })
+        };
         Ok(node)
     }
 
@@ -591,12 +635,15 @@ impl<'src> Parser<'src> {
             ));
         }
         debug!("got continue statement");
-        let node = ast.add(NodeInfo {
-            kind: NodeInfoKind::Continue,
-            offset: self.current.start() as u32,
-            p1: 0,
-            p2: 0,
-        });
+        // SAFETY: Continue takes nothing
+        let node = unsafe {
+            ast.add(NodeInfo {
+                kind: NodeInfoKind::Continue,
+                offset: self.current.start() as u32,
+                p1: 0,
+                p2: 0,
+            })
+        };
         Ok(node)
     }
 
@@ -608,12 +655,15 @@ impl<'src> Parser<'src> {
         };
         debug!("parsed string-like ({kind:?}): `{s}`");
         let i = ast.alloc_string(s);
-        ast.add(NodeInfo {
-            kind,
-            offset: self.current.start() as u32,
-            p1: i.raw(),
-            p2: 0,
-        })
+        // SAFETY: string-likes take a handle to their underlying value, which has been provided
+        unsafe {
+            ast.add(NodeInfo {
+                kind,
+                offset: self.current.start() as u32,
+                p1: i.raw(),
+                p2: 0,
+            })
+        }
     }
 
     fn parse_bool(&mut self, ast: &mut Ast) -> NodeHandle {
@@ -623,34 +673,43 @@ impl<'src> Parser<'src> {
             _ => panic!("BUG: should only be called on an ident"),
         };
         debug!("parsed bool: `{p1}`");
-        ast.add(NodeInfo {
-            kind: NodeInfoKind::Boolean,
-            offset: self.current.start() as u32,
-            p1,
-            p2: 0,
-        })
+        // SAFETY: Booleans take a binary value denoting if it's `true` or `false`
+        unsafe {
+            ast.add(NodeInfo {
+                kind: NodeInfoKind::Boolean,
+                offset: self.current.start() as u32,
+                p1,
+                p2: 0,
+            })
+        }
     }
 
     fn parse_last_status(&mut self, ast: &mut Ast) -> NodeHandle {
         debug_assert!(matches!(self.current.kind(), TokenKind::QuestionMark));
         debug!("parsed last status");
-        ast.add(NodeInfo {
-            kind: NodeInfoKind::LastStatus,
-            offset: self.current.start() as u32,
-            p1: 0,
-            p2: 0,
-        })
+        // SAFETY: LastStatus takes nothing
+        unsafe {
+            ast.add(NodeInfo {
+                kind: NodeInfoKind::LastStatus,
+                offset: self.current.start() as u32,
+                p1: 0,
+                p2: 0,
+            })
+        }
     }
 
     fn parse_home_dir(&mut self, ast: &mut Ast) -> NodeHandle {
         debug_assert!(matches!(self.current.kind(), TokenKind::Tilde));
         debug!("parsed last status");
-        ast.add(NodeInfo {
-            kind: NodeInfoKind::HomeDir,
-            offset: self.current.start() as u32,
-            p1: 0,
-            p2: 0,
-        })
+        // SAEFTY: HomeDir takes nothing
+        unsafe {
+            ast.add(NodeInfo {
+                kind: NodeInfoKind::HomeDir,
+                offset: self.current.start() as u32,
+                p1: 0,
+                p2: 0,
+            })
+        }
     }
 
     fn parse_grouped_expr(&mut self, ast: &mut Ast) -> Result<NodeHandle> {

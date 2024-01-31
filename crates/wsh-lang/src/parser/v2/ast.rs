@@ -249,8 +249,13 @@ impl Ast {
     }
 
     /// Add a node to the AST. This will return a handle to the node.
-    // TODO: make unsafe
-    pub(super) fn add(&mut self, node: NodeInfo) -> NodeHandle {
+    ///
+    /// # Safety
+    /// This function blindly accpets any NodeInfo. NodeInfo contains context-sensitive information
+    /// about the type being added into the AST, and varies per node. See [`NodeInfoKind`] for
+    /// descriptions of each type's serialization into the AST. Failure to properly serialize
+    /// breaks the invariants of this type and the corresponding node type.
+    pub(super) unsafe fn add(&mut self, node: NodeInfo) -> NodeHandle {
         self.nodes.push(node);
         NodeHandle(self.nodes.len() as u32 - 1)
     }
