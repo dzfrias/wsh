@@ -373,6 +373,9 @@ impl<'src> Parser<'src> {
                 | TokenKind::End
                 | TokenKind::Else
         ) {
+            if self.peek().kind() == TokenKind::Backtick && self.in_scope(Scope::Capture) {
+                break;
+            }
             self.next_token();
             let expr = self.parse_expr(ast, Precedence::Lowest)?;
             exprs.push(expr);
@@ -412,6 +415,7 @@ impl<'src> Parser<'src> {
             TokenKind::QuestionMark => self.parse_last_status(ast),
             TokenKind::Tilde => self.parse_home_dir(ast),
             TokenKind::Bang | TokenKind::Minus | TokenKind::Plus => self.parse_prefix(ast)?,
+            TokenKind::Backtick => self.parse_capture(ast)?,
             s => todo!("expr for {s:?}"),
         };
 
@@ -527,6 +531,26 @@ impl<'src> Parser<'src> {
             p1,
             p2,
         })
+    }
+
+    fn parse_capture(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
+        debug_assert!(matches!(self.current.kind(), TokenKind::Backtick));
+        debug!("began parsing capture");
+        let start = self.current.start();
+        self.next_token();
+        self.enter_scope(Scope::Capture);
+        let pipeline = self.parse_pipeline(ast)?;
+        self.pop_scope();
+        let node = ast.add(NodeInfo {
+            kind: NodeInfoKind::Capture,
+            offset: start as u32,
+            p1: pipeline.raw(),
+            p2: 0,
+        });
+        self.expect_next(TokenKind::Backtick, "expected closing backtick")
+            .attach(Label::new(start..=start, "for this backtick"))?;
+        debug!("successfully parsed capture");
+        Ok(node)
     }
 
     fn parse_break(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
@@ -691,6 +715,7 @@ impl<'src> Parser<'src> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Scope {
     Loop,
+    Capture,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -762,6 +787,7 @@ mod tests {
     parser_test!(if_, "if x == 3 then echo hi\necho hi end");
     parser_test!(if_else, "if x == 3 then echo hi else echo hi end");
     parser_test!(while_, "while x == 3 do echo hi end");
+    parser_test!(captures, "echo `echo hi | wc -l`");
     parser_test!(env_set, "$RUST_LOG=trace $RUST_BACKTRACE=1 cargo test");
     parser_test!(break_and_continue, "while x == 3 do break\ncontinue end");
 

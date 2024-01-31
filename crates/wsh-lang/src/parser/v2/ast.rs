@@ -46,6 +46,7 @@ pub enum NodeKind {
     Unop(Unop),
     LastStatus(LastStatus),
     HomeDir(HomeDir),
+    Capture(Capture),
 }
 
 #[derive(Debug)]
@@ -109,6 +110,11 @@ pub struct Binop {
     pub lhs: NodeHandle,
     pub rhs: NodeHandle,
     pub op: BinopKind,
+}
+
+#[derive(Debug)]
+pub struct Capture {
+    pub pipeline: NodeHandle,
 }
 
 #[derive(Debug)]
@@ -356,6 +362,9 @@ impl Ast {
             }),
             NodeInfoKind::LastStatus => NodeKind::LastStatus(LastStatus),
             NodeInfoKind::HomeDir => NodeKind::HomeDir(HomeDir),
+            NodeInfoKind::Capture => NodeKind::Capture(Capture {
+                pipeline: NodeHandle(p1),
+            }),
 
             NodeInfoKind::Add => binop!(Add),
             NodeInfoKind::Sub => binop!(Sub),
@@ -736,6 +745,8 @@ pub(super) enum NodeInfoKind {
     HomeDir,
     /// `$a`. `a = String[p1]`
     EnvVar,
+    /// `\`p1\``
+    Capture,
 
     /// `a`. a = p1 | p2
     Number,
@@ -833,7 +844,7 @@ impl AstDisplay for Node {
         }
         fmt!(
             Root, Command, Number, Binop, String, Ident, Unop, Pipeline, Boolean, LastStatus,
-            EnvVar, Assignment, HomeDir, Export, If, While, Break, Continue
+            EnvVar, Assignment, HomeDir, Export, If, While, Break, Continue, Capture
         )
     }
 }
@@ -1086,5 +1097,15 @@ impl AstDisplay for Break {
 impl AstDisplay for Continue {
     fn ast_fmt(&self, _ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
         f.writeln("CONTINUE")
+    }
+}
+
+impl AstDisplay for Capture {
+    fn ast_fmt(&self, ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        f.writeln("CAPTURE")?;
+        f.indent();
+        self.pipeline.deref(ast).ast_fmt(ast, f)?;
+        f.unindent();
+        Ok(())
     }
 }
