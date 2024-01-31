@@ -536,10 +536,13 @@ impl<'src> Parser<'src> {
     fn parse_capture(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
         debug_assert!(matches!(self.current.kind(), TokenKind::Backtick));
         debug!("began parsing capture");
+        let old = self.mode;
+        self.mode = LexMode::Normal;
         let start = self.current.start();
         self.next_token();
         self.enter_scope(Scope::Capture);
         let pipeline = self.parse_pipeline(ast)?;
+        self.mode = old;
         self.pop_scope();
         let node = ast.add(NodeInfo {
             kind: NodeInfoKind::Capture,
@@ -790,6 +793,7 @@ mod tests {
     parser_test!(captures, "echo `echo hi | wc -l`");
     parser_test!(env_set, "$RUST_LOG=trace $RUST_BACKTRACE=1 cargo test");
     parser_test!(break_and_continue, "while x == 3 do break\ncontinue end");
+    parser_test!(backticks_go_to_normal, "echo .(`echo hi`) hello");
 
     parser_test!(@fail export_no_assign, "export HELLO == 1 + 1");
     parser_test!(@fail export_not_ident, "export $HELLO = 1 + 1");
