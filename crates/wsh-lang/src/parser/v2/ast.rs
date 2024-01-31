@@ -31,6 +31,10 @@ pub enum NodeKind {
     Pipeline(Pipeline),
     Assignment(Assignment),
     Export(Export),
+    If(If),
+    While(While),
+    Break(Break),
+    Continue(Continue),
 
     // Expressions
     String(StringHandle),
@@ -78,6 +82,19 @@ pub struct Assignment {
 pub struct EnvSet {
     pub name: IdentHandle,
     pub value: NodeHandle,
+}
+
+#[derive(Debug)]
+pub struct If {
+    pub condition: NodeHandle,
+    pub body: DataHandle<DataArray<NodeHandle>>,
+    pub else_body: Option<DataHandle<DataArray<NodeHandle>>>,
+}
+
+#[derive(Debug)]
+pub struct While {
+    pub condition: NodeHandle,
+    pub body: DataHandle<DataArray<NodeHandle>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -138,6 +155,12 @@ pub struct LastStatus;
 
 #[derive(Debug)]
 pub struct HomeDir;
+
+#[derive(Debug)]
+pub struct Break;
+
+#[derive(Debug)]
+pub struct Continue;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Number(f64);
@@ -295,6 +318,29 @@ impl Ast {
                 name: IdentHandle(p1),
                 value: NodeHandle(p2),
             }),
+            NodeInfoKind::If => NodeKind::If(If {
+                condition: NodeHandle(p1),
+                body: DataHandle::new(p2),
+                else_body: None,
+            }),
+            NodeInfoKind::While => NodeKind::While(While {
+                condition: NodeHandle(p1),
+                body: DataHandle::new(p2),
+            }),
+            NodeInfoKind::IfElse => {
+                let (body, else_body) = DataHandle::<(
+                    DataHandle<DataArray<NodeHandle>>,
+                    DataHandle<DataArray<NodeHandle>>,
+                )>::new(p2)
+                .deref(self);
+                NodeKind::If(If {
+                    condition: NodeHandle(p1),
+                    body,
+                    else_body: Some(else_body),
+                })
+            }
+            NodeInfoKind::Break => NodeKind::Break(Break),
+            NodeInfoKind::Continue => NodeKind::Continue(Continue),
 
             NodeInfoKind::Number => {
                 let raw = (p2 as u64) | (p1 as u64) << 32;
@@ -667,6 +713,16 @@ pub(super) enum NodeInfoKind {
     Assignment,
     /// `export a = p2`. `a = String[p1]`
     Export,
+    /// `if p1 then p2 end`
+    If,
+    /// `if p1 then a else b end`. `(a, b) = Tuple[DataArray<Stmt>; 2]`
+    IfElse,
+    /// `while a do b end`
+    While,
+    /// `break`
+    Break,
+    /// `continue`
+    Continue,
 
     /// `a`. `a = String[p1]`
     String,
@@ -777,7 +833,7 @@ impl AstDisplay for Node {
         }
         fmt!(
             Root, Command, Number, Binop, String, Ident, Unop, Pipeline, Boolean, LastStatus,
-            EnvVar, Assignment, HomeDir, Export
+            EnvVar, Assignment, HomeDir, Export, If, While, Break, Continue
         )
     }
 }
@@ -978,5 +1034,57 @@ impl AstDisplay for IdentHandle {
 impl AstDisplay for EnvVarHandle {
     fn ast_fmt(&self, ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
         (*self).deref(ast).ast_fmt(ast, f)
+    }
+}
+
+impl AstDisplay for If {
+    fn ast_fmt(&self, ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        f.writeln("IF")?;
+        f.indent();
+        self.condition.deref(ast).ast_fmt(ast, f)?;
+        f.writeln("BODY")?;
+        f.indent();
+        for stmt in self.body.deref(ast).iter(ast) {
+            stmt.deref(ast).ast_fmt(ast, f)?;
+        }
+        f.unindent();
+        if let Some(else_body) = self.else_body {
+            f.writeln("ELSE")?;
+            f.indent();
+            for stmt in else_body.deref(ast).iter(ast) {
+                stmt.deref(ast).ast_fmt(ast, f)?;
+            }
+            f.unindent();
+        }
+        f.unindent();
+        Ok(())
+    }
+}
+
+impl AstDisplay for While {
+    fn ast_fmt(&self, ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        f.writeln("WHILE")?;
+        f.indent();
+        self.condition.deref(ast).ast_fmt(ast, f)?;
+        f.writeln("BODY")?;
+        f.indent();
+        for stmt in self.body.deref(ast).iter(ast) {
+            stmt.deref(ast).ast_fmt(ast, f)?;
+        }
+        f.unindent();
+        f.unindent();
+        Ok(())
+    }
+}
+
+impl AstDisplay for Break {
+    fn ast_fmt(&self, _ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        f.writeln("BREAK")
+    }
+}
+
+impl AstDisplay for Continue {
+    fn ast_fmt(&self, _ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        f.writeln("CONTINUE")
     }
 }

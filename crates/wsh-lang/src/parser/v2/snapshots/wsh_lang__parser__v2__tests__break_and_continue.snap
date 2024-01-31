@@ -1,0 +1,13 @@
+---
+source: crates/wsh-lang/src/parser/v2/mod.rs
+expression: ast
+---
+ROOT
+  WHILE
+    BINOP `==`
+      IDENT `x`
+      NUMBER `3`
+    BODY
+      BREAK
+      CONTINUE
+

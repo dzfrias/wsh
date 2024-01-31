@@ -9,7 +9,8 @@ use self::error::*;
 use crate::{
     parser::lexer::v2::{LexMode, Lexer, Token, TokenKind},
     v2::ast::{
-        Ast, DataArray, EnvSet, NodeHandle, NodeInfo, NodeInfoKind, PipelineEnd, PipelineEndKind,
+        Ast, DataArray, DataHandle, EnvSet, NodeHandle, NodeInfo, NodeInfoKind, PipelineEnd,
+        PipelineEndKind,
     },
 };
 
@@ -62,6 +63,7 @@ pub struct Parser<'src> {
 
     mode: LexMode,
     current: Token<'src>,
+    scope: Vec<Scope>,
 }
 
 impl<'src> Parser<'src> {
@@ -72,6 +74,7 @@ impl<'src> Parser<'src> {
 
             mode: LexMode::Normal,
             current: Token::default(),
+            scope: vec![],
         };
         // Past dummy token
         parser.next_token();
@@ -89,8 +92,11 @@ impl<'src> Parser<'src> {
         while self.current.kind() != TokenKind::Eof {
             stmts.push(self.parse_stmt(&mut ast)?);
             if self.peek().kind() != TokenKind::Eof {
-                // TODO: better error here
-                self.expect_next(TokenKind::Semicolon, "statement did not terminate properly")?;
+                self.expect_next(TokenKind::Semicolon, "expected line break")
+                    .attach(Label::new(
+                        self.current.start()..self.current.end(),
+                        "expected here",
+                    ))?;
             }
             self.next_token();
         }
@@ -112,6 +118,10 @@ impl<'src> Parser<'src> {
             TokenKind::Ident(_) if self.peek_strict().kind() == TokenKind::Assign => {
                 self.parse_assignment(ast)?
             }
+            TokenKind::While => self.parse_while(ast)?,
+            TokenKind::If => self.parse_if(ast)?,
+            TokenKind::Break => self.parse_break(ast)?,
+            TokenKind::Continue => self.parse_continue(ast)?,
             _ => self.parse_pipeline(ast)?,
         };
         debug!("successfully parsed statement");
@@ -248,6 +258,105 @@ impl<'src> Parser<'src> {
         Ok(node)
     }
 
+    fn parse_if(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
+        debug_assert!(matches!(self.current.kind(), TokenKind::If));
+        debug!("began parsing if statement");
+        let start = self.current.start();
+        self.mode = LexMode::Strict;
+        self.next_token();
+        let cond_start = self.current.start();
+        let condition = self.parse_expr(ast, Precedence::Lowest)?;
+        let cond_end = self.current.end();
+        self.expect_next(TokenKind::Then, "expected `then` after if condition")
+            .attach(Label::new(cond_start..cond_end, "after this expression"))?;
+        self.next_token();
+        let body = self.parse_block(ast, true)?;
+        let (kind, p2) = if self.current.kind() == TokenKind::Else {
+            debug!("got `else` in if statement");
+            self.next_token();
+            let else_body = self.parse_block(ast, false)?;
+            let data = ast.serialize((body, else_body));
+            (NodeInfoKind::IfElse, data.raw())
+        } else {
+            (NodeInfoKind::If, body.raw())
+        };
+        let node = ast.add(NodeInfo {
+            kind,
+            offset: start as u32,
+            p1: condition.raw(),
+            p2,
+        });
+        debug!("sucessfully parsed if statement");
+        Ok(node)
+    }
+
+    fn parse_while(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
+        debug_assert!(matches!(self.current.kind(), TokenKind::While));
+        debug!("began parsing while statement");
+        let start = self.current.start();
+        self.mode = LexMode::Strict;
+        self.next_token();
+        let cond_start = self.current.start();
+        let condition = self.parse_expr(ast, Precedence::Lowest)?;
+        let cond_end = self.current.end();
+        self.expect_next(TokenKind::Do, "expected `do` after while condition")
+            .attach(Label::new(cond_start..cond_end, "after this expression"))?;
+        self.next_token();
+        self.enter_scope(Scope::Loop);
+        let body = self.parse_block(ast, false)?;
+        self.pop_scope();
+        let node = ast.add(NodeInfo {
+            kind: NodeInfoKind::While,
+            offset: start as u32,
+            p1: condition.raw(),
+            p2: body.raw(),
+        });
+
+        debug!("successfully parsed while statement");
+        Ok(node)
+    }
+
+    fn parse_block(
+        &mut self,
+        ast: &mut Ast,
+        allow_else: bool,
+    ) -> Result<DataHandle<DataArray<NodeHandle>>> {
+        debug!("began parsing body");
+        let mut body = vec![];
+        while !matches!(
+            self.current.kind(),
+            TokenKind::End | TokenKind::Eof | TokenKind::Else
+        ) {
+            let stmt = self.parse_stmt(ast)?;
+            if !matches!(
+                self.peek().kind(),
+                TokenKind::End | TokenKind::Eof | TokenKind::Else
+            ) {
+                self.expect_next(TokenKind::Semicolon, "expected line break")
+                    .attach(Label::new(
+                        self.current.start()..self.current.end(),
+                        "expected here",
+                    ))?;
+            }
+            body.push(stmt);
+            self.next_token();
+        }
+        if self.current.kind() != TokenKind::End
+            && !(allow_else && self.current.kind() == TokenKind::Else)
+        {
+            return Err(Error::new(
+                self.current.start(),
+                "expected `end` after block",
+            ))
+            .attach(Label::new(
+                self.current.start()..self.current.end(),
+                "expected right here",
+            ));
+        }
+        debug!("successfully parsed body with {} statements", body.len());
+        Ok(DataArray::from_iter(ast, body))
+    }
+
     fn parse_cmd(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
         debug!("began parsing command");
         let mut exprs = vec![self.parse_expr(ast, Precedence::Lowest)?];
@@ -261,6 +370,8 @@ impl<'src> Parser<'src> {
                 | TokenKind::PercentPipe
                 | TokenKind::PercentWrite
                 | TokenKind::PercentAppend
+                | TokenKind::End
+                | TokenKind::Else
         ) {
             self.next_token();
             let expr = self.parse_expr(ast, Precedence::Lowest)?;
@@ -418,6 +529,50 @@ impl<'src> Parser<'src> {
         })
     }
 
+    fn parse_break(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
+        debug_assert!(matches!(self.current.kind(), TokenKind::Break));
+        if !self.in_scope(Scope::Loop) {
+            return Err(Error::new(
+                self.current.start(),
+                "cannot break outside of loop",
+            ))
+            .attach(Label::new(
+                self.current.start()..self.current.end(),
+                "invalid when there are no loop scopes",
+            ));
+        }
+        debug!("got break statement");
+        let node = ast.add(NodeInfo {
+            kind: NodeInfoKind::Break,
+            offset: self.current.start() as u32,
+            p1: 0,
+            p2: 0,
+        });
+        Ok(node)
+    }
+
+    fn parse_continue(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
+        debug_assert!(matches!(self.current.kind(), TokenKind::Continue));
+        if !self.in_scope(Scope::Loop) {
+            return Err(Error::new(
+                self.current.start(),
+                "cannot continue outside of loop",
+            ))
+            .attach(Label::new(
+                self.current.start()..self.current.end(),
+                "invalid when there are no loop scopes",
+            ));
+        }
+        debug!("got continue statement");
+        let node = ast.add(NodeInfo {
+            kind: NodeInfoKind::Continue,
+            offset: self.current.start() as u32,
+            p1: 0,
+            p2: 0,
+        });
+        Ok(node)
+    }
+
     fn parse_string_like(&mut self, ast: &mut Ast, kind: NodeInfoKind) -> NodeHandle {
         let (TokenKind::Ident(s) | TokenKind::EnvVar(s) | TokenKind::String(s)) =
             self.current.kind()
@@ -519,6 +674,23 @@ impl<'src> Parser<'src> {
     fn peek_strict(&mut self) -> Token<'src> {
         self.lexer.peek_token(LexMode::Strict)
     }
+
+    fn enter_scope(&mut self, scope: Scope) {
+        self.scope.push(scope);
+    }
+
+    fn in_scope(&self, scope: Scope) -> bool {
+        self.scope.iter().rev().any(|s| *s == scope)
+    }
+
+    fn pop_scope(&mut self) -> Scope {
+        self.scope.pop().expect("should always pop a scope!")
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Scope {
+    Loop,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -587,9 +759,17 @@ mod tests {
     parser_test!(implicit_concat, "echo .hi/$HELLO/world");
     parser_test!(home_dir, "echo ~/code");
     parser_test!(export, "export HELLO = 1 + 1\necho hi");
+    parser_test!(if_, "if x == 3 then echo hi\necho hi end");
+    parser_test!(if_else, "if x == 3 then echo hi else echo hi end");
+    parser_test!(while_, "while x == 3 do echo hi end");
     parser_test!(env_set, "$RUST_LOG=trace $RUST_BACKTRACE=1 cargo test");
+    parser_test!(break_and_continue, "while x == 3 do break\ncontinue end");
 
     parser_test!(@fail export_no_assign, "export HELLO == 1 + 1");
     parser_test!(@fail export_not_ident, "export $HELLO = 1 + 1");
     parser_test!(@fail unclosed_group, "echo .(2 + 10");
+    parser_test!(@fail no_end_for_if, "if x == 3 then echo hi");
+    parser_test!(@fail no_then_for_if, "if x == 3 echo hi");
+    parser_test!(@fail break_outside_loop, "break");
+    parser_test!(@fail continue_outside_loop, "continue");
 }

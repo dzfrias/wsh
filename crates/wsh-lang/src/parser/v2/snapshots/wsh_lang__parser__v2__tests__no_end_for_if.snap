@@ -1,0 +1,12 @@
+---
+source: crates/wsh-lang/src/parser/v2/mod.rs
+expression: "String::from_utf8(buf).unwrap()"
+---
+Error: expected `end` after block
+   ╭─[<test>:1:23]
+   │
+ 1 │ if x == 3 then echo hi
+   │                       │ 
+   │                       ╰─ expected right here
+───╯
+

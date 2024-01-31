@@ -1,0 +1,19 @@
+---
+source: crates/wsh-lang/src/parser/v2/mod.rs
+expression: ast
+---
+ROOT
+  IF
+    BINOP `==`
+      IDENT `x`
+      NUMBER `3`
+    BODY
+      PIPELINE
+        COMMAND
+          IDENT `echo`
+          IDENT `hi`
+      PIPELINE
+        COMMAND
+          IDENT `echo`
+          IDENT `hi`
+
