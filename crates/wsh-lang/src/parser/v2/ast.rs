@@ -35,6 +35,7 @@ pub enum NodeKind {
     While(While),
     Break(Break),
     Continue(Continue),
+    Alias(Alias),
 
     // Expressions
     String(StringHandle),
@@ -110,6 +111,12 @@ pub struct Binop {
     pub lhs: NodeHandle,
     pub rhs: NodeHandle,
     pub op: BinopKind,
+}
+
+#[derive(Debug)]
+pub struct Alias {
+    pub name: IdentHandle,
+    pub pipeline: NodeHandle,
 }
 
 #[derive(Debug)]
@@ -352,6 +359,10 @@ impl Ast {
             }
             NodeInfoKind::Break => NodeKind::Break(Break),
             NodeInfoKind::Continue => NodeKind::Continue(Continue),
+            NodeInfoKind::Alias => NodeKind::Alias(Alias {
+                name: IdentHandle(p1),
+                pipeline: NodeHandle(p2),
+            }),
 
             NodeInfoKind::Number => {
                 let raw = (p2 as u64) | (p1 as u64) << 32;
@@ -737,6 +748,8 @@ pub(super) enum NodeInfoKind {
     Break,
     /// `continue`
     Continue,
+    /// `alias p1 = p2`
+    Alias,
 
     /// `a`. `a = String[p1]`
     String,
@@ -849,7 +862,7 @@ impl AstDisplay for Node {
         }
         fmt!(
             Root, Command, Number, Binop, String, Ident, Unop, Pipeline, Boolean, LastStatus,
-            EnvVar, Assignment, HomeDir, Export, If, While, Break, Continue, Capture
+            EnvVar, Assignment, HomeDir, Export, If, While, Break, Continue, Capture, Alias
         )
     }
 }
@@ -1109,6 +1122,17 @@ impl AstDisplay for Capture {
     fn ast_fmt(&self, ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
         f.writeln("CAPTURE")?;
         f.indent();
+        self.pipeline.deref(ast).ast_fmt(ast, f)?;
+        f.unindent();
+        Ok(())
+    }
+}
+
+impl AstDisplay for Alias {
+    fn ast_fmt(&self, ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        f.writeln("ALIAS")?;
+        f.indent();
+        self.name.ast_fmt(ast, f)?;
         self.pipeline.deref(ast).ast_fmt(ast, f)?;
         f.unindent();
         Ok(())

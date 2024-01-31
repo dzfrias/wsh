@@ -1,7 +1,8 @@
 pub mod ast;
 pub mod error;
+mod source;
 
-use std::{borrow::Cow, io};
+use std::borrow::Cow;
 
 use tracing::debug;
 
@@ -13,48 +14,7 @@ use crate::{
         PipelineEndKind,
     },
 };
-
-/// The original text of wsh's input, along with a source name.
-#[derive(Debug)]
-pub struct Source {
-    contents: String,
-    name: Cow<'static, str>,
-}
-
-impl Source {
-    /// Create a new source with the given name and text.
-    pub fn new(name: impl Into<Cow<'static, str>>, contents: String) -> Self {
-        Self {
-            name: name.into(),
-            contents,
-        }
-    }
-
-    /// Get the underlying contents of the source.
-    pub fn contents(&self) -> &str {
-        &self.contents
-    }
-
-    /// Get the name of the source.
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    /// Format an error on this source. This will write the error message to the `writer`.
-    pub fn fmt_error(&self, error: Error, writer: impl io::Write) -> io::Result<()> {
-        use ariadne::{Color, Label, Report, ReportKind, Source};
-
-        Report::build(ReportKind::Error, self.name(), error.offset())
-            .with_message(error.msg())
-            .with_labels(error.labels().iter().map(|label| {
-                Label::new((self.name(), label.range.clone()))
-                    .with_message(&label.msg)
-                    .with_color(Color::Blue)
-            }))
-            .finish()
-            .write((self.name(), Source::from(self.contents())), writer)
-    }
-}
+pub use source::Source;
 
 /// The parser for the wsh language.
 #[derive(Debug)]
@@ -70,7 +30,7 @@ impl<'src> Parser<'src> {
     /// Create a new parser for the given source.
     pub fn new(source: &'src Source) -> Self {
         let mut parser = Self {
-            lexer: Lexer::new(&source.contents),
+            lexer: Lexer::new(source.contents()),
 
             mode: LexMode::Normal,
             current: Token::default(),
@@ -157,6 +117,7 @@ impl<'src> Parser<'src> {
             // Special commands that get dedicated nodes in the AST
             match s {
                 "export" => return self.parse_export(ast),
+                "alias" => return self.parse_alias(ast),
                 _ => {}
             }
         }
@@ -269,6 +230,43 @@ impl<'src> Parser<'src> {
             })
         };
         debug!("successfully parsed export");
+        Ok(node)
+    }
+
+    fn parse_alias(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
+        debug!("began parsing alias");
+        let offset = self.current.start() as u32;
+        self.mode = LexMode::Strict;
+        self.next_token();
+        let TokenKind::Ident(name) = self.current.kind() else {
+            return Err(Error::new(
+                self.current.start(),
+                "expected identifier for alias name",
+            ))
+            .attach(Label::new(
+                self.current.start()..self.current.end(),
+                "this is not an ident",
+            ));
+        };
+        let name_handle = ast.alloc_ident(name);
+        self.expect_next(TokenKind::Assign, "expected assignment token")
+            .attach(Label::new(
+                self.current.start()..self.current.end(),
+                "perhaps you mean to put `=` here?",
+            ))?;
+        self.mode = LexMode::Normal;
+        self.next_token();
+        let pipeline = self.parse_pipeline(ast)?;
+        // SAFETY: Alias takes the ident handle, as well as a handle to a pipeline
+        let node = unsafe {
+            ast.add(NodeInfo {
+                kind: NodeInfoKind::Alias,
+                offset,
+                p1: name_handle.raw(),
+                p2: pipeline.raw(),
+            })
+        };
+        debug!("successfully parsed alias with name: {name}");
         Ok(node)
     }
 
@@ -853,6 +851,7 @@ mod tests {
     parser_test!(env_set, "$RUST_LOG=trace $RUST_BACKTRACE=1 cargo test");
     parser_test!(break_and_continue, "while x == 3 do break\ncontinue end");
     parser_test!(backticks_go_to_normal, "echo .(`echo hi`) hello");
+    parser_test!(alias, "alias foo = echo hello world");
 
     parser_test!(@fail export_no_assign, "export HELLO == 1 + 1");
     parser_test!(@fail export_not_ident, "export $HELLO = 1 + 1");
@@ -861,4 +860,5 @@ mod tests {
     parser_test!(@fail no_then_for_if, "if x == 3 echo hi");
     parser_test!(@fail break_outside_loop, "break");
     parser_test!(@fail continue_outside_loop, "continue");
+    parser_test!(@fail alias_no_assign, "alias foo + echo hello world");
 }

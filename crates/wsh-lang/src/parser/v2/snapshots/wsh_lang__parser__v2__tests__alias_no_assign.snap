@@ -1,0 +1,12 @@
+---
+source: crates/wsh-lang/src/parser/v2/mod.rs
+expression: "String::from_utf8(buf).unwrap()"
+---
+Error: expected assignment token
+   ╭─[<test>:1:11]
+   │
+ 1 │ alias foo + echo hello world
+   │           ┬  
+   │           ╰── perhaps you mean to put `=` here?
+───╯
+
