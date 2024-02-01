@@ -53,10 +53,7 @@ impl<'src> Parser<'src> {
             stmts.push(self.parse_stmt(&mut ast)?);
             if self.peek().kind() != TokenKind::Eof {
                 self.expect_next(TokenKind::Semicolon, "expected line break")
-                    .attach(Label::new(
-                        self.current.start()..self.current.end(),
-                        "expected here",
-                    ))?;
+                    .attach(Label::new(self.current.range(), "expected here"))?;
             }
             self.next_token();
         }
@@ -98,28 +95,16 @@ impl<'src> Parser<'src> {
         while matches!(self.current.kind(), TokenKind::EnvVar(_))
             && self.peek_strict().kind() == TokenKind::Assign
         {
-            let TokenKind::EnvVar(name) = self.current.kind() else {
-                unreachable!()
-            };
-            debug!("got env set with name: {name}");
-            let name = ast.alloc_ident(name);
-            self.mode = LexMode::Strict;
-            self.next_token();
-            self.mode = LexMode::Normal;
-            self.next_token();
-            let value = self.parse_expr(ast, Precedence::Lowest)?;
-            env.push(EnvSet { name, value });
-            debug!("parsed env set");
+            let env_set = self.parse_env_set(ast)?;
+            env.push(env_set);
             self.next_token();
         }
 
-        if let TokenKind::String(s) = self.current.kind() {
-            // Special commands that get dedicated nodes in the AST
-            match s {
-                "export" => return self.parse_export(ast),
-                "alias" => return self.parse_alias(ast),
-                _ => {}
-            }
+        // Special commands that get dedicated nodes in the AST
+        match self.current.kind() {
+            TokenKind::String("export") => return self.parse_export(ast),
+            TokenKind::String("alias") => return self.parse_alias(ast),
+            _ => {}
         }
 
         let offset = self.current.start() as u32;
@@ -170,6 +155,21 @@ impl<'src> Parser<'src> {
         Ok(node)
     }
 
+    fn parse_env_set(&mut self, ast: &mut Ast) -> Result<EnvSet> {
+        let TokenKind::EnvVar(name) = self.current.kind() else {
+            panic!("BUG: should always call on an env var");
+        };
+        debug!("got env set with name: {name}");
+        let name = ast.alloc_env_var(name);
+        self.mode = LexMode::Strict;
+        self.next_token();
+        self.mode = LexMode::Normal;
+        self.next_token();
+        let value = self.parse_expr(ast, Precedence::Lowest)?;
+        debug!("parsed env set");
+        Ok(EnvSet { name, value })
+    }
+
     fn parse_assignment(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
         debug!("began parsing assignment");
         let TokenKind::Ident(name) = self.current.kind() else {
@@ -207,16 +207,13 @@ impl<'src> Parser<'src> {
                 "expected ident for environment variable name",
             ))
             .attach(Label::new(
-                self.current.start()..self.current.end(),
+                self.current.range(),
                 "this should be a regular identifier",
             ));
         };
         let name = ast.alloc_string(name);
         self.expect_next(TokenKind::Assign, "expected assignment token")
-            .attach(Label::new(
-                self.current.start()..self.current.end(),
-                "you might mean: `=`",
-            ))?;
+            .attach(Label::new(self.current.range(), "you might mean: `=`"))?;
         self.next_token();
         let value = self.parse_expr(ast, Precedence::Lowest)?;
         self.mode = LexMode::Normal;
@@ -243,15 +240,12 @@ impl<'src> Parser<'src> {
                 self.current.start(),
                 "expected identifier for alias name",
             ))
-            .attach(Label::new(
-                self.current.start()..self.current.end(),
-                "this is not an ident",
-            ));
+            .attach(Label::new(self.current.range(), "this is not an ident"));
         };
         let name_handle = ast.alloc_ident(name);
         self.expect_next(TokenKind::Assign, "expected assignment token")
             .attach(Label::new(
-                self.current.start()..self.current.end(),
+                self.current.range(),
                 "perhaps you mean to put `=` here?",
             ))?;
         self.mode = LexMode::Normal;
@@ -353,10 +347,7 @@ impl<'src> Parser<'src> {
                 TokenKind::End | TokenKind::Eof | TokenKind::Else
             ) {
                 self.expect_next(TokenKind::Semicolon, "expected line break")
-                    .attach(Label::new(
-                        self.current.start()..self.current.end(),
-                        "expected here",
-                    ))?;
+                    .attach(Label::new(self.current.range(), "expected here"))?;
             }
             body.push(stmt);
             self.next_token();
@@ -368,10 +359,7 @@ impl<'src> Parser<'src> {
                 self.current.start(),
                 "expected `end` after block",
             ))
-            .attach(Label::new(
-                self.current.start()..self.current.end(),
-                "expected right here",
-            ));
+            .attach(Label::new(self.current.range(), "expected right here"));
         }
         debug!("successfully parsed body with {} statements", body.len());
         Ok(DataArray::from_iter(ast, body))
@@ -603,7 +591,7 @@ impl<'src> Parser<'src> {
                 "cannot break outside of loop",
             ))
             .attach(Label::new(
-                self.current.start()..self.current.end(),
+                self.current.range(),
                 "invalid when there are no loop scopes",
             ));
         }
@@ -628,7 +616,7 @@ impl<'src> Parser<'src> {
                 "cannot continue outside of loop",
             ))
             .attach(Label::new(
-                self.current.start()..self.current.end(),
+                self.current.range(),
                 "invalid when there are no loop scopes",
             ));
         }

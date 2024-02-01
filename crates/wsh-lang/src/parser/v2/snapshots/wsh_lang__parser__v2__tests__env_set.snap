@@ -9,9 +9,9 @@ ROOT
       STRING `test`
     ENV
       ENV_SET
-        IDENT `RUST_LOG`
+        ENV_VAR `RUST_LOG`
         STRING `trace`
       ENV_SET
-        IDENT `RUST_BACKTRACE`
+        ENV_VAR `RUST_BACKTRACE`
         STRING `1`
 

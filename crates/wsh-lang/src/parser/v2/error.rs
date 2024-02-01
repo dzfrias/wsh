@@ -5,8 +5,10 @@ use std::{
 
 use thiserror::Error;
 
+/// A conveinience type for `Result<T, Error>`
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// The error type, encompassing all parsing errors.
 #[derive(Debug, Error)]
 #[error("{msg}")]
 pub struct Error {
@@ -62,6 +64,7 @@ impl Label {
     }
 }
 
+/// Extension trait to attach labels to Result types.
 pub trait LabelAttach {
     fn attach(self, label: Label) -> Self;
 }

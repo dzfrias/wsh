@@ -16,12 +16,14 @@ pub struct Ast {
     strings: Vec<AstString>,
 }
 
+/// A node in the AST. This can contain any node kind.
 #[derive(Debug)]
 pub struct Node {
     kind: NodeKind,
     offset: usize,
 }
 
+/// The kind of the node in the AST.
 #[derive(Debug)]
 pub enum NodeKind {
     Root(Root),
@@ -50,17 +52,20 @@ pub enum NodeKind {
     Capture(Capture),
 }
 
+/// The root node. This should always be added last when contructing the AST.
 #[derive(Debug)]
 pub struct Root {
     pub stmts: DataHandle<DataArray<NodeHandle>>,
 }
 
+/// A command.
 #[derive(Debug)]
 pub struct Command {
     pub exprs: DataHandle<DataArray<NodeHandle>>,
     pub merge_stderr: bool,
 }
 
+/// A pipeline of commands.
 #[derive(Debug)]
 pub struct Pipeline {
     pub cmds: DataHandle<DataArray<NodeHandle>>,
@@ -68,37 +73,14 @@ pub struct Pipeline {
     pub env: DataHandle<DataArray<EnvSet>>,
 }
 
+/// The end of a pipeline, either `>` or `>>`.
 #[derive(Debug)]
 pub struct PipelineEnd {
     pub kind: PipelineEndKind,
     pub file: NodeHandle,
 }
 
-#[derive(Debug)]
-pub struct Assignment {
-    pub name: IdentHandle,
-    pub value: NodeHandle,
-}
-
-#[derive(Debug)]
-pub struct EnvSet {
-    pub name: IdentHandle,
-    pub value: NodeHandle,
-}
-
-#[derive(Debug)]
-pub struct If {
-    pub condition: NodeHandle,
-    pub body: DataHandle<DataArray<NodeHandle>>,
-    pub else_body: Option<DataHandle<DataArray<NodeHandle>>>,
-}
-
-#[derive(Debug)]
-pub struct While {
-    pub condition: NodeHandle,
-    pub body: DataHandle<DataArray<NodeHandle>>,
-}
-
+/// Denotes the type of the end of the pipeline, `>` or `>>`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum PipelineEndKind {
@@ -106,6 +88,36 @@ pub enum PipelineEndKind {
     Append,
 }
 
+/// A variable assignment.
+#[derive(Debug)]
+pub struct Assignment {
+    pub name: IdentHandle,
+    pub value: NodeHandle,
+}
+
+/// An environment variable set
+#[derive(Debug)]
+pub struct EnvSet {
+    pub name: EnvVarHandle,
+    pub value: NodeHandle,
+}
+
+/// An `if` statement.
+#[derive(Debug)]
+pub struct If {
+    pub condition: NodeHandle,
+    pub body: DataHandle<DataArray<NodeHandle>>,
+    pub else_body: Option<DataHandle<DataArray<NodeHandle>>>,
+}
+
+/// A `while` statement.
+#[derive(Debug)]
+pub struct While {
+    pub condition: NodeHandle,
+    pub body: DataHandle<DataArray<NodeHandle>>,
+}
+
+/// A binary operation.
 #[derive(Debug)]
 pub struct Binop {
     pub lhs: NodeHandle,
@@ -113,29 +125,34 @@ pub struct Binop {
     pub op: BinopKind,
 }
 
+/// An alias. Note that this accepts **pipelines** on the right hand side, not just anything.
 #[derive(Debug)]
 pub struct Alias {
     pub name: IdentHandle,
     pub pipeline: NodeHandle,
 }
 
+/// A bacticks capture expression: `<PIPELINE>`.
 #[derive(Debug)]
 pub struct Capture {
     pub pipeline: NodeHandle,
 }
 
+/// An environment variable export.
 #[derive(Debug)]
 pub struct Export {
     pub name: IdentHandle,
     pub value: NodeHandle,
 }
 
+/// A unary operation.
 #[derive(Debug)]
 pub struct Unop {
     pub expr: NodeHandle,
     pub op: UnopKind,
 }
 
+/// The type of the binary operation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinopKind {
     Add,
@@ -150,6 +167,7 @@ pub enum BinopKind {
     Ne,
 }
 
+/// The type of the unary operation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnopKind {
     Neg,
@@ -157,27 +175,34 @@ pub enum UnopKind {
     Sign,
 }
 
+/// A boolean literal, either `true` or `false`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Boolean {
     True,
     False,
 }
 
+/// A last command status expression (`?`).
 #[derive(Debug)]
 pub struct LastStatus;
 
+/// A tilde expansion (`~`).
 #[derive(Debug)]
 pub struct HomeDir;
 
+/// A break statement.
 #[derive(Debug)]
 pub struct Break;
 
+/// A continue statement.
 #[derive(Debug)]
 pub struct Continue;
 
+/// A floating-point number.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Number(f64);
 
+/// An environment variable, of the form `$IDENT`.
 #[derive(Debug, Clone, Hash, PartialEq)]
 pub struct EnvVar(Ident);
 
@@ -225,6 +250,7 @@ impl Deref for Ident {
     }
 }
 
+/// An array of handles to `T` with a static length and a handle to the elements.
 #[derive(Debug)]
 pub struct DataArray<T>
 where
@@ -284,7 +310,7 @@ impl Ast {
     }
 
     /// Allocate an env var, returning a handle to it.
-    pub(super) fn alloc_env(&mut self, s: &str) -> EnvVarHandle {
+    pub(super) fn alloc_env_var(&mut self, s: &str) -> EnvVarHandle {
         EnvVarHandle(self.alloc_string(s).raw())
     }
 
@@ -424,10 +450,13 @@ impl Default for Ast {
     }
 }
 
+/// A trait that allows types data to be serailized in the arbitrary data of the AST. Since the
+/// data is pretty much arbitrary, this trait controls how types are represented there.
 pub(super) trait Serialize: Sized {
     fn serialize(&self, ast: &mut Ast) -> DataHandle<Self>;
 }
 
+/// A trait for types to be deserialized from the arbitrary data in the AST.
 pub trait Deserialize: Sized {
     fn deserialize(ast: &Ast, index: DataHandle<Self>) -> Self;
 }
@@ -444,15 +473,19 @@ pub trait ExactSizeDeserialize: Deserialize {
     fn size() -> usize;
 }
 
+/// A handle to a string in the AST.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct StringHandle(u32);
 
+/// A handle to an identifier in the AST.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct IdentHandle(u32);
 
+/// A handle to an environment variable in the AST.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct EnvVarHandle(u32);
 
+/// A handle to some arbitrary data that can be deserialized into `T` stored in the AST.
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct DataHandle<T>(u32, PhantomData<T>);
 
@@ -488,6 +521,9 @@ impl<T> DataHandle<T> {
         T: Deserialize,
     {
         T::deserialize(ast, self)
+    }
+    fn add(self, amount: u32) -> DataHandle<T> {
+        DataHandle(self.0 + amount, PhantomData)
     }
 }
 
@@ -534,6 +570,7 @@ impl<T: ExactSizeDeserialize> Deserialize for DataArray<T> {
 }
 
 impl<T: ExactSizeDeserialize> DataArray<T> {
+    /// Create an iterator over the elements of the data array.
     pub fn iter<'ast>(&self, ast: &'ast Ast) -> DataArrayIter<'ast, T> {
         DataArrayIter {
             ast,
@@ -543,14 +580,32 @@ impl<T: ExactSizeDeserialize> DataArray<T> {
         }
     }
 
-    pub fn len(&self) -> usize {
-        self.len as usize
+    /// Get the length of the data array.
+    pub fn len(&self) -> u32 {
+        self.len
     }
 
+    /// Check if the data array is empty.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
+    /// Get an elemenet in the data array.
+    pub fn get(&self, ast: &Ast, offset: u32) -> T {
+        self.ptr.add(offset).deref(ast)
+    }
+
+    /// Get the first element in the data array.
+    pub fn first(&self, ast: &Ast) -> T {
+        self.get(ast, 0)
+    }
+
+    /// Get the last element in the data array.
+    pub fn last(&self, ast: &Ast) -> T {
+        self.get(ast, self.len() - 1)
+    }
+
+    /// Create a new data array from an iterator of `T`.
     pub(super) fn from_iter<I, U>(ast: &mut Ast, iter: I) -> DataHandle<Self>
     where
         I: IntoIterator<Item = T, IntoIter = U>,
@@ -676,7 +731,7 @@ impl Deserialize for EnvSet {
         let name = ast.extra_data[index.raw() as usize];
         let value = ast.extra_data[index.raw() as usize + 1];
         Self {
-            name: IdentHandle(name),
+            name: EnvVarHandle(name),
             value: NodeHandle(value),
         }
     }
@@ -688,6 +743,7 @@ impl ExactSizeDeserialize for EnvSet {
     }
 }
 
+/// An iterator over elements of a data array.
 #[derive(Debug)]
 pub struct DataArrayIter<'ast, T>
 where
@@ -715,6 +771,8 @@ impl<'ast, T: ExactSizeDeserialize> Iterator for DataArrayIter<'ast, T> {
 
 impl<T: ExactSizeDeserialize> FusedIterator for DataArrayIter<'_, T> {}
 
+/// The node info type. This is what's stored in the AST, and the two data fields (`p1` and `p2`)
+/// are dependent on the node kind.
 #[derive(Debug, Clone)]
 pub(super) struct NodeInfo {
     pub kind: NodeInfoKind,

@@ -1,4 +1,4 @@
-use std::{collections::VecDeque, str::Chars};
+use std::{collections::VecDeque, ops::Range, str::Chars};
 use tracing::trace;
 
 #[derive(Debug, Clone)]
@@ -21,6 +21,10 @@ impl<'src> Token<'src> {
     /// The size of the token.
     pub fn size(&self) -> usize {
         self.kind().size()
+    }
+
+    pub fn range(&self) -> Range<usize> {
+        self.start()..self.end()
     }
 
     /// The offset pointing to the end of the token, not inclusive.
