@@ -9,6 +9,7 @@ pub enum Token {
     String(SmolStr),
     QuotedString(SmolStr),
     UnquotedString(SmolStr),
+    AtFile(SmolStr),
     BoolTrue,
     BoolFalse,
     Backtick,
@@ -99,7 +100,10 @@ impl TokenBuffer {
                 self.number_table.push(n);
                 (self.number_table.len() - 1) as u32
             }
-            Token::String(s) | Token::UnquotedString(s) | Token::QuotedString(s) => {
+            Token::String(s)
+            | Token::UnquotedString(s)
+            | Token::QuotedString(s)
+            | Token::AtFile(s) => {
                 let offset = self.str_table.len();
                 self.str_table.push(s);
                 offset as u32
@@ -140,6 +144,10 @@ impl TokenBuffer {
             TokenKind::UnquotedString => {
                 let s = &self.str_table[*payload as usize];
                 Token::UnquotedString(s.clone())
+            }
+            TokenKind::AtFile => {
+                let s = &self.str_table[*payload as usize];
+                Token::AtFile(s.clone())
             }
             TokenKind::Number => {
                 let n = self.number_table[*payload as usize];
@@ -280,6 +288,7 @@ pub(super) enum TokenKind {
     Tilde,
     Colon,
     ColonAssign,
+    AtFile,
 
     LParen,
     RParen,
@@ -437,6 +446,7 @@ impl Token {
             Token::Break => TokenKind::Break,
             Token::Return => TokenKind::Return,
             Token::Continue => TokenKind::Continue,
+            Token::AtFile(_) => TokenKind::AtFile,
         }
     }
 
@@ -481,7 +491,7 @@ impl Token {
             Token::Continue => 8,
             Token::Ident(Ident(s)) | Token::String(s) => s.len(),
             Token::QuotedString(s) => s.len() + 2,
-            Token::UnquotedString(s) => s.len() + 1,
+            Token::UnquotedString(s) | Token::AtFile(s) => s.len() + 1,
             // TODO: perhaps the ryu crate can be used here?
             Token::Number(n) => n.to_string().len(),
         }
@@ -521,6 +531,7 @@ impl fmt::Display for Token {
             Token::Ident(ident) => write!(f, "ident `{ident}`"),
             Token::Number(i) => write!(f, "int `{i}`"),
             Token::String(s) => write!(f, "string `{s}`"),
+            Token::AtFile(s) => write!(f, "at-file `{s}`"),
             Token::UnquotedString(s) => write!(f, "unquoted string `{s}`"),
             Token::QuotedString(s) => write!(f, "quoted string `{s}`"),
             Token::BoolTrue => write!(f, "true"),

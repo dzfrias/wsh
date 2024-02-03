@@ -410,6 +410,7 @@ impl<'src> Parser<'src> {
         let mut expr = match &self.current_token {
             Token::String(s) | Token::QuotedString(s) => Expr::String(s.clone()),
             Token::Number(i) => Expr::Number(*i),
+            Token::AtFile(f) => Expr::AtFile(f.clone()),
             Token::BoolFalse => Expr::Bool(false),
             Token::BoolTrue => Expr::Bool(true),
             Token::Ident(ident) => Expr::Ident(ident.clone()),
