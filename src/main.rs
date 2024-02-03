@@ -1,10 +1,7 @@
 mod cli;
 mod file_suggest;
 
-use std::{
-    fs,
-    path::{Path, PathBuf},
-};
+use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 use clap::Parser as CliParser;
@@ -14,7 +11,7 @@ use reedline::{
 };
 use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
 use wsh_cmp::completer::Completer;
-use wsh_lang::Shell;
+use wsh_lang::{shell_v2::Shell, v2::Source};
 
 use crate::cli::Cli;
 use file_suggest::FileSuggest;
@@ -39,24 +36,9 @@ fn main() -> Result<()> {
         .with(fmt_layer)
         .init();
 
-    let args = Cli::parse();
-    if let Some(input) = args.input {
-        let mut interpreter = Shell::new();
-        run_file(&mut interpreter, input)?;
-    } else {
-        start_repl()?;
-    }
+    let _args = Cli::parse();
+    start_repl()?;
 
-    Ok(())
-}
-
-fn run_file(interpreter: &mut Shell, input: impl AsRef<Path>) -> Result<()> {
-    let contents = fs::read_to_string(&input).context("error reading input file")?;
-    // TODO: handle
-    let _ = interpreter.run(
-        &contents,
-        &input.as_ref().file_name().unwrap().to_string_lossy(),
-    );
     Ok(())
 }
 
@@ -65,9 +47,6 @@ fn start_repl() -> Result<()> {
     let mut shell = Shell::new();
     let home_dir = dirs::home_dir();
     let mut line_editor = line_editor(home_dir.as_ref().map(|home| home.join(".wsi_history")))?;
-    if let Some(rc_file) = home_dir.as_ref().map(|home| home.join(".wsirc")) {
-        run_file(&mut shell, rc_file)?;
-    }
 
     loop {
         let prompt = DefaultPrompt::new(
@@ -77,9 +56,8 @@ fn start_repl() -> Result<()> {
         let sig = line_editor.read_line(&prompt);
         match sig {
             Ok(Signal::Success(input)) => {
-                if let Ok(Some(result)) = shell.run(&input, "<prompt>") {
-                    println!("{result}");
-                }
+                let source = Source::new("<prompt>", input);
+                shell.run(&source)
             }
             Ok(Signal::CtrlD) => break,
             Ok(Signal::CtrlC) => continue,

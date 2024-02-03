@@ -52,6 +52,68 @@ pub enum NodeKind {
     Capture(Capture),
 }
 
+impl NodeKind {
+    pub fn as_string(&self) -> Option<&StringHandle> {
+        if let Self::String(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_env_var(&self) -> Option<&EnvVarHandle> {
+        if let Self::EnvVar(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_ident(&self) -> Option<&IdentHandle> {
+        if let Self::Ident(v) = self {
+            Some(v)
+        } else {
+            None
+        }
+    }
+}
+
+macro_rules! as_impl {
+    ($(fn $name:ident() -> $ty:tt);* $(;)?) => {
+        impl NodeKind {
+            $(
+                pub fn $name(&self) -> Option<&$ty> {
+                    if let Self::$ty(v) = self {
+                        Some(v)
+                    } else {
+                        None
+                    }
+                }
+             )*
+        }
+    };
+}
+
+as_impl! {
+    fn as_root() -> Root;
+    fn as_command() -> Command;
+    fn as_pipeline() -> Pipeline;
+    fn as_assignment() -> Assignment;
+    fn as_export() -> Export;
+    fn as_if() -> If;
+    fn as_while() -> While;
+    fn as_break() -> Break;
+    fn as_continue() -> Continue;
+    fn as_alias() -> Alias;
+    fn as_number() -> Number;
+    fn as_boolean() -> Boolean;
+    fn as_binop() -> Binop;
+    fn as_unop() -> Unop;
+    fn as_last_status() -> LastStatus;
+    fn as_home_dir() -> HomeDir;
+    fn as_capture() -> Capture;
+}
+
 /// The root node. This should always be added last when contructing the AST.
 #[derive(Debug)]
 pub struct Root {
@@ -200,7 +262,7 @@ pub struct Continue;
 
 /// A floating-point number.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Number(f64);
+pub struct Number(pub f64);
 
 /// An environment variable, of the form `$IDENT`.
 #[derive(Debug, Clone, Hash, PartialEq)]
@@ -591,17 +653,20 @@ impl<T: ExactSizeDeserialize> DataArray<T> {
     }
 
     /// Get an elemenet in the data array.
-    pub fn get(&self, ast: &Ast, offset: u32) -> T {
-        self.ptr.add(offset).deref(ast)
+    pub fn get(&self, ast: &Ast, offset: u32) -> Option<T> {
+        if offset >= self.len() {
+            return None;
+        }
+        Some(self.ptr.add(offset).deref(ast))
     }
 
     /// Get the first element in the data array.
-    pub fn first(&self, ast: &Ast) -> T {
+    pub fn first(&self, ast: &Ast) -> Option<T> {
         self.get(ast, 0)
     }
 
     /// Get the last element in the data array.
-    pub fn last(&self, ast: &Ast) -> T {
+    pub fn last(&self, ast: &Ast) -> Option<T> {
         self.get(ast, self.len() - 1)
     }
 

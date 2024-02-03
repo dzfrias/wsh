@@ -2,6 +2,7 @@ mod builtins;
 mod env;
 mod error;
 mod memfs;
+pub mod shell_v2;
 mod value;
 
 use crate::{
