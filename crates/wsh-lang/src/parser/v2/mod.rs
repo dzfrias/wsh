@@ -810,7 +810,7 @@ mod tests {
                 let parser = Parser::new(&source);
                 let err = parser.parse().expect_err("parser should fail");
                 let mut buf = vec![];
-                source.fmt_error(err, &mut buf).unwrap();
+                source.fmt_error(&err, &mut buf).unwrap();
                 ::insta::assert_display_snapshot!(String::from_utf8(buf).unwrap());
             }
         };

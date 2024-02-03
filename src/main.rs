@@ -1,7 +1,7 @@
 mod cli;
 mod file_suggest;
 
-use std::path::PathBuf;
+use std::{io, path::PathBuf};
 
 use anyhow::{Context, Result};
 use clap::Parser as CliParser;
@@ -11,7 +11,10 @@ use reedline::{
 };
 use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
 use wsh_cmp::completer::Completer;
-use wsh_lang::{shell_v2::Shell, v2::Source};
+use wsh_lang::{
+    shell_v2::{error::ErrorKind, Shell},
+    v2::Source,
+};
 
 use crate::cli::Cli;
 use file_suggest::FileSuggest;
@@ -57,7 +60,13 @@ fn start_repl() -> Result<()> {
         match sig {
             Ok(Signal::Success(input)) => {
                 let source = Source::new("<prompt>", input);
-                shell.run(&source)
+                if let Err(err) = shell.run(&source) {
+                    if let ErrorKind::ParseError(parse_error) = err.kind() {
+                        source.fmt_error(parse_error, io::stderr())?;
+                    } else {
+                        eprintln!("wsh: {err}");
+                    }
+                }
             }
             Ok(Signal::CtrlD) => break,
             Ok(Signal::CtrlC) => continue,

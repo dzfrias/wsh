@@ -20,7 +20,8 @@ impl Value {
             return ValueType::Number;
         }
         if self.0 & Self::SIGN_BIT == Self::SIGN_BIT {
-            return ValueType::Object;
+            let ty = unsafe { self.as_obj() }.type_();
+            return ValueType::Object(ty);
         }
         // Tag
         match self.0 & 0b11 {
@@ -71,7 +72,7 @@ impl fmt::Display for Value {
                 ValueType::Number => write!(f, "{}", self.as_num()),
                 ValueType::Null => write!(f, "null"),
                 ValueType::Boolean => write!(f, "{}", self.as_bool()),
-                ValueType::Object => write!(f, "{}", &*self.as_obj()),
+                ValueType::Object(_) => write!(f, "{}", &*self.as_obj()),
             }
         }
     }
@@ -98,6 +99,11 @@ pub enum Obj {
     String(StringObj),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ObjType {
+    String,
+}
+
 impl fmt::Display for Obj {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -121,6 +127,12 @@ impl Obj {
         let inner = Obj::String(s_obj);
         let ptr = Box::into_raw(Box::new(inner));
         ObjPtr(ptr)
+    }
+
+    pub fn type_(&self) -> ObjType {
+        match self {
+            Obj::String(_) => ObjType::String,
+        }
     }
 }
 
@@ -171,5 +183,24 @@ pub enum ValueType {
     Number,
     Null,
     Boolean,
-    Object,
+    Object(ObjType),
+}
+
+impl fmt::Display for ValueType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ValueType::Number => write!(f, "number"),
+            ValueType::Null => write!(f, "null"),
+            ValueType::Boolean => write!(f, "bool"),
+            ValueType::Object(ty) => write!(f, "object [{ty}]"),
+        }
+    }
+}
+
+impl fmt::Display for ObjType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ObjType::String => write!(f, "string"),
+        }
+    }
 }

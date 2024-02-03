@@ -29,7 +29,7 @@ impl Source {
     }
 
     /// Format an error on this source. This will write the error message to the `writer`.
-    pub fn fmt_error(&self, error: Error, writer: impl io::Write) -> io::Result<()> {
+    pub fn fmt_error(&self, error: &Error, writer: impl io::Write) -> io::Result<()> {
         use ariadne::{Color, Label, Report, ReportKind, Source};
 
         Report::build(ReportKind::Error, self.name(), error.offset())
