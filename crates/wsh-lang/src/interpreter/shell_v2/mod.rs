@@ -2,6 +2,12 @@ pub mod error;
 mod pipeline;
 mod value;
 
+use std::io;
+#[cfg(unix)]
+use std::os::unix::process::ExitStatusExt;
+#[cfg(windows)]
+use std::os::windows::process::ExitStatusExt;
+
 use self::error::Result;
 use crate::{
     interpreter::shell_v2::{pipeline::Stdio, value::Value},
@@ -21,6 +27,7 @@ use crate::{
 pub struct Shell {
     to_free: Vec<ObjPtr>,
     current_pos: usize,
+    last_status: i32,
 }
 
 impl Shell {
@@ -28,6 +35,7 @@ impl Shell {
         Shell {
             to_free: vec![],
             current_pos: 0,
+            last_status: 0,
         }
     }
 
@@ -74,12 +82,22 @@ impl Shell {
                     .map_err(ErrorKind::CommandFailedToStart)
                     .with_position(pos)?,
             )
-            .map_err(ErrorKind::CommandFailedToStart)
+            .map_err(|err| {
+                self.last_status = if err.kind() == io::ErrorKind::NotFound {
+                    127
+                } else {
+                    1
+                };
+                ErrorKind::CommandFailedToStart(err)
+            })
             .with_position(pos)?;
-        handle
+        let exit_status = handle
             .wait(self)
             .map_err(ErrorKind::CommandFailed)
             .with_position(pos)?;
+        #[allow(clippy::unnecessary_cast)]
+        let exit_status = exit_status.into_raw() as i32;
+        self.last_status = exit_status;
         Ok(())
     }
 
@@ -101,7 +119,7 @@ impl Shell {
             NodeKind::EnvVar(env_var) => self.eval_env_var(ast, *env_var),
             NodeKind::Binop(binop) => self.eval_binop(ast, binop)?,
             NodeKind::Unop(unop) => self.eval_unop(ast, unop)?,
-            NodeKind::LastStatus(_) => todo!(),
+            NodeKind::LastStatus(_) => Value::number(self.last_status as f64),
             NodeKind::HomeDir(h) => self.eval_home_dir(ast, h)?,
             NodeKind::Capture(_) => todo!(),
             _ => unreachable!("should not be called on non-expr"),
