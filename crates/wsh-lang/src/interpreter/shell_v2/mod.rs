@@ -1,3 +1,4 @@
+mod builtins;
 pub mod error;
 mod pipeline;
 mod value;
@@ -12,6 +13,7 @@ use self::error::Result;
 use crate::{
     interpreter::shell_v2::{pipeline::Stdio, value::Value},
     shell_v2::{
+        builtins::Builtin,
         error::{Error, ErrorKind, WithPosition},
         value::{Obj, ObjPtr, ValueType},
     },
@@ -284,15 +286,19 @@ impl Shell {
         let name = self
             .eval_expr(ast, exprs.first(ast).unwrap().deref(ast))?
             .to_string();
+        let args = exprs
+            .iter(ast)
+            .skip(1)
+            .map(|expr| self.eval_expr(ast, expr.deref(ast)).map(|e| e.to_string()))
+            .collect::<Result<Vec<_>>>()?;
+        if let Some(builtin) = Builtin::from_name(&name) {
+            return Ok(pipeline::Command::from(
+                move |shell: &mut Shell, stdio: Stdio| builtin.run(shell, stdio, &args),
+            ));
+        }
         Ok(pipeline::Command::Basic(
             pipeline::BasicCommand::new(&name)
-                .args(
-                    exprs
-                        .iter(ast)
-                        .skip(1)
-                        .map(|expr| self.eval_expr(ast, expr.deref(ast)).map(|e| e.to_string()))
-                        .collect::<Result<Vec<_>>>()?,
-                )
+                .args(args)
                 .merge_stderr(cmd.merge_stderr),
         ))
     }

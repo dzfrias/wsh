@@ -167,9 +167,9 @@ impl<T> Pipe<T> {
 
 #[derive(Debug)]
 pub struct Stdio {
-    stdout: File,
-    stderr: File,
-    stdin: File,
+    pub stdout: File,
+    pub stderr: File,
+    pub stdin: File,
 }
 
 impl Stdio {
