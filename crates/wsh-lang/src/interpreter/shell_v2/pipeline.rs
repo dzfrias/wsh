@@ -36,6 +36,22 @@ impl<T> Pipeline<T> {
         }));
     }
 
+    pub fn extend(&mut self, pipeline: Pipeline<T>) {
+        self.pipe(pipeline.inner);
+    }
+
+    pub fn append_args(&mut self, args: &[String]) {
+        match &mut self.inner {
+            Command::Basic(basic) => basic.args.extend_from_slice(args),
+            Command::Pipe(pipe) => match &mut pipe.rhs {
+                Command::Basic(basic) => basic.args.extend_from_slice(args),
+                Command::Closure(c) => c.args.extend_from_slice(args),
+                Command::Pipe(_) => unreachable!(),
+            },
+            Command::Closure(c) => c.args.extend_from_slice(args),
+        }
+    }
+
     /// Run the pipeline, returning a handle to the new process.
     pub fn spawn(&mut self, data: &mut T, stdio: Stdio) -> io::Result<Handle<T>> {
         self.inner.spawn(data, stdio)
@@ -54,11 +70,28 @@ impl<T> Pipeline<T> {
     }
 }
 
-pub type PipelineClosure<T> = Box<dyn FnOnce(&mut T, Stdio) -> i32>;
+pub struct Closure<T> {
+    inner: Option<PipelineClosure<T>>,
+    args: Vec<String>,
+}
+
+impl<T> Closure<T> {
+    pub fn wrap<F>(f: F, args: Vec<String>) -> Self
+    where
+        F: FnOnce(&mut T, Stdio, &[String]) -> i32 + 'static,
+    {
+        Self {
+            inner: Some(Box::new(f)),
+            args,
+        }
+    }
+}
+
+type PipelineClosure<T> = Box<dyn FnOnce(&mut T, Stdio, &[String]) -> i32>;
 
 pub enum Command<T> {
     Basic(BasicCommand),
-    Closure(Option<PipelineClosure<T>>),
+    Closure(Closure<T>),
     Pipe(Box<Pipe<T>>),
 }
 
@@ -68,12 +101,9 @@ impl<T> From<BasicCommand> for Command<T> {
     }
 }
 
-impl<T, F> From<F> for Command<T>
-where
-    F: FnOnce(&mut T, Stdio) -> i32 + 'static,
-{
-    fn from(value: F) -> Self {
-        Self::Closure(Some(Box::new(value)))
+impl<T> From<Closure<T>> for Command<T> {
+    fn from(value: Closure<T>) -> Self {
+        Self::Closure(value)
     }
 }
 
@@ -82,7 +112,8 @@ impl<T> Command<T> {
         let handle = match self {
             Command::Basic(c) => HandleInner::Command(c.spawn(stdio)?),
             Command::Closure(c) => HandleInner::Closure(ClosureHandle {
-                closure: c.take(),
+                closure: c.inner.take(),
+                args: std::mem::take(&mut c.args),
                 stdio: Some(stdio),
                 killed: false,
             }),
@@ -273,6 +304,7 @@ impl CommandHandle {
 
 pub struct ClosureHandle<T> {
     closure: Option<PipelineClosure<T>>,
+    args: Vec<String>,
     stdio: Option<Stdio>,
     killed: bool,
 }
@@ -292,8 +324,9 @@ impl<T> ClosureHandle<T> {
         let result = (self
             .closure
             .take()
-            .expect("cannot wait on closure more than once!"))(data, stdio)
-            as i32;
+            .expect("cannot wait on closure more than once!"))(
+            data, stdio, &self.args
+        ) as i32;
         Ok(process::ExitStatus::from_raw(result))
     }
 
@@ -345,12 +378,15 @@ mod tests {
     fn pipe_closure() {
         let cmd = BasicCommand::new("echo").args(Some("hello"));
         let mut pipeline = Pipeline::new(cmd);
-        pipeline.pipe(|_: &mut (), mut stdio: Stdio| {
-            let mut stdin = String::new();
-            stdio.stdin.unwrap().read_to_string(&mut stdin).unwrap();
-            writeln!(stdio.stdout, "got: {stdin}").unwrap();
-            0
-        });
+        pipeline.pipe(Closure::wrap(
+            |_: &mut (), mut stdio: Stdio, _: &[String]| {
+                let mut stdin = String::new();
+                stdio.stdin.unwrap().read_to_string(&mut stdin).unwrap();
+                writeln!(stdio.stdout, "got: {stdin}").unwrap();
+                0
+            },
+            vec![],
+        ));
         let mut handle = pipeline.spawn(&mut (), Stdio::inherit().unwrap()).unwrap();
         handle.wait(&mut ()).unwrap();
         assert!(false)

@@ -1,7 +1,7 @@
 mod cli;
 mod file_suggest;
 
-use std::{io, path::PathBuf};
+use std::{fs, io, path::PathBuf};
 
 use anyhow::{Context, Result};
 use clap::Parser as CliParser;
@@ -50,6 +50,15 @@ fn start_repl() -> Result<()> {
     let mut shell = Shell::new();
     let home_dir = dirs::home_dir();
     let mut line_editor = line_editor(home_dir.as_ref().map(|home| home.join(".wsi_history")))?;
+    if let Some(rc_file) = home_dir.as_ref().map(|home| home.join(".wsirc")) {
+        if rc_file.try_exists().context("error finding .wsirc")? {
+            let contents = fs::read_to_string(&rc_file).context("error reading rc file")?;
+            shell.run(&Source::new(
+                rc_file.to_string_lossy().to_string(),
+                contents,
+            ))?;
+        }
+    }
 
     loop {
         let prompt = DefaultPrompt::new(

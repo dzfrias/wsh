@@ -2,7 +2,7 @@ pub mod ast;
 pub mod error;
 mod source;
 
-use std::borrow::Cow;
+use std::{borrow::Cow, iter};
 
 use tracing::debug;
 
@@ -250,14 +250,25 @@ impl<'src> Parser<'src> {
             ))?;
         self.mode = LexMode::Normal;
         self.next_token();
-        let pipeline = self.parse_pipeline(ast)?;
-        // SAFETY: Alias takes the ident handle, as well as a handle to a pipeline
+        let mut sub_ast = Ast::new();
+        let pipeline = self.parse_pipeline(&mut sub_ast)?;
+        let arr = DataArray::from_iter(&mut sub_ast, iter::once(pipeline));
+        unsafe {
+            sub_ast.add(NodeInfo {
+                kind: NodeInfoKind::Root,
+                offset: 0,
+                p1: arr.raw(),
+                p2: 0,
+            })
+        };
+        let subtree = ast.alloc_subtree(sub_ast);
+        // SAFETY: Alias takes the ident handle, as well as a handle to the subtree
         let node = unsafe {
             ast.add(NodeInfo {
                 kind: NodeInfoKind::Alias,
                 offset,
                 p1: name_handle.raw(),
-                p2: pipeline.raw(),
+                p2: subtree.raw(),
             })
         };
         debug!("successfully parsed alias with name: {name}");

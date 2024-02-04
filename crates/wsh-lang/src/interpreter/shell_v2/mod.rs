@@ -13,8 +13,8 @@ use std::{
     io::{self, Read},
 };
 
-use filedescriptor::{AsRawFileDescriptor, RawFileDescriptor};
-use rustix::fd::FromRawFd;
+use filedescriptor::{AsRawFileDescriptor, FromRawFileDescriptor, RawFileDescriptor};
+use itertools::Either;
 
 use self::error::Result;
 use crate::{
@@ -27,7 +27,7 @@ use crate::{
     },
     v2::{
         ast::{
-            self, Assignment, Ast, Binop, BinopKind, Boolean, Capture, EnvVarHandle, Export,
+            self, Alias, Assignment, Ast, Binop, BinopKind, Boolean, Capture, EnvVarHandle, Export,
             HomeDir, Node, NodeKind, Pipeline, PipelineEndKind, Unop, UnopKind,
         },
         Parser, Source,
@@ -68,36 +68,14 @@ impl Shell {
             NodeKind::Pipeline(pipeline) => self.eval_pipeline(ast, pipeline),
             NodeKind::Export(export) => self.eval_export(ast, export),
             NodeKind::Assignment(assignment) => self.eval_assignment(ast, assignment),
+            NodeKind::Alias(alias) => self.eval_alias(ast, alias),
             s => todo!("stmt for {s:?}"),
         }
     }
 
     fn eval_pipeline(&mut self, ast: &Ast, pipeline: &Pipeline) -> Result<()> {
-        let cmds = pipeline.cmds.deref(ast);
-        let first = cmds
-            .first(ast)
-            .expect("pipeline should have at least one command")
-            .deref(ast);
         let pos = self.current_pos;
-        let env = pipeline
-            .env
-            .deref(ast)
-            .iter(ast)
-            .map(|env_set| {
-                self.eval_expr(ast, env_set.value.deref(ast))
-                    .map(|value| (env_set.name.deref(ast).to_string(), value.to_string()))
-            })
-            .collect::<Result<Vec<_>>>()?;
-        let cmd = self.make_cmd(ast, first.kind().as_command().unwrap(), &env)?;
-        let mut exec = cmds.iter(ast).skip(1).try_fold(
-            pipeline::Pipeline::new(cmd),
-            |mut pipeline, cmd| {
-                let deref = cmd.deref(ast);
-                let cmd = deref.kind().as_command().unwrap();
-                pipeline.pipe(self.make_cmd(ast, cmd, &env)?);
-                Ok(pipeline)
-            },
-        )?;
+        let mut exec = self.make_pipeline(ast, pipeline)?;
         // Configure stdout to the pipeline redirect, if any (defaults to shell stdout)
         let stdout = match &pipeline.end {
             Some(end) => {
@@ -155,6 +133,13 @@ impl Shell {
     fn eval_assignment(&mut self, ast: &Ast, assignment: &Assignment) -> Result<()> {
         let value = self.eval_expr(ast, assignment.value.deref(ast))?;
         self.env.set_var(assignment.name.deref(ast).clone(), value);
+        Ok(())
+    }
+
+    fn eval_alias(&mut self, ast: &Ast, alias: &Alias) -> Result<()> {
+        let name = alias.name.deref(ast).clone();
+        let subtree = alias.pipeline.deref(ast).clone();
+        self.env.set_alias(name.to_string(), subtree);
         Ok(())
     }
 
@@ -342,12 +327,47 @@ impl Shell {
         Ok(Value::String(home.into()))
     }
 
+    fn make_pipeline(
+        &mut self,
+        ast: &Ast,
+        pipeline: &Pipeline,
+    ) -> Result<pipeline::Pipeline<Shell>> {
+        let env = pipeline
+            .env
+            .deref(ast)
+            .iter(ast)
+            .map(|env_set| {
+                self.eval_expr(ast, env_set.value.deref(ast))
+                    .map(|value| (env_set.name.deref(ast).to_string(), value.to_string()))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let cmds = pipeline.cmds.deref(ast);
+        let first = cmds.first(ast).unwrap().deref(ast);
+        let cmd = self.make_cmd(ast, first.kind().as_command().unwrap(), &env)?;
+        let exec = cmds.iter(ast).skip(1).try_fold(
+            match cmd {
+                Either::Left(cmd) => pipeline::Pipeline::new(cmd),
+                Either::Right(pipeline) => pipeline,
+            },
+            |mut pipeline, cmd| {
+                let deref = cmd.deref(ast);
+                let cmd = deref.kind().as_command().unwrap();
+                match self.make_cmd(ast, cmd, &env)? {
+                    Either::Left(cmd) => pipeline.pipe(cmd),
+                    Either::Right(other) => pipeline.extend(other),
+                }
+                Ok(pipeline)
+            },
+        )?;
+        Ok(exec)
+    }
+
     fn make_cmd(
         &mut self,
         ast: &Ast,
         cmd: &ast::Command,
         env: &[(String, String)],
-    ) -> Result<pipeline::Command<Self>> {
+    ) -> Result<Either<pipeline::Command<Self>, pipeline::Pipeline<Self>>> {
         let exprs = cmd.exprs.deref(ast);
         let name = self
             .eval_expr(ast, exprs.first(ast).unwrap().deref(ast))?
@@ -357,17 +377,31 @@ impl Shell {
             .skip(1)
             .map(|expr| self.eval_expr(ast, expr.deref(ast)).map(|e| e.to_string()))
             .collect::<Result<Vec<_>>>()?;
-        if let Some(builtin) = Builtin::from_name(&name) {
-            return Ok(pipeline::Command::from(
-                move |shell: &mut Shell, stdio: Stdio| builtin.run(shell, stdio, &args),
-            ));
+        if let Some(sub_ast) = self.env.get_alias(&name) {
+            let node = sub_ast.first().unwrap();
+            let pipeline = node.kind().as_pipeline().unwrap();
+            let mut pipeline = self.make_pipeline(&sub_ast, pipeline)?;
+            // We append this command's args to the end of the aliased pipeline
+            pipeline.append_args(&args);
+            self.env.set_alias(name, sub_ast);
+            return Ok(Either::Right(pipeline));
         }
-        Ok(pipeline::Command::Basic(
+        if let Some(builtin) = Builtin::from_name(&name) {
+            return Ok(Either::Left(pipeline::Command::from(
+                pipeline::Closure::wrap(
+                    move |shell: &mut Shell, stdio: Stdio, args: &[String]| {
+                        builtin.run(shell, stdio, args)
+                    },
+                    args,
+                ),
+            )));
+        }
+        Ok(Either::Left(pipeline::Command::Basic(
             pipeline::BasicCommand::new(&name)
                 .env(env.iter().map(|(k, v)| (k, v)))
                 .args(args)
                 .merge_stderr(cmd.merge_stderr),
-        ))
+        )))
     }
 
     fn eval_env_var(&mut self, ast: &Ast, env_var: EnvVarHandle) -> Value {
@@ -392,7 +426,7 @@ impl Default for Shell {
 /// # Safety
 /// `fd` must be a valid raw file descriptor.
 unsafe fn clone_raw_fd(fd: RawFileDescriptor) -> io::Result<File> {
-    let file = unsafe { File::from_raw_fd(fd) };
+    let file = unsafe { File::from_raw_file_descriptor(fd) };
     let clone = file.try_clone()?;
     std::mem::forget(file);
     Ok(clone)

@@ -4,7 +4,7 @@ use std::{iter::FusedIterator, marker::PhantomData, ops::Deref};
 use smol_str::SmolStr;
 
 /// The abstract syntax tree of the wsh language.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Ast {
     /// The internal representation of nodes. The AST revolves around NodeInfo being small (around
     /// 16 bytes), taking a data-oriented approach. This design was largely inspired by the Zig
@@ -14,6 +14,7 @@ pub struct Ast {
     /// treated however is seen fit depending on the node kind.
     extra_data: Vec<u32>,
     strings: Vec<AstString>,
+    subtrees: Vec<Ast>,
 }
 
 /// A node in the AST. This can contain any node kind.
@@ -191,7 +192,7 @@ pub struct Binop {
 #[derive(Debug)]
 pub struct Alias {
     pub name: IdentHandle,
-    pub pipeline: NodeHandle,
+    pub pipeline: SubtreeHandle,
 }
 
 /// A bacticks capture expression: `<PIPELINE>`.
@@ -330,6 +331,7 @@ impl Ast {
             nodes: vec![],
             extra_data: vec![],
             strings: vec![],
+            subtrees: vec![],
         }
     }
 
@@ -341,6 +343,15 @@ impl Ast {
         };
 
         root
+    }
+
+    /// Get the first statement in the AST.
+    pub fn first(&self) -> Option<Node> {
+        self.root()
+            .stmts
+            .deref(self)
+            .first(self)
+            .map(|handle| handle.deref(self))
     }
 
     /// Add a node to the AST. This will return a handle to the node.
@@ -374,6 +385,11 @@ impl Ast {
     /// Allocate an env var, returning a handle to it.
     pub(super) fn alloc_env_var(&mut self, s: &str) -> EnvVarHandle {
         EnvVarHandle(self.alloc_string(s).raw())
+    }
+
+    pub(super) fn alloc_subtree(&mut self, tree: Ast) -> SubtreeHandle {
+        self.subtrees.push(tree);
+        SubtreeHandle(self.subtrees.len() as u32 - 1)
     }
 
     fn get_node(&self, node: NodeHandle) -> Node {
@@ -449,7 +465,7 @@ impl Ast {
             NodeInfoKind::Continue => NodeKind::Continue(Continue),
             NodeInfoKind::Alias => NodeKind::Alias(Alias {
                 name: IdentHandle(p1),
-                pipeline: NodeHandle(p2),
+                pipeline: SubtreeHandle(p2),
             }),
 
             NodeInfoKind::Number => {
@@ -543,6 +559,10 @@ pub struct StringHandle(u32);
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct IdentHandle(u32);
 
+/// A handle to a subtree in the AST.
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
+pub struct SubtreeHandle(u32);
+
 /// A handle to an environment variable in the AST.
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct EnvVarHandle(u32);
@@ -568,6 +588,15 @@ impl StringHandle {
     }
     pub fn deref(self, ast: &Ast) -> &AstString {
         &ast.strings[self.raw() as usize]
+    }
+}
+
+impl SubtreeHandle {
+    pub(super) fn raw(self) -> u32 {
+        self.0
+    }
+    pub fn deref(self, ast: &Ast) -> &Ast {
+        &ast.subtrees[self.raw() as usize]
     }
 }
 
@@ -1256,7 +1285,8 @@ impl AstDisplay for Alias {
         f.writeln("ALIAS")?;
         f.indent();
         self.name.ast_fmt(ast, f)?;
-        self.pipeline.deref(ast).ast_fmt(ast, f)?;
+        let subtree = self.pipeline.deref(ast);
+        subtree.first().unwrap().ast_fmt(subtree, f)?;
         f.unindent();
         Ok(())
     }
