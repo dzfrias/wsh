@@ -22,10 +22,10 @@ where
     S: Into<OsString> + Clone,
 {
     let args = Args::try_parse_from(args)?;
-    let contents = fs::read_to_string(args.file).context("error reading file")?;
+    let contents = fs::read_to_string(&args.file).context("error reading file")?;
     let old = shell.global_stdout;
     shell.global_stdout = stdio.stdout.as_raw_file_descriptor();
-    let source = Source::new("hi", contents);
+    let source = Source::new(args.file.to_string_lossy().to_string(), contents);
     shell.run(&source)?;
     shell.global_stdout = old;
     Ok(())
