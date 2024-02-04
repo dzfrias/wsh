@@ -8,7 +8,13 @@ mod value;
 use std::os::unix::process::ExitStatusExt;
 #[cfg(windows)]
 use std::os::windows::process::ExitStatusExt;
-use std::{fs, io};
+use std::{
+    fs::{self, File},
+    io::{self, Read},
+};
+
+use filedescriptor::{AsRawFileDescriptor, RawFileDescriptor};
+use rustix::fd::FromRawFd;
 
 use self::error::Result;
 use crate::{
@@ -21,8 +27,8 @@ use crate::{
     },
     v2::{
         ast::{
-            self, Assignment, Ast, Binop, BinopKind, Boolean, EnvVarHandle, Export, HomeDir, Node,
-            NodeKind, Pipeline, PipelineEndKind, Unop, UnopKind,
+            self, Assignment, Ast, Binop, BinopKind, Boolean, Capture, EnvVarHandle, Export,
+            HomeDir, Node, NodeKind, Pipeline, PipelineEndKind, Unop, UnopKind,
         },
         Parser, Source,
     },
@@ -32,6 +38,7 @@ pub struct Shell {
     current_pos: usize,
     last_status: i32,
     env: Env,
+    global_stdout: RawFileDescriptor,
 }
 
 impl Shell {
@@ -40,6 +47,7 @@ impl Shell {
             current_pos: 0,
             last_status: 0,
             env: Env::new(),
+            global_stdout: io::stdout().as_raw_file_descriptor(),
         }
     }
 
@@ -103,9 +111,12 @@ impl Shell {
                     .map_err(ErrorKind::BadRedirect)
                     .with_position(pos)?
             }
-            None => pipeline::stdout()
-                .map_err(ErrorKind::CommandFailedToStart)
-                .with_position(pos)?,
+            // SAFETY: self.global_stdout must always be a valid file descriptor
+            None => unsafe {
+                clone_raw_fd(self.global_stdout)
+                    .map_err(ErrorKind::CommandFailedToStart)
+                    .with_position(self.current_pos)?
+            },
         };
         let stdio = Stdio {
             stdout,
@@ -167,7 +178,7 @@ impl Shell {
             NodeKind::Unop(unop) => self.eval_unop(ast, unop)?,
             NodeKind::LastStatus(_) => Value::Number(self.last_status as f64),
             NodeKind::HomeDir(h) => self.eval_home_dir(ast, h)?,
-            NodeKind::Capture(_) => todo!(),
+            NodeKind::Capture(capture) => self.eval_capture(ast, capture)?,
             _ => unreachable!("should not be called on non-expr"),
         };
         Ok(val)
@@ -212,6 +223,39 @@ impl Shell {
             }
         };
         Ok(val)
+    }
+
+    fn eval_capture(&mut self, ast: &Ast, capture: &Capture) -> Result<Value> {
+        let (mut reader, writer) = os_pipe::pipe()
+            .map_err(ErrorKind::CommandFailedToStart)
+            .with_position(self.current_pos)?;
+        // We create a thread to do reads here so that we always make progress on io. Deadlocks
+        // might occur when pipes gets completely filled, and this thread makes sure that doesn't
+        // happen.
+        let handle = std::thread::spawn(move || -> io::Result<Vec<u8>> {
+            let mut output = vec![];
+            reader.read_to_end(&mut output)?;
+            Ok(output)
+        });
+        let old = self.global_stdout;
+        self.global_stdout = writer.as_raw_file_descriptor();
+        self.eval_pipeline(
+            ast,
+            capture.pipeline.deref(ast).kind().as_pipeline().unwrap(),
+        )?;
+        // Avoiding a deadlock here. We need to drop our writer before reading!
+        drop(writer);
+        self.global_stdout = old;
+        let out = handle
+            .join()
+            .unwrap()
+            .map_err(ErrorKind::CaptureError)
+            .with_position(self.current_pos)?;
+        let mut out = String::from_utf8_lossy(&out).to_string();
+        while out.ends_with('\n') || out.ends_with('\r') {
+            out.truncate(out.len() - 1);
+        }
+        Ok(Value::String(out.into_boxed_str()))
     }
 
     fn eval_numeric_unop(&mut self, op: UnopKind, f: f64) -> Result<Value> {
@@ -341,4 +385,15 @@ impl Default for Shell {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Clones the file descriptor, returning it as a [`File`].
+///
+/// # Safety
+/// `fd` must be a valid raw file descriptor.
+unsafe fn clone_raw_fd(fd: RawFileDescriptor) -> io::Result<File> {
+    let file = unsafe { File::from_raw_fd(fd) };
+    let clone = file.try_clone()?;
+    std::mem::forget(file);
+    Ok(clone)
 }

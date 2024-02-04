@@ -54,6 +54,8 @@ pub enum ErrorKind {
     BadRedirect(io::Error),
     #[error("unbound variable: `{0}`")]
     UnboundVariable(Ident),
+    #[error("capture error: {0}")]
+    CaptureError(io::Error),
 }
 
 pub trait WithPosition<T> {

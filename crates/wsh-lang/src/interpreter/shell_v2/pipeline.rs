@@ -83,7 +83,8 @@ impl<T> Command<T> {
             Command::Basic(c) => HandleInner::Command(c.spawn(stdio)?),
             Command::Closure(c) => HandleInner::Closure(ClosureHandle {
                 closure: c.take(),
-                stdio,
+                stdio: Some(stdio),
+                killed: false,
             }),
             Command::Pipe(p) => HandleInner::Pipe(p.spawn(data, stdio)?),
         };
@@ -161,7 +162,7 @@ pub struct Pipe<T> {
 
 impl<T> Pipe<T> {
     pub fn spawn(&mut self, data: &mut T, stdio: Stdio) -> io::Result<PipeHandle<T>> {
-        let (reader, writer) = os_pipe::pipe().unwrap();
+        let (reader, writer) = os_pipe::pipe()?;
         let writer = unsafe { File::from_raw_file_descriptor(writer.into_raw_file_descriptor()) };
         let mut lhs = self.lhs.spawn(
             data,
@@ -199,18 +200,6 @@ impl Stdio {
             stderr,
             stdin,
         }
-    }
-
-    pub fn try_clone(&self) -> io::Result<Self> {
-        Ok(Self {
-            stdout: self.stdout.try_clone()?,
-            stderr: self.stderr.try_clone()?,
-            stdin: self
-                .stdin
-                .as_ref()
-                .map(|stdin| stdin.try_clone())
-                .transpose()?,
-        })
     }
 
     #[cfg(test)]
@@ -284,18 +273,32 @@ impl CommandHandle {
 
 pub struct ClosureHandle<T> {
     closure: Option<PipelineClosure<T>>,
-    stdio: Stdio,
+    stdio: Option<Stdio>,
+    killed: bool,
 }
 
 impl<T> ClosureHandle<T> {
     pub fn wait(&mut self, data: &mut T) -> io::Result<process::ExitStatus> {
+        // If killed, we simply prevent the closure from executing
+        if self.killed {
+            return Ok(process::ExitStatus::from_raw(0));
+        }
+        // Avoiding a deadlock! We need `stdio` to be dropped in case it's a pipe end
+        let stdio = self
+            .stdio
+            .take()
+            .expect("cannot wait on closure more than once!");
         #[allow(clippy::unnecessary_cast)]
-        let result = (self.closure.take().unwrap())(data, self.stdio.try_clone()?) as i32;
+        let result = (self
+            .closure
+            .take()
+            .expect("cannot wait on closure more than once!"))(data, stdio)
+            as i32;
         Ok(process::ExitStatus::from_raw(result))
     }
 
     pub fn kill(&mut self) -> io::Result<()> {
-        // TODO: should kill do something?
+        self.killed = true;
         Ok(())
     }
 }

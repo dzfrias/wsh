@@ -1,4 +1,5 @@
 mod cd;
+mod source;
 mod which;
 
 use std::{io::Write, iter};
@@ -16,6 +17,7 @@ use force_writeln;
 pub enum Builtin {
     Cd,
     Which,
+    Source,
 }
 
 impl Builtin {
@@ -23,6 +25,7 @@ impl Builtin {
         Some(match name {
             "cd" => Self::Cd,
             "which" => Self::Which,
+            "source" => Self::Source,
             _ => return None,
         })
     }
@@ -31,6 +34,7 @@ impl Builtin {
         match self {
             Builtin::Cd => "cd",
             Builtin::Which => "which",
+            Builtin::Source => "source",
         }
     }
 
@@ -46,6 +50,7 @@ impl Builtin {
         if let Err(err) = match self {
             Builtin::Cd => cd::cd(shell, stdio, args),
             Builtin::Which => which::which(shell, stdio, args),
+            Builtin::Source => source::source(shell, stdio, args),
         } {
             force_writeln!(stderr, "{}: {err:#}", self.name());
             1
