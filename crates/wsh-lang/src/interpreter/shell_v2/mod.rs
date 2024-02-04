@@ -3,11 +3,11 @@ pub mod error;
 mod pipeline;
 mod value;
 
-use std::io;
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
 #[cfg(windows)]
 use std::os::windows::process::ExitStatusExt;
+use std::{fs, io};
 
 use self::error::Result;
 use crate::{
@@ -20,7 +20,7 @@ use crate::{
     v2::{
         ast::{
             self, Ast, Binop, BinopKind, Boolean, EnvVarHandle, HomeDir, Node, NodeKind, Pipeline,
-            Unop, UnopKind,
+            PipelineEndKind, Unop, UnopKind,
         },
         Parser, Source,
     },
@@ -68,7 +68,7 @@ impl Shell {
             .deref(ast);
         let pos = self.current_pos;
         let cmd = self.make_cmd(ast, first.kind().as_command().unwrap())?;
-        let mut pipeline = cmds.iter(ast).skip(1).try_fold(
+        let mut exec = cmds.iter(ast).skip(1).try_fold(
             pipeline::Pipeline::new(cmd),
             |mut pipeline, cmd| {
                 let deref = cmd.deref(ast);
@@ -77,13 +77,32 @@ impl Shell {
                 Ok(pipeline)
             },
         )?;
-        let mut handle = pipeline
-            .spawn(
-                self,
-                Stdio::inherit()
-                    .map_err(ErrorKind::CommandFailedToStart)
-                    .with_position(pos)?,
-            )
+        // Configure stdout to the pipeline redirect, if any (defaults to shell stdout)
+        let stdout = match &pipeline.end {
+            Some(end) => {
+                let mut opts = fs::OpenOptions::new();
+                match end.kind {
+                    PipelineEndKind::Write => opts.write(true).truncate(true).create(true),
+                    PipelineEndKind::Append => opts.append(true).create(true),
+                };
+                let file = self.eval_expr(ast, end.file.deref(ast))?;
+                opts.open(file.to_string())
+                    .map_err(ErrorKind::BadRedirect)
+                    .with_position(pos)?
+            }
+            None => pipeline::stdout()
+                .map_err(ErrorKind::CommandFailedToStart)
+                .with_position(pos)?,
+        };
+        let stdio = Stdio {
+            stdout,
+            stderr: pipeline::stderr()
+                .map_err(ErrorKind::CommandFailedToStart)
+                .with_position(pos)?,
+            stdin: None,
+        };
+        let mut handle = exec
+            .spawn(self, stdio)
             .map_err(|err| {
                 self.last_status = if err.kind() == io::ErrorKind::NotFound {
                     127

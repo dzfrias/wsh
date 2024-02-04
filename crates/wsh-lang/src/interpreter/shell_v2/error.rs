@@ -50,6 +50,8 @@ pub enum ErrorKind {
     CommandFailedToStart(io::Error),
     #[error("command failed: {0}")]
     CommandFailed(io::Error),
+    #[error("bad redirect: {0}")]
+    BadRedirect(io::Error),
 }
 
 pub trait WithPosition<T> {

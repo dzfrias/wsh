@@ -22,10 +22,12 @@ pub struct Pipeline<T> {
 }
 
 impl<T> Pipeline<T> {
+    /// Create a new pipeline, starting from a command.
     pub fn new(cmd: impl Into<Command<T>>) -> Self {
         Self { inner: cmd.into() }
     }
 
+    /// Set up a pipe between the last commmand and the provided one.
     pub fn pipe(&mut self, cmd: impl Into<Command<T>>) {
         let inner = self.take_inner();
         self.inner = Command::Pipe(Box::new(Pipe {
@@ -34,6 +36,7 @@ impl<T> Pipeline<T> {
         }));
     }
 
+    /// Run the pipeline, returning a handle to the new process.
     pub fn spawn(&mut self, data: &mut T, stdio: Stdio) -> io::Result<Handle<T>> {
         self.inner.spawn(data, stdio)
     }
@@ -124,13 +127,12 @@ impl BasicCommand {
             stdio.stderr
         };
 
-        process::Command::new(&self.cmd)
-            .args(&self.args)
-            .stdout(stdio.stdout)
-            .stderr(stderr)
-            .stdin(stdio.stdin)
-            .spawn()
-            .map(|child| CommandHandle { inner: child })
+        let mut cmd = process::Command::new(&self.cmd);
+        cmd.args(&self.args).stdout(stdio.stdout).stderr(stderr);
+        if let Some(stdin) = stdio.stdin {
+            cmd.stdin(stdin);
+        }
+        cmd.spawn().map(|child| CommandHandle { inner: child })
     }
 }
 
@@ -150,7 +152,7 @@ impl<T> Pipe<T> {
         let reader = unsafe { File::from_raw_file_descriptor(reader.into_raw_file_descriptor()) };
         let rhs_res = self
             .rhs
-            .spawn(data, Stdio::new(stdio.stdout, stdio.stderr, reader));
+            .spawn(data, Stdio::new(stdio.stdout, stdio.stderr, Some(reader)));
         match rhs_res {
             Ok(rhs) => Ok(PipeHandle {
                 lhs: Box::new(lhs),
@@ -169,11 +171,11 @@ impl<T> Pipe<T> {
 pub struct Stdio {
     pub stdout: File,
     pub stderr: File,
-    pub stdin: File,
+    pub stdin: Option<File>,
 }
 
 impl Stdio {
-    pub fn new(stdout: File, stderr: File, stdin: File) -> Self {
+    pub fn new(stdout: File, stderr: File, stdin: Option<File>) -> Self {
         Self {
             stdout,
             stderr,
@@ -185,29 +187,40 @@ impl Stdio {
         Ok(Self {
             stdout: self.stdout.try_clone()?,
             stderr: self.stderr.try_clone()?,
-            stdin: self.stdin.try_clone()?,
+            stdin: self
+                .stdin
+                .as_ref()
+                .map(|stdin| stdin.try_clone())
+                .transpose()?,
         })
     }
 
+    #[cfg(test)]
     pub fn inherit() -> io::Result<Self> {
-        unsafe {
-            let stdout = File::from_raw_file_descriptor(io::stdout().as_raw_file_descriptor());
-            let stdout_clone = stdout.try_clone()?;
-            let stderr = File::from_raw_file_descriptor(io::stderr().as_raw_file_descriptor());
-            let stderr_clone = stderr.try_clone()?;
-            let stdin = File::from_raw_file_descriptor(io::stdin().as_raw_file_descriptor());
-            let stdin_clone = stdin.try_clone()?;
-            // We `forget` here to avoid closing the file descriptors
-            mem::forget(stdout);
-            mem::forget(stderr);
-            mem::forget(stdin);
-            Ok(Self {
-                stdout: stdout_clone,
-                stderr: stderr_clone,
-                stdin: stdin_clone,
-            })
-        }
+        Ok(Self {
+            stdout: stdout()?,
+            stderr: stderr()?,
+            stdin: None,
+        })
     }
+}
+
+/// Get a `File` for stdout. This will create a clone of the stdout file descriptor
+pub fn stdout() -> io::Result<File> {
+    // SAFETY: io::stdout() must be a vaild fd
+    let file = unsafe { File::from_raw_file_descriptor(io::stdout().as_raw_file_descriptor()) };
+    let clone = file.try_clone()?;
+    mem::forget(file);
+    Ok(clone)
+}
+
+/// Get a `File` for stderr. This will create a clone of the stderr file descriptor
+pub fn stderr() -> io::Result<File> {
+    // SAFETY: io::stderr() must be a vaild fd
+    let file = unsafe { File::from_raw_file_descriptor(io::stderr().as_raw_file_descriptor()) };
+    let clone = file.try_clone()?;
+    mem::forget(file);
+    Ok(clone)
 }
 
 pub struct Handle<T>(HandleInner<T>);
@@ -230,7 +243,7 @@ impl<T> Handle<T> {
     }
 }
 
-pub enum HandleInner<T> {
+enum HandleInner<T> {
     Command(CommandHandle),
     Pipe(PipeHandle<T>),
     Closure(ClosureHandle<T>),
@@ -313,7 +326,7 @@ mod tests {
         let mut pipeline = Pipeline::new(cmd);
         pipeline.pipe(|_: &mut (), mut stdio: Stdio| {
             let mut stdin = String::new();
-            stdio.stdin.read_to_string(&mut stdin).unwrap();
+            stdio.stdin.unwrap().read_to_string(&mut stdin).unwrap();
             writeln!(stdio.stdout, "got: {stdin}").unwrap();
             0
         });
