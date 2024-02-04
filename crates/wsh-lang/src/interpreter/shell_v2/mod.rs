@@ -7,7 +7,7 @@ mod value;
 use std::os::unix::process::ExitStatusExt;
 #[cfg(windows)]
 use std::os::windows::process::ExitStatusExt;
-use std::{fs, io};
+use std::{env, fs, io};
 
 use self::error::Result;
 use crate::{
@@ -19,8 +19,8 @@ use crate::{
     },
     v2::{
         ast::{
-            self, Ast, Binop, BinopKind, Boolean, EnvVarHandle, HomeDir, Node, NodeKind, Pipeline,
-            PipelineEndKind, Unop, UnopKind,
+            self, Ast, Binop, BinopKind, Boolean, EnvVarHandle, Export, HomeDir, Node, NodeKind,
+            Pipeline, PipelineEndKind, Unop, UnopKind,
         },
         Parser, Source,
     },
@@ -54,6 +54,7 @@ impl Shell {
         self.current_pos = node.offset();
         match node.kind() {
             NodeKind::Pipeline(pipeline) => self.eval_pipeline(ast, pipeline),
+            NodeKind::Export(export) => self.eval_export(ast, export),
             s => todo!("stmt for {s:?}"),
         }
     }
@@ -65,13 +66,22 @@ impl Shell {
             .expect("pipeline should have at least one command")
             .deref(ast);
         let pos = self.current_pos;
-        let cmd = self.make_cmd(ast, first.kind().as_command().unwrap())?;
+        let env = pipeline
+            .env
+            .deref(ast)
+            .iter(ast)
+            .map(|env_set| {
+                self.eval_expr(ast, env_set.value.deref(ast))
+                    .map(|value| (env_set.name.deref(ast).to_string(), value.to_string()))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let cmd = self.make_cmd(ast, first.kind().as_command().unwrap(), &env)?;
         let mut exec = cmds.iter(ast).skip(1).try_fold(
             pipeline::Pipeline::new(cmd),
             |mut pipeline, cmd| {
                 let deref = cmd.deref(ast);
                 let cmd = deref.kind().as_command().unwrap();
-                pipeline.pipe(self.make_cmd(ast, cmd)?);
+                pipeline.pipe(self.make_cmd(ast, cmd, &env)?);
                 Ok(pipeline)
             },
         )?;
@@ -117,6 +127,12 @@ impl Shell {
         #[allow(clippy::unnecessary_cast)]
         let exit_status = exit_status.into_raw() as i32;
         self.last_status = exit_status;
+        Ok(())
+    }
+
+    fn eval_export(&mut self, ast: &Ast, export: &Export) -> Result<()> {
+        let value = self.eval_expr(ast, export.value.deref(ast))?.to_string();
+        env::set_var(&**export.name.deref(ast), value);
         Ok(())
     }
 
@@ -266,7 +282,12 @@ impl Shell {
         Ok(Value::String(home.into()))
     }
 
-    fn make_cmd(&mut self, ast: &Ast, cmd: &ast::Command) -> Result<pipeline::Command<Self>> {
+    fn make_cmd(
+        &mut self,
+        ast: &Ast,
+        cmd: &ast::Command,
+        env: &[(String, String)],
+    ) -> Result<pipeline::Command<Self>> {
         let exprs = cmd.exprs.deref(ast);
         let name = self
             .eval_expr(ast, exprs.first(ast).unwrap().deref(ast))?
@@ -283,6 +304,7 @@ impl Shell {
         }
         Ok(pipeline::Command::Basic(
             pipeline::BasicCommand::new(&name)
+                .env(env.iter().map(|(k, v)| (k, v)))
                 .args(args)
                 .merge_stderr(cmd.merge_stderr),
         ))
@@ -290,7 +312,7 @@ impl Shell {
 
     fn eval_env_var(&mut self, ast: &Ast, env_var: EnvVarHandle) -> Value {
         let env_var = env_var.deref(ast);
-        let value = std::env::var(&**env_var).unwrap_or_default();
+        let value = env::var(&**env_var).unwrap_or_default();
         Value::String(value.into_boxed_str())
     }
 

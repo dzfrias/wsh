@@ -47,6 +47,7 @@ impl<T> Pipeline<T> {
             Command::Basic(BasicCommand {
                 cmd: String::new(),
                 merge_stderr: false,
+                env: vec![],
                 args: vec![],
             }),
         )
@@ -94,6 +95,7 @@ impl<T> Command<T> {
 pub struct BasicCommand {
     cmd: String,
     args: Vec<String>,
+    env: Vec<(String, String)>,
     merge_stderr: bool,
 }
 
@@ -102,6 +104,7 @@ impl BasicCommand {
         Self {
             cmd: cmd.to_owned(),
             args: vec![],
+            env: vec![],
             merge_stderr: false,
         }
     }
@@ -112,6 +115,18 @@ impl BasicCommand {
         S: AsRef<str>,
     {
         self.args = args.into_iter().map(|s| s.as_ref().to_owned()).collect();
+        self
+    }
+
+    pub fn env<I, S>(mut self, args: I) -> Self
+    where
+        I: IntoIterator<Item = (S, S)>,
+        S: AsRef<str>,
+    {
+        self.env = args
+            .into_iter()
+            .map(|(k, v)| (k.as_ref().to_owned(), v.as_ref().to_owned()))
+            .collect();
         self
     }
 
@@ -128,7 +143,10 @@ impl BasicCommand {
         };
 
         let mut cmd = process::Command::new(&self.cmd);
-        cmd.args(&self.args).stdout(stdio.stdout).stderr(stderr);
+        cmd.args(&self.args)
+            .envs(self.env.iter().map(|(k, v)| (k, v)))
+            .stdout(stdio.stdout)
+            .stderr(stderr);
         if let Some(stdin) = stdio.stdin {
             cmd.stdin(stdin);
         }
