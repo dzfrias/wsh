@@ -2,11 +2,11 @@ use std::{ffi::OsString, fs, path::PathBuf};
 
 use clap::Parser;
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use filedescriptor::AsRawFileDescriptor;
 
 use crate::{
-    shell_v2::{pipeline::Stdio, Shell},
+    shell_v2::{error::ErrorKind, pipeline::Stdio, Shell},
     v2::Source,
 };
 
@@ -26,7 +26,14 @@ where
     let old = shell.global_stdout;
     shell.global_stdout = stdio.stdout.as_raw_file_descriptor();
     let source = Source::new(args.file.to_string_lossy().to_string(), contents);
-    shell.run(&source)?;
+    if let Err(err) = shell.run(&source) {
+        if let ErrorKind::ParseError(parse_error) = err.kind() {
+            source.fmt_error(parse_error, stdio.stderr)?;
+            bail!("parse error")
+        } else {
+            bail!(err);
+        }
+    }
     shell.global_stdout = old;
     Ok(())
 }
