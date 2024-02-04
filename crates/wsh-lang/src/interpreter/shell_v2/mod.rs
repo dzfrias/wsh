@@ -123,7 +123,7 @@ impl Shell {
     fn eval_expr(&mut self, ast: &Ast, expr: Node) -> Result<Value> {
         self.current_pos = expr.offset();
         let val = match expr.kind() {
-            NodeKind::String(s) => Value::String(s.deref(ast).to_string()),
+            NodeKind::String(s) => Value::String(s.deref(ast).to_string().into_boxed_str()),
             NodeKind::Number(f) => Value::Number(f.0),
             NodeKind::Boolean(b) => match b {
                 Boolean::True => Value::Boolean(true),
@@ -196,12 +196,9 @@ impl Shell {
         Ok(val)
     }
 
-    fn eval_object_binop(&mut self, op: BinopKind, mut lhs: String, rhs: String) -> Result<Value> {
+    fn eval_object_binop(&mut self, op: BinopKind, lhs: Box<str>, rhs: Box<str>) -> Result<Value> {
         let val = match op {
-            BinopKind::Add => {
-                lhs.push_str(&rhs);
-                Value::String(lhs)
-            }
+            BinopKind::Add => Value::String(format!("{lhs}{rhs}").into_boxed_str()),
             BinopKind::Eq => Value::Boolean(lhs == rhs),
             BinopKind::Ne => Value::Boolean(lhs != rhs),
             _ => {
@@ -266,7 +263,7 @@ impl Shell {
             .to_str()
             .ok_or(ErrorKind::HomeDirInvalidUTF8)
             .with_position(self.current_pos)?;
-        Ok(Value::String(home.to_owned()))
+        Ok(Value::String(home.into()))
     }
 
     fn make_cmd(&mut self, ast: &Ast, cmd: &ast::Command) -> Result<pipeline::Command<Self>> {
@@ -294,7 +291,7 @@ impl Shell {
     fn eval_env_var(&mut self, ast: &Ast, env_var: EnvVarHandle) -> Value {
         let env_var = env_var.deref(ast);
         let value = std::env::var(&**env_var).unwrap_or_default();
-        Value::String(value)
+        Value::String(value.into_boxed_str())
     }
 
     fn error(&self, kind: ErrorKind) -> Error {

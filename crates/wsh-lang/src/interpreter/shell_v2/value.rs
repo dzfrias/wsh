@@ -3,7 +3,7 @@ use std::fmt;
 #[derive(Clone)]
 pub enum Value {
     Number(f64),
-    String(String),
+    String(Box<str>),
     Boolean(bool),
     Null,
 }
