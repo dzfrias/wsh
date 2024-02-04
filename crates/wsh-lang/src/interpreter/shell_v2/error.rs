@@ -4,7 +4,7 @@ use thiserror::Error;
 
 use crate::{
     shell_v2::value::ValueType,
-    v2::ast::{BinopKind, UnopKind},
+    v2::ast::{BinopKind, Ident, UnopKind},
 };
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -52,6 +52,8 @@ pub enum ErrorKind {
     CommandFailed(io::Error),
     #[error("bad redirect: {0}")]
     BadRedirect(io::Error),
+    #[error("unbound variable: `{0}`")]
+    UnboundVariable(Ident),
 }
 
 pub trait WithPosition<T> {

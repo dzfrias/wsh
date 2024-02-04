@@ -1,4 +1,5 @@
 mod builtins;
+mod env;
 pub mod error;
 mod pipeline;
 mod value;
@@ -7,20 +8,21 @@ mod value;
 use std::os::unix::process::ExitStatusExt;
 #[cfg(windows)]
 use std::os::windows::process::ExitStatusExt;
-use std::{env, fs, io};
+use std::{fs, io};
 
 use self::error::Result;
 use crate::{
-    interpreter::shell_v2::{pipeline::Stdio, value::Value},
     shell_v2::{
         builtins::Builtin,
+        env::Env,
         error::{Error, ErrorKind, WithPosition},
-        value::ValueType,
+        pipeline::Stdio,
+        value::{Value, ValueType},
     },
     v2::{
         ast::{
-            self, Ast, Binop, BinopKind, Boolean, EnvVarHandle, Export, HomeDir, Node, NodeKind,
-            Pipeline, PipelineEndKind, Unop, UnopKind,
+            self, Assignment, Ast, Binop, BinopKind, Boolean, EnvVarHandle, Export, HomeDir, Node,
+            NodeKind, Pipeline, PipelineEndKind, Unop, UnopKind,
         },
         Parser, Source,
     },
@@ -29,6 +31,7 @@ use crate::{
 pub struct Shell {
     current_pos: usize,
     last_status: i32,
+    env: Env,
 }
 
 impl Shell {
@@ -36,6 +39,7 @@ impl Shell {
         Shell {
             current_pos: 0,
             last_status: 0,
+            env: Env::new(),
         }
     }
 
@@ -55,6 +59,7 @@ impl Shell {
         match node.kind() {
             NodeKind::Pipeline(pipeline) => self.eval_pipeline(ast, pipeline),
             NodeKind::Export(export) => self.eval_export(ast, export),
+            NodeKind::Assignment(assignment) => self.eval_assignment(ast, assignment),
             s => todo!("stmt for {s:?}"),
         }
     }
@@ -132,7 +137,13 @@ impl Shell {
 
     fn eval_export(&mut self, ast: &Ast, export: &Export) -> Result<()> {
         let value = self.eval_expr(ast, export.value.deref(ast))?.to_string();
-        env::set_var(&**export.name.deref(ast), value);
+        std::env::set_var(&**export.name.deref(ast), value);
+        Ok(())
+    }
+
+    fn eval_assignment(&mut self, ast: &Ast, assignment: &Assignment) -> Result<()> {
+        let value = self.eval_expr(ast, assignment.value.deref(ast))?;
+        self.env.set_var(assignment.name.deref(ast).clone(), value);
         Ok(())
     }
 
@@ -145,7 +156,12 @@ impl Shell {
                 Boolean::True => Value::Boolean(true),
                 Boolean::False => Value::Boolean(false),
             },
-            NodeKind::Ident(_) => todo!(),
+            NodeKind::Ident(i) => self
+                .env
+                .get_var(i.deref(ast))
+                .cloned()
+                .ok_or_else(|| ErrorKind::UnboundVariable(i.deref(ast).clone()))
+                .with_position(self.current_pos)?,
             NodeKind::EnvVar(env_var) => self.eval_env_var(ast, *env_var),
             NodeKind::Binop(binop) => self.eval_binop(ast, binop)?,
             NodeKind::Unop(unop) => self.eval_unop(ast, unop)?,
@@ -312,7 +328,7 @@ impl Shell {
 
     fn eval_env_var(&mut self, ast: &Ast, env_var: EnvVarHandle) -> Value {
         let env_var = env_var.deref(ast);
-        let value = env::var(&**env_var).unwrap_or_default();
+        let value = std::env::var(&**env_var).unwrap_or_default();
         Value::String(value.into_boxed_str())
     }
 
