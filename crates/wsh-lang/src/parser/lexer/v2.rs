@@ -238,7 +238,7 @@ impl<'src> Lexer<'src> {
             self.consume_while(|c| c == '\n');
         }
         // Dots will force us into strict mode
-        if self.current == '.' {
+        if self.current == '.' && !matches!(self.peek(), '.' | ' ' | '\0' | '\t') {
             self.consume();
             mode = LexMode::Strict;
         }
