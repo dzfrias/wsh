@@ -428,7 +428,10 @@ impl<'src> Parser<'src> {
             TokenKind::Tilde => self.parse_home_dir(ast),
             TokenKind::Bang | TokenKind::Minus | TokenKind::Plus => self.parse_prefix(ast)?,
             TokenKind::Backtick => self.parse_capture(ast)?,
-            s => todo!("expr for {s:?}"),
+            _ => {
+                return Err(Error::new(start, "expected vaild expression"))
+                    .attach(Label::new(self.current.range(), "found here"))
+            }
         };
 
         loop {
