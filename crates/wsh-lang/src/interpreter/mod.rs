@@ -639,8 +639,7 @@ impl Shell {
                     let path = std::env::current_dir()
                         .map(|dir| Path::new(path.as_str()).absolutize_from(dir).unwrap())
                         .unwrap_or(Cow::Borrowed(Path::new(path.as_str())));
-                    let memfs::Entry::File(memfs_file) = self.env.mem_fs.entry(&path).unwrap()
-                    else {
+                    let Some(memfs::Entry::File(memfs_file)) = self.env.mem_fs.entry(&path) else {
                         self.print_err(ShellError::MemfsNotFound(path.to_path_buf()));
                         return Err(());
                     };
