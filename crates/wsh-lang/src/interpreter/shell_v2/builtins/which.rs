@@ -16,7 +16,12 @@ struct Args {
     cmds: Vec<String>,
 }
 
-pub fn which<I, S>(_shell: &mut Shell, mut stdio: Stdio, args: I) -> Result<()>
+pub fn which<I, S>(
+    _shell: &mut Shell,
+    mut stdio: Stdio,
+    args: I,
+    _env: &[(String, String)],
+) -> Result<()>
 where
     I: IntoIterator<Item = S>,
     S: Into<OsString> + Clone,

@@ -411,7 +411,10 @@ impl Shell {
             let merge_stderr = cmd.merge_stderr;
             return Ok(Either::Left(pipeline::Command::from(
                 pipeline::Closure::wrap(
-                    move |shell: &mut Shell, mut stdio: Stdio, args: &[String]| {
+                    move |shell: &mut Shell,
+                          mut stdio: Stdio,
+                          args: &[String],
+                          env: &[(String, String)]| {
                         if merge_stderr {
                             stdio.stderr = match stdio.stdout.try_clone() {
                                 Ok(file) => file,
@@ -425,9 +428,10 @@ impl Shell {
                                 }
                             };
                         }
-                        builtin.run(shell, stdio, args)
+                        builtin.run(shell, stdio, args, env)
                     },
                     args,
+                    env.to_vec(),
                 ),
             )));
         }

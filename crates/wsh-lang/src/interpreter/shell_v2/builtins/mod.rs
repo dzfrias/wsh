@@ -42,7 +42,13 @@ impl Builtin {
         }
     }
 
-    pub fn run(self, shell: &mut Shell, mut stdio: Stdio, args: &[String]) -> i32 {
+    pub fn run(
+        self,
+        shell: &mut Shell,
+        mut stdio: Stdio,
+        args: &[String],
+        env: &[(String, String)],
+    ) -> i32 {
         let mut stderr = match stdio.stderr.try_clone() {
             Ok(stderr) => stderr,
             Err(err) => {
@@ -52,10 +58,10 @@ impl Builtin {
         };
         let args = iter::once(self.name()).chain(args.iter().map(|s| s.as_str()));
         if let Err(err) = match self {
-            Builtin::Cd => cd::cd(shell, stdio, args),
-            Builtin::Which => which::which(shell, stdio, args),
-            Builtin::Source => source::source(shell, stdio, args),
-            Builtin::Allow => allow::allow(shell, stdio, args),
+            Builtin::Cd => cd::cd(shell, stdio, args, env),
+            Builtin::Which => which::which(shell, stdio, args, env),
+            Builtin::Source => source::source(shell, stdio, args, env),
+            Builtin::Allow => allow::allow(shell, stdio, args, env),
         } {
             force_writeln!(stderr, "{}: {err:#}", self.name());
             1

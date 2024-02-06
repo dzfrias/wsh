@@ -10,7 +10,12 @@ struct Args {
     dir: Option<PathBuf>,
 }
 
-pub fn cd<I, S>(_shell: &mut Shell, _stdio: Stdio, args: I) -> anyhow::Result<()>
+pub fn cd<I, S>(
+    _shell: &mut Shell,
+    _stdio: Stdio,
+    args: I,
+    _env: &[(String, String)],
+) -> anyhow::Result<()>
 where
     I: IntoIterator<Item = S>,
     S: Into<OsString> + Clone,

@@ -70,8 +70,10 @@ impl Env {
         let mut ctx = builder
             .stdout(Box::new(to_wasi_file(ctx.stdout)))
             .stderr(Box::new(to_wasi_file(ctx.stderr)))
-            .args(&ctx.args)
+            .args(ctx.args)
             .expect("should not overflow on args")
+            .envs(ctx.env)
+            .expect("should not overflow on environment vars")
             .build();
 
         for env_var in &self.allowed_envs {
@@ -126,7 +128,8 @@ pub struct WasiContext<'a> {
     stdout: &'a std::fs::File,
     stderr: &'a std::fs::File,
     stdin: Option<&'a std::fs::File>,
-    args: Vec<String>,
+    args: &'a [String],
+    env: &'a [(String, String)],
 }
 
 impl<'a> WasiContext<'a> {
@@ -139,15 +142,18 @@ impl<'a> WasiContext<'a> {
             stdout,
             stderr,
             stdin,
-            args: vec![],
+            args: &[],
+            env: &[],
         }
     }
 
-    pub fn args<I>(mut self, args: I) -> Self
-    where
-        I: IntoIterator<Item = String>,
-    {
-        self.args = args.into_iter().collect();
+    pub fn args(mut self, args: &'a [String]) -> Self {
+        self.args = args;
+        self
+    }
+
+    pub fn env(mut self, env: &'a [(String, String)]) -> Self {
+        self.env = env;
         self
     }
 }

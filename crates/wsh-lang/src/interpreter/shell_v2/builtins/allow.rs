@@ -13,7 +13,12 @@ struct Args {
     env_vars: Vec<String>,
 }
 
-pub fn allow<I, S>(shell: &mut Shell, _stdio: Stdio, args: I) -> Result<()>
+pub fn allow<I, S>(
+    shell: &mut Shell,
+    _stdio: Stdio,
+    args: I,
+    _env: &[(String, String)],
+) -> Result<()>
 where
     I: IntoIterator<Item = S>,
     S: Into<OsString> + Clone,

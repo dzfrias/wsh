@@ -15,7 +15,12 @@ struct Args {
     args: Vec<String>,
 }
 
-pub fn source<I, S>(shell: &mut Shell, stdio: Stdio, args: I) -> Result<()>
+pub fn source<I, S>(
+    shell: &mut Shell,
+    stdio: Stdio,
+    args: I,
+    env: &[(String, String)],
+) -> Result<()>
 where
     I: IntoIterator<Item = S>,
     S: Into<OsString> + Clone,
@@ -30,7 +35,8 @@ where
             .env
             .prepare_wasi(
                 WasiContext::new(&stdio.stdout, &stdio.stderr, stdio.stdin.as_ref())
-                    .args(args.args),
+                    .args(&args.args)
+                    .env(env),
             )
             .context("error preparing store for WASI")?;
         let module = wsh_parser::Parser::new(&contents)

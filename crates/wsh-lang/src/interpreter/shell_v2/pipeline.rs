@@ -73,21 +73,23 @@ impl<T> Pipeline<T> {
 pub struct Closure<T> {
     inner: Option<PipelineClosure<T>>,
     args: Vec<String>,
+    env: Vec<(String, String)>,
 }
 
 impl<T> Closure<T> {
-    pub fn wrap<F>(f: F, args: Vec<String>) -> Self
+    pub fn wrap<F>(f: F, args: Vec<String>, env: Vec<(String, String)>) -> Self
     where
-        F: FnOnce(&mut T, Stdio, &[String]) -> i32 + 'static,
+        F: FnOnce(&mut T, Stdio, &[String], &[(String, String)]) -> i32 + 'static,
     {
         Self {
             inner: Some(Box::new(f)),
             args,
+            env,
         }
     }
 }
 
-type PipelineClosure<T> = Box<dyn FnOnce(&mut T, Stdio, &[String]) -> i32>;
+type PipelineClosure<T> = Box<dyn FnOnce(&mut T, Stdio, &[String], &[(String, String)]) -> i32>;
 
 pub enum Command<T> {
     Basic(BasicCommand),
@@ -114,6 +116,7 @@ impl<T> Command<T> {
             Command::Closure(c) => HandleInner::Closure(ClosureHandle {
                 closure: c.inner.take(),
                 args: std::mem::take(&mut c.args),
+                env: std::mem::take(&mut c.env),
                 stdio: Some(stdio),
                 killed: false,
             }),
@@ -280,6 +283,7 @@ impl CommandHandle {
 pub struct ClosureHandle<T> {
     closure: Option<PipelineClosure<T>>,
     args: Vec<String>,
+    env: Vec<(String, String)>,
     stdio: Option<Stdio>,
     killed: bool,
 }
@@ -300,7 +304,7 @@ impl<T> ClosureHandle<T> {
             .closure
             .take()
             .expect("cannot wait on closure more than once!"))(
-            data, stdio, &self.args
+            data, stdio, &self.args, &self.env
         ) as i32;
         Ok(process::ExitStatus::from_raw(result))
     }
@@ -371,12 +375,13 @@ mod tests {
         let cmd = BasicCommand::new("echo").args(Some("hello"));
         let mut pipeline = Pipeline::new(cmd);
         pipeline.pipe(Closure::wrap(
-            |_: &mut (), mut stdio: Stdio, _: &[String]| {
+            |_: &mut (), mut stdio: Stdio, _: &[String], _: &[(String, String)]| {
                 let mut stdin = String::new();
                 stdio.stdin.unwrap().read_to_string(&mut stdin).unwrap();
                 writeln!(stdio.stdout, "got: {stdin}").unwrap();
                 0
             },
+            vec![],
             vec![],
         ));
         let mut handle = pipeline.spawn(&mut (), inherit_stdio()).unwrap();
