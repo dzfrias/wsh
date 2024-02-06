@@ -1,9 +1,14 @@
 use std::{
     borrow::Cow,
+    io,
     ops::{Bound, Range, RangeBounds},
 };
 
 use thiserror::Error;
+
+use crate::v2::source::SourceError;
+
+use super::Source;
 
 /// A conveinience type for `Result<T, Error>`
 pub type Result<T> = std::result::Result<T, Error>;
@@ -36,6 +41,22 @@ impl Error {
 
     pub fn offset(&self) -> usize {
         self.offset
+    }
+}
+
+impl SourceError for Error {
+    fn fmt_on(&self, source: &Source, writer: impl io::Write) -> io::Result<()> {
+        use ariadne::{Color, Label, Report, ReportKind, Source};
+
+        Report::build(ReportKind::Error, source.name(), self.offset())
+            .with_message(self.msg())
+            .with_labels(self.labels().iter().map(|label| {
+                Label::new((source.name(), label.range.clone()))
+                    .with_message(&label.msg)
+                    .with_color(Color::Blue)
+            }))
+            .finish()
+            .write((source.name(), Source::from(source.contents())), writer)
     }
 }
 

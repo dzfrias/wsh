@@ -4,7 +4,10 @@ use thiserror::Error;
 
 use crate::{
     shell_v2::value::ValueType,
-    v2::ast::{BinopKind, Ident, UnopKind},
+    v2::{
+        ast::{BinopKind, Ident, UnopKind},
+        Source, SourceError,
+    },
 };
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -27,6 +30,15 @@ impl Error {
 
     pub fn offset(&self) -> usize {
         self.offset
+    }
+}
+
+impl SourceError for Error {
+    fn fmt_on(&self, source: &Source, mut writer: impl io::Write) -> io::Result<()> {
+        if let ErrorKind::ParseError(parse_error) = self.kind() {
+            return parse_error.fmt_on(source, writer);
+        }
+        writeln!(writer, "wsh: {}", self.kind())
     }
 }
 

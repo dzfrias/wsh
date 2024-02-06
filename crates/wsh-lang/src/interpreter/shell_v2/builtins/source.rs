@@ -2,12 +2,11 @@ use std::{ffi::OsString, fs, path::PathBuf};
 
 use clap::Parser;
 
-use anyhow::{bail, Context, Result};
-use filedescriptor::AsRawFileDescriptor;
+use anyhow::{Context, Result};
 
 use crate::{
-    shell_v2::{env::WasiContext, error::ErrorKind, pipeline::Stdio, Shell},
-    v2::Source,
+    shell_v2::{env::WasiContext, pipeline::Stdio, Shell},
+    v2::{Source, SourceError},
 };
 
 #[derive(Debug, Parser)]
@@ -48,20 +47,17 @@ where
 
     // If not a Wasm file, it should be a wsh script
     let contents = String::from_utf8(contents).context("error reading file")?;
-    let (old_stdout, old_stderr) = (shell.global_stdout, shell.global_stderr);
-    (shell.global_stdout, shell.global_stderr) = (
-        stdio.stdout.as_raw_file_descriptor(),
-        stdio.stderr.as_raw_file_descriptor(),
-    );
-    let source = Source::new(args.file.to_string_lossy().to_string(), contents);
-    if let Err(err) = shell.run(&source) {
-        if let ErrorKind::ParseError(parse_error) = err.kind() {
-            source.fmt_error(parse_error, stdio.stderr)?;
-            bail!("parse error")
-        } else {
-            bail!(err);
-        }
+    let old_stdout = shell.set_stdout(stdio.stdout);
+    let old_stderr = shell.set_stderr(stdio.stderr);
+    let name = args.file.file_stem().unwrap().to_string_lossy();
+    let source = Source::new(&name, contents);
+    let result = shell.run(&source);
+    shell.set_stdout(old_stdout);
+    let stderr = shell.set_stderr(old_stderr);
+    if let Err(err) = result {
+        err.fmt_on(&source, stderr)
+            .context("problem writing error to stderr")?;
     }
-    (shell.global_stdout, shell.global_stderr) = (old_stdout, old_stderr);
+
     Ok(())
 }

@@ -12,8 +12,8 @@ use reedline::{
 use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
 use wsh_cmp::completer::Completer;
 use wsh_lang::{
-    shell_v2::{error::ErrorKind, Shell},
-    v2::Source,
+    shell_v2::Shell,
+    v2::{Source, SourceError},
 };
 
 use crate::cli::Cli;
@@ -43,16 +43,11 @@ fn main() -> Result<()> {
     if let Some(input) = args.input {
         let contents = fs::read_to_string(&input).context("error reading input file")?;
         let mut shell = Shell::new();
-        let source = Source::new(
-            input.file_stem().unwrap().to_string_lossy().to_string(),
-            contents,
-        );
+        let name = input.file_stem().unwrap().to_string_lossy();
+        let source = Source::new(&name, contents);
         if let Err(err) = shell.run(&source) {
-            if let ErrorKind::ParseError(parse_error) = err.kind() {
-                source.fmt_error(parse_error, io::stderr())?;
-            } else {
-                eprintln!("wsh: {err}");
-            }
+            err.fmt_on(&source, io::stderr())
+                .context("problem writing error to stderr")?;
         }
         return Ok(());
     }
@@ -70,7 +65,7 @@ fn start_repl() -> Result<()> {
         if rc_file.try_exists().context("error finding .wsirc")? {
             let contents = fs::read_to_string(&rc_file).context("error reading rc file")?;
             shell.run(&Source::new(
-                rc_file.to_string_lossy().to_string(),
+                &rc_file.file_stem().unwrap().to_string_lossy(),
                 contents,
             ))?;
         }
@@ -86,11 +81,8 @@ fn start_repl() -> Result<()> {
             Ok(Signal::Success(input)) => {
                 let source = Source::new("<prompt>", input);
                 if let Err(err) = shell.run(&source) {
-                    if let ErrorKind::ParseError(parse_error) = err.kind() {
-                        source.fmt_error(parse_error, io::stderr())?;
-                    } else {
-                        eprintln!("wsh: {err}");
-                    }
+                    err.fmt_on(&source, io::stderr())
+                        .context("problem writing error to stderr")?;
                 }
             }
             Ok(Signal::CtrlD) => break,

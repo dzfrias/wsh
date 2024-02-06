@@ -14,7 +14,7 @@ use crate::{
         PipelineEndKind,
     },
 };
-pub use source::Source;
+pub use source::*;
 
 /// The parser for the wsh language.
 #[derive(Debug)]
@@ -824,7 +824,7 @@ mod tests {
                 let parser = Parser::new(&source);
                 let err = parser.parse().expect_err("parser should fail");
                 let mut buf = vec![];
-                source.fmt_error(&err, &mut buf).unwrap();
+                err.fmt_on(&source, &mut buf).unwrap();
                 ::insta::assert_display_snapshot!(String::from_utf8(buf).unwrap());
             }
         };

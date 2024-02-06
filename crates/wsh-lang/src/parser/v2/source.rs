@@ -1,21 +1,16 @@
-use std::{borrow::Cow, io};
-
-use crate::v2::error::Error;
+use std::io;
 
 /// The original text of wsh's input, along with a source name.
 #[derive(Debug)]
-pub struct Source {
+pub struct Source<'a> {
     contents: String,
-    name: Cow<'static, str>,
+    name: &'a str,
 }
 
-impl Source {
+impl<'a> Source<'a> {
     /// Create a new source with the given name and text.
-    pub fn new(name: impl Into<Cow<'static, str>>, contents: String) -> Self {
-        Self {
-            name: name.into(),
-            contents,
-        }
+    pub fn new(name: &'a str, contents: String) -> Self {
+        Self { name, contents }
     }
 
     /// Get the underlying contents of the source.
@@ -24,22 +19,11 @@ impl Source {
     }
 
     /// Get the name of the source.
-    pub fn name(&self) -> &str {
-        &self.name
+    pub fn name(&self) -> &'a str {
+        self.name
     }
+}
 
-    /// Format an error on this source. This will write the error message to the `writer`.
-    pub fn fmt_error(&self, error: &Error, writer: impl io::Write) -> io::Result<()> {
-        use ariadne::{Color, Label, Report, ReportKind, Source};
-
-        Report::build(ReportKind::Error, self.name(), error.offset())
-            .with_message(error.msg())
-            .with_labels(error.labels().iter().map(|label| {
-                Label::new((self.name(), label.range.clone()))
-                    .with_message(&label.msg)
-                    .with_color(Color::Blue)
-            }))
-            .finish()
-            .write((self.name(), Source::from(self.contents())), writer)
-    }
+pub trait SourceError {
+    fn fmt_on(&self, source: &Source, writer: impl io::Write) -> io::Result<()>;
 }

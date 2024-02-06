@@ -13,7 +13,7 @@ use std::{
     io::{self, Read, Write},
 };
 
-use filedescriptor::{AsRawFileDescriptor, FromRawFileDescriptor, RawFileDescriptor};
+use filedescriptor::{AsRawFileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor};
 use itertools::Either;
 
 use self::error::Result;
@@ -38,21 +38,29 @@ pub struct Shell {
     current_pos: usize,
     last_status: i32,
     env: Env,
-    global_stdout: RawFileDescriptor,
-    global_stderr: RawFileDescriptor,
+    global_stdout: File,
+    global_stderr: File,
 }
 
 impl Shell {
+    /// Create a new `Shell`.
     pub fn new() -> Self {
         Shell {
             current_pos: 0,
             last_status: 0,
             env: Env::new(),
-            global_stdout: io::stdout().as_raw_file_descriptor(),
-            global_stderr: io::stderr().as_raw_file_descriptor(),
+            // SAFETY: io::stdout() is a valid raw file descriptor.
+            global_stdout: unsafe {
+                File::from_raw_file_descriptor(io::stdout().as_raw_file_descriptor())
+            },
+            // SAFETY: io::stderr() is a valid raw file descriptor.
+            global_stderr: unsafe {
+                File::from_raw_file_descriptor(io::stderr().as_raw_file_descriptor())
+            },
         }
     }
 
+    /// Run the shell with the given source code.
     pub fn run(&mut self, source: &Source) -> Result<()> {
         let parser = Parser::new(source);
         let ast = parser
@@ -62,6 +70,16 @@ impl Shell {
             self.eval_stmt(&ast, stmt.deref(&ast))?;
         }
         Ok(())
+    }
+
+    /// Set the global stdout of the shell to a File, returning the previous value.
+    pub fn set_stdout(&mut self, stdout: File) -> File {
+        std::mem::replace(&mut self.global_stdout, stdout)
+    }
+
+    /// Set the global stderr of the shell to a File, returning the previous value.
+    pub fn set_stderr(&mut self, stdout: File) -> File {
+        std::mem::replace(&mut self.global_stderr, stdout)
     }
 
     fn eval_stmt(&mut self, ast: &Ast, node: Node) -> Result<()> {
@@ -91,21 +109,19 @@ impl Shell {
                     .map_err(ErrorKind::BadRedirect)
                     .with_position(pos)?
             }
-            // SAFETY: self.global_stdout must always be a valid file descriptor
-            None => unsafe {
-                clone_raw_fd(self.global_stdout)
-                    .map_err(ErrorKind::CommandFailedToStart)
-                    .with_position(self.current_pos)?
-            },
+            None => self
+                .global_stdout
+                .try_clone()
+                .map_err(ErrorKind::CommandFailedToStart)
+                .with_position(pos)?,
         };
         let stdio = Stdio {
             stdout,
-            // SAFETY: self.global_stderr must always be a valid file descriptor
-            stderr: unsafe {
-                clone_raw_fd(self.global_stderr)
-                    .map_err(ErrorKind::CommandFailedToStart)
-                    .with_position(self.current_pos)?
-            },
+            stderr: self
+                .global_stdout
+                .try_clone()
+                .map_err(ErrorKind::CommandFailedToStart)
+                .with_position(pos)?,
             stdin: None,
         };
         let mut handle = exec
@@ -227,15 +243,15 @@ impl Shell {
             reader.read_to_end(&mut output)?;
             Ok(output)
         });
-        let old = self.global_stdout;
-        self.global_stdout = writer.as_raw_file_descriptor();
+        // SAFETY: the write end is a valid file descriptor, and it can be written to
+        let old = self.set_stdout(unsafe {
+            File::from_raw_file_descriptor(writer.into_raw_file_descriptor())
+        });
         self.eval_pipeline(
             ast,
             capture.pipeline.deref(ast).kind().as_pipeline().unwrap(),
         )?;
-        // Avoiding a deadlock here. We need to drop our writer before reading!
-        drop(writer);
-        self.global_stdout = old;
+        self.set_stdout(old);
         let out = handle
             .join()
             .expect("reader thread should not panic")
@@ -438,15 +454,4 @@ impl Default for Shell {
     fn default() -> Self {
         Self::new()
     }
-}
-
-/// Clones the file descriptor, returning it as a [`File`].
-///
-/// # Safety
-/// `fd` must be a valid raw file descriptor.
-unsafe fn clone_raw_fd(fd: RawFileDescriptor) -> io::Result<File> {
-    let file = unsafe { File::from_raw_file_descriptor(fd) };
-    let clone = file.try_clone()?;
-    std::mem::forget(file);
-    Ok(clone)
 }
