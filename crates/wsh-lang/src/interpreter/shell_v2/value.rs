@@ -5,7 +5,6 @@ pub enum Value {
     Number(f64),
     String(Box<str>),
     Boolean(bool),
-    Null,
 }
 
 impl Value {
@@ -14,7 +13,6 @@ impl Value {
             Value::Number(_) => ValueType::Number,
             Value::String(_) => ValueType::String,
             Value::Boolean(_) => ValueType::Boolean,
-            Value::Null => ValueType::Null,
         }
     }
 }
@@ -24,7 +22,6 @@ pub enum ValueType {
     Number,
     String,
     Boolean,
-    Null,
 }
 
 impl fmt::Display for ValueType {
@@ -33,7 +30,6 @@ impl fmt::Display for ValueType {
             ValueType::Number => write!(f, "number"),
             ValueType::String => write!(f, "string"),
             ValueType::Boolean => write!(f, "boolean"),
-            ValueType::Null => write!(f, "null"),
         }
     }
 }
@@ -44,7 +40,6 @@ impl fmt::Display for Value {
             Value::Number(n) => write!(f, "{n}"),
             Value::String(s) => write!(f, "{s}"),
             Value::Boolean(b) => write!(f, "{b}"),
-            Value::Null => write!(f, "null"),
         }
     }
 }

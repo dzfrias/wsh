@@ -10,7 +10,7 @@ use std::os::unix::process::ExitStatusExt;
 use std::os::windows::process::ExitStatusExt;
 use std::{fs::File, io, mem, process};
 
-use filedescriptor::{AsRawFileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor};
+use filedescriptor::{FromRawFileDescriptor, IntoRawFileDescriptor};
 
 /// A command pipeline generic over `T`.
 ///
@@ -232,33 +232,6 @@ impl Stdio {
             stdin,
         }
     }
-
-    #[cfg(test)]
-    pub fn inherit() -> io::Result<Self> {
-        Ok(Self {
-            stdout: stdout()?,
-            stderr: stderr()?,
-            stdin: None,
-        })
-    }
-}
-
-/// Get a `File` for stdout. This will create a clone of the stdout file descriptor
-pub fn stdout() -> io::Result<File> {
-    // SAFETY: io::stdout() must be a vaild fd
-    let file = unsafe { File::from_raw_file_descriptor(io::stdout().as_raw_file_descriptor()) };
-    let clone = file.try_clone()?;
-    mem::forget(file);
-    Ok(clone)
-}
-
-/// Get a `File` for stderr. This will create a clone of the stderr file descriptor
-pub fn stderr() -> io::Result<File> {
-    // SAFETY: io::stderr() must be a vaild fd
-    let file = unsafe { File::from_raw_file_descriptor(io::stderr().as_raw_file_descriptor()) };
-    let clone = file.try_clone()?;
-    mem::forget(file);
-    Ok(clone)
 }
 
 pub struct Handle<T>(HandleInner<T>);
@@ -360,16 +333,33 @@ impl<T> PipeHandle<T> {
 
 #[cfg(test)]
 mod tests {
+    use filedescriptor::AsRawFileDescriptor;
     use std::io::{Read, Write};
 
     use super::*;
+
+    fn inherit_stdio() -> Stdio {
+        let stdout =
+            unsafe { File::from_raw_file_descriptor(io::stdout().as_raw_file_descriptor()) };
+        let stdout_clone = stdout.try_clone().unwrap();
+        mem::forget(stdout);
+        let stderr =
+            unsafe { File::from_raw_file_descriptor(io::stderr().as_raw_file_descriptor()) };
+        let stderr_clone = stderr.try_clone().unwrap();
+        mem::forget(stderr);
+        Stdio {
+            stdout: stdout_clone,
+            stderr: stderr_clone,
+            stdin: None,
+        }
+    }
 
     #[test]
     fn basic_commands() {
         let cmd = BasicCommand::new("echo").args(Some("hello"));
         let mut pipeline = Pipeline::new(cmd);
         pipeline.pipe(BasicCommand::new("wc").args(Some("-l")));
-        let mut handle = pipeline.spawn(&mut (), Stdio::inherit().unwrap()).unwrap();
+        let mut handle = pipeline.spawn(&mut (), inherit_stdio()).unwrap();
         handle.wait(&mut ()).unwrap();
         assert!(false)
     }
@@ -387,7 +377,7 @@ mod tests {
             },
             vec![],
         ));
-        let mut handle = pipeline.spawn(&mut (), Stdio::inherit().unwrap()).unwrap();
+        let mut handle = pipeline.spawn(&mut (), inherit_stdio()).unwrap();
         handle.wait(&mut ()).unwrap();
         assert!(false)
     }

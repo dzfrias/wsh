@@ -2,11 +2,11 @@
 source: tests/shell.rs
 expression: stderr
 ---
-Error: unexpected token: pipe, expected newline after file write redirection
-   ╭─[bad_redirect_position.tmp:1:20]
+Error: expected line break
+   ╭─[bad_redirect_position:1:20]
    │
  1 │ echo hi > file.txt | cat
    │                    ┬  
-   │                    ╰── error happened here
+   │                    ╰── expected here
 ───╯
 

@@ -2,13 +2,11 @@
 source: tests/shell.rs
 expression: stderr
 ---
-Error: unexpected token: eof, expected rparen to close expression
-   ╭─[accurate_errors_with_bloated_floats.tmp:2:8]
+Error: expected rparen to close grouped expression
+   ╭─[accurate_errors_with_bloated_floats:2:9]
    │
  2 │ echo .(1
-   │       ┬┬  
-   │       ╰─── lparen found here
-   │        │  
-   │        ╰── error happened here
+   │       ─┬  
+   │        ╰── this grouped expression
 ───╯
 

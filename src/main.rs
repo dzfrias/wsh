@@ -39,7 +39,23 @@ fn main() -> Result<()> {
         .with(fmt_layer)
         .init();
 
-    let _args = Cli::parse();
+    let args = Cli::parse();
+    if let Some(input) = args.input {
+        let contents = fs::read_to_string(&input).context("error reading input file")?;
+        let mut shell = Shell::new();
+        let source = Source::new(
+            input.file_stem().unwrap().to_string_lossy().to_string(),
+            contents,
+        );
+        if let Err(err) = shell.run(&source) {
+            if let ErrorKind::ParseError(parse_error) = err.kind() {
+                source.fmt_error(parse_error, io::stderr())?;
+            } else {
+                eprintln!("wsh: {err}");
+            }
+        }
+        return Ok(());
+    }
     start_repl()?;
 
     Ok(())

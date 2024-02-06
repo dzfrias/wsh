@@ -10,7 +10,7 @@ use std::os::unix::process::ExitStatusExt;
 use std::os::windows::process::ExitStatusExt;
 use std::{
     fs::{self, File},
-    io::{self, Read},
+    io::{self, Read, Write},
 };
 
 use filedescriptor::{AsRawFileDescriptor, FromRawFileDescriptor, RawFileDescriptor};
@@ -39,6 +39,7 @@ pub struct Shell {
     last_status: i32,
     env: Env,
     global_stdout: RawFileDescriptor,
+    global_stderr: RawFileDescriptor,
 }
 
 impl Shell {
@@ -48,6 +49,7 @@ impl Shell {
             last_status: 0,
             env: Env::new(),
             global_stdout: io::stdout().as_raw_file_descriptor(),
+            global_stderr: io::stderr().as_raw_file_descriptor(),
         }
     }
 
@@ -98,9 +100,12 @@ impl Shell {
         };
         let stdio = Stdio {
             stdout,
-            stderr: pipeline::stderr()
-                .map_err(ErrorKind::CommandFailedToStart)
-                .with_position(pos)?,
+            // SAFETY: self.global_stderr must always be a valid file descriptor
+            stderr: unsafe {
+                clone_raw_fd(self.global_stderr)
+                    .map_err(ErrorKind::CommandFailedToStart)
+                    .with_position(self.current_pos)?
+            },
             stdin: None,
         };
         let mut handle = exec
@@ -233,7 +238,7 @@ impl Shell {
         self.global_stdout = old;
         let out = handle
             .join()
-            .unwrap()
+            .expect("reader thread should not panic")
             .map_err(ErrorKind::CaptureError)
             .with_position(self.current_pos)?;
         let mut out = String::from_utf8_lossy(&out).to_string();
@@ -387,9 +392,23 @@ impl Shell {
             return Ok(Either::Right(pipeline));
         }
         if let Some(builtin) = Builtin::from_name(&name) {
+            let merge_stderr = cmd.merge_stderr;
             return Ok(Either::Left(pipeline::Command::from(
                 pipeline::Closure::wrap(
-                    move |shell: &mut Shell, stdio: Stdio, args: &[String]| {
+                    move |shell: &mut Shell, mut stdio: Stdio, args: &[String]| {
+                        if merge_stderr {
+                            stdio.stderr = match stdio.stdout.try_clone() {
+                                Ok(file) => file,
+                                Err(err) => {
+                                    writeln!(
+                                        stdio.stderr,
+                                        "error cloning stdout to merge with stderr: {err}"
+                                    )
+                                    .expect("write to stderr failed!");
+                                    return 1;
+                                }
+                            };
+                        }
                         builtin.run(shell, stdio, args)
                     },
                     args,

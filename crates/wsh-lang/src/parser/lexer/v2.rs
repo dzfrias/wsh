@@ -380,6 +380,7 @@ impl<'src> Lexer<'src> {
                 | TokenKind::Number(_)
                 | TokenKind::RParen
                 | TokenKind::End
+                | TokenKind::Backtick
         ) && self.should_semicolon(mode)
         {
             self.insert_semi = true;
