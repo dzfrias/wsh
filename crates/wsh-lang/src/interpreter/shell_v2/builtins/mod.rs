@@ -1,3 +1,4 @@
+mod allow;
 mod cd;
 mod source;
 mod which;
@@ -18,6 +19,7 @@ pub enum Builtin {
     Cd,
     Which,
     Source,
+    Allow,
 }
 
 impl Builtin {
@@ -26,6 +28,7 @@ impl Builtin {
             "cd" => Self::Cd,
             "which" => Self::Which,
             "source" => Self::Source,
+            "allow" => Self::Allow,
             _ => return None,
         })
     }
@@ -35,6 +38,7 @@ impl Builtin {
             Builtin::Cd => "cd",
             Builtin::Which => "which",
             Builtin::Source => "source",
+            Builtin::Allow => "allow",
         }
     }
 
@@ -51,6 +55,7 @@ impl Builtin {
             Builtin::Cd => cd::cd(shell, stdio, args),
             Builtin::Which => which::which(shell, stdio, args),
             Builtin::Source => source::source(shell, stdio, args),
+            Builtin::Allow => allow::allow(shell, stdio, args),
         } {
             force_writeln!(stderr, "{}: {err:#}", self.name());
             1

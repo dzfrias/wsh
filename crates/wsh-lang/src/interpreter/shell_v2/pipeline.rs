@@ -194,11 +194,13 @@ pub struct Pipe<T> {
 impl<T> Pipe<T> {
     pub fn spawn(&mut self, data: &mut T, stdio: Stdio) -> io::Result<PipeHandle<T>> {
         let (reader, writer) = os_pipe::pipe()?;
+        // SAFETY: `writer` is a valid raw file descriptor, and can be written to
         let writer = unsafe { File::from_raw_file_descriptor(writer.into_raw_file_descriptor()) };
         let mut lhs = self.lhs.spawn(
             data,
             Stdio::new(writer, stdio.stderr.try_clone()?, stdio.stdin),
         )?;
+        // SAFETY: `reader` is a valid raw file descriptor, and can be read from
         let reader = unsafe { File::from_raw_file_descriptor(reader.into_raw_file_descriptor()) };
         let rhs_res = self
             .rhs

@@ -1,4 +1,11 @@
-use std::{any::Any, collections::HashMap, mem::ManuallyDrop, pin::Pin};
+use std::{
+    any::Any,
+    collections::HashMap,
+    io,
+    mem::ManuallyDrop,
+    path::{Path, PathBuf},
+    pin::Pin,
+};
 
 use filedescriptor::{AsRawFileDescriptor, FromRawFileDescriptor};
 use wsh_engine::Store;
@@ -12,15 +19,30 @@ use crate::{
 pub struct Env {
     vars: HashMap<Ident, Value>,
     aliases: HashMap<String, Ast>,
+
     store: Store,
+    allowed_dirs: Vec<PathBuf>,
+    allowed_envs: Vec<String>,
 }
 
 impl Env {
     pub fn new() -> Self {
+        let mut store = Store::default();
+        let mut wasi_ctx = WasiCtxBuilder::new().build();
+        // Link the WASI preview 1 snapshot into the store. This is actually just a stand-in. This
+        // is only here so that module instantiation doesn't fail. All host functions linked by
+        // this function call are replaced every time `prepare_wasi` is called. This is because
+        // WasCtx is not designed to work over multiple WASM module's lifetimes, so there are **a
+        // lot** of problems when trying to maintain a global refernce counted instance of WasiCtx.
+        // Perhaps if a new WASI implementation is designed from scratch, this wouldn't be
+        // necessary.
+        wsh_wasi::sync::snapshots::preview_1::link(&mut store, &mut wasi_ctx);
         Self {
             vars: HashMap::new(),
             aliases: HashMap::new(),
             store: Store::default(),
+            allowed_dirs: vec![],
+            allowed_envs: vec![],
         }
     }
 
@@ -40,7 +62,7 @@ impl Env {
         self.vars.insert(ident, value);
     }
 
-    pub fn prepare_wasi(&mut self, ctx: WasiContext) {
+    pub fn prepare_wasi(&mut self, ctx: WasiContext) -> Result<(), wsh_wasi::WasiError> {
         let mut builder = WasiCtxBuilder::new();
         if let Some(stdin) = ctx.stdin {
             builder.stdin(Box::new(to_wasi_file(stdin)));
@@ -52,7 +74,42 @@ impl Env {
             .expect("should not overflow on args")
             .build();
 
+        for env_var in &self.allowed_envs {
+            let Ok(value) = std::env::var(env_var) else {
+                continue;
+            };
+            ctx.push_env(env_var, &value)
+                .expect("should not overflow on env vars");
+        }
+
+        for path in &self.allowed_dirs {
+            let dir = wasi_dir(path)?;
+            ctx.push_preopened_dir(dir, path)?;
+            let Ok(current_dir) = std::env::current_dir() else {
+                continue;
+            };
+            let Some(mut relative) = pathdiff::diff_paths(path, current_dir) else {
+                continue;
+            };
+            if relative == Path::new("") {
+                relative = PathBuf::from(".");
+            }
+            let dir = wasi_dir(&relative)?;
+            ctx.push_preopened_dir(dir, relative)?;
+        }
+
         wsh_wasi::sync::snapshots::preview_1::link(self.store_mut(), &mut ctx);
+        Ok(())
+    }
+
+    pub fn allow_dir(&mut self, p: impl AsRef<Path>) -> io::Result<()> {
+        let abs_path = std::fs::canonicalize(p.as_ref())?;
+        self.allowed_dirs.push(abs_path);
+        Ok(())
+    }
+
+    pub fn allow_env(&mut self, env: String) {
+        self.allowed_envs.push(env);
     }
 
     pub fn store(&self) -> &Store {
@@ -103,6 +160,12 @@ fn to_wasi_file(file: &std::fs::File) -> NoDropWasiFile<wsh_wasi::sync::file::Fi
     let file =
         unsafe { cap_std::fs::File::from_raw_file_descriptor(file.as_raw_file_descriptor()) };
     NoDropWasiFile::new(wsh_wasi::sync::file::File::from_cap_std(file))
+}
+
+fn wasi_dir(path: impl AsRef<Path>) -> Result<Box<wsh_wasi::sync::dir::Dir>, wsh_wasi::WasiError> {
+    let cap_std_dir = cap_std::fs::Dir::open_ambient_dir(path, cap_std::ambient_authority())?;
+    let dir = Box::new(wsh_wasi::sync::dir::Dir::from_cap_std(cap_std_dir));
+    Ok(dir)
 }
 
 /// A wrapper implementing `WasiFile` that prevents the inner file from being dropped.

@@ -26,9 +26,13 @@ where
     const MAGIC: &[u8; 4] = b"\0asm";
     // This will detect if the file is a WebAssembly file
     if contents.len() >= 4 && &contents[0..4] == MAGIC {
-        shell.env.prepare_wasi(
-            WasiContext::new(&stdio.stdout, &stdio.stderr, stdio.stdin.as_ref()).args(args.args),
-        );
+        shell
+            .env
+            .prepare_wasi(
+                WasiContext::new(&stdio.stdout, &stdio.stderr, stdio.stdin.as_ref())
+                    .args(args.args),
+            )
+            .context("error preparing store for WASI")?;
         let module = wsh_parser::Parser::new(&contents)
             .read_module()
             .context("error parsing wasm file")?;
