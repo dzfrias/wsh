@@ -1,6 +1,6 @@
 use std::{ffi::OsString, path::PathBuf};
 
-use anyhow::{ensure, Context, Result};
+use anyhow::{Context, Result};
 use clap::Parser;
 
 use crate::shell_v2::{pipeline::Stdio, Shell};
@@ -38,11 +38,10 @@ where
         return Ok(());
     }
     for path in &args.dirs {
-        ensure!(path.is_dir(), "expected directory to allow");
         shell
             .env
             .allow_dir(path)
-            .context("error canonicalizing provided path")?;
+            .context("error allowing directory")?;
     }
 
     Ok(())

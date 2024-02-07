@@ -16,6 +16,9 @@ use crate::{
     v2::ast::{Ast, Ident},
 };
 
+/// Holds all global state of the shell.
+// Perhaps this would be better split up among different structs, but for right now it's convenient
+// to have it in just one. There hasn't been a clear advantage to either implementation, right now.
 pub struct Env {
     vars: HashMap<Ident, Value>,
     aliases: HashMap<String, Ast>,
@@ -62,6 +65,10 @@ impl Env {
         self.vars.insert(ident, value);
     }
 
+    /// Set up the execution of a WASI module. This allows system arguments to be passed,
+    /// environment variables, to be set, and I/O streams to be registered.
+    ///
+    /// This method should be called every time a WASI module is going to be run in the store.
     pub fn prepare_wasi(&mut self, ctx: WasiContext) -> Result<(), wsh_wasi::WasiError> {
         let mut builder = WasiCtxBuilder::new();
         if let Some(stdin) = ctx.stdin {
@@ -76,6 +83,7 @@ impl Env {
             .expect("should not overflow on environment vars")
             .build();
 
+        // Set up allowed environment variables
         for env_var in &self.allowed_envs {
             let Ok(value) = std::env::var(env_var) else {
                 continue;
@@ -84,13 +92,14 @@ impl Env {
                 .expect("should not overflow on env vars");
         }
 
+        // Set up allowed WASI dirs
         for path in &self.allowed_dirs {
             let dir = wasi_dir(path)?;
             ctx.push_preopened_dir(dir, path)?;
-            let Ok(current_dir) = std::env::current_dir() else {
-                continue;
-            };
-            let Some(mut relative) = pathdiff::diff_paths(path, current_dir) else {
+            let Some(mut relative) = std::env::current_dir()
+                .ok()
+                .and_then(|cwd| pathdiff::diff_paths(path, cwd))
+            else {
                 continue;
             };
             if relative == Path::new("") {
@@ -104,20 +113,30 @@ impl Env {
         Ok(())
     }
 
+    /// Allow a directory to be modified by WASI modules.
     pub fn allow_dir(&mut self, p: impl AsRef<Path>) -> io::Result<()> {
+        if !p.as_ref().is_dir() {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "path is not a directory",
+            ));
+        }
         let abs_path = std::fs::canonicalize(p.as_ref())?;
         self.allowed_dirs.push(abs_path);
         Ok(())
     }
 
+    /// Allow an environment variable to be read by WASI modules.
     pub fn allow_env(&mut self, env: String) {
         self.allowed_envs.push(env);
     }
 
+    /// Get a shared reference to the global WebAssembly store.
     pub fn store(&self) -> &Store {
         &self.store
     }
 
+    /// Get an exclusive reference to the global WebAssembly store.
     pub fn store_mut(&mut self) -> &mut Store {
         &mut self.store
     }
