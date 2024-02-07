@@ -1,7 +1,10 @@
 mod cli;
 mod file_suggest;
 
-use std::{fs, io, path::PathBuf};
+use std::{
+    fs, io,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{Context, Result};
 use clap::Parser as CliParser;
@@ -41,33 +44,35 @@ fn main() -> Result<()> {
 
     let args = Cli::parse();
     if let Some(input) = args.input {
-        let contents = fs::read_to_string(&input).context("error reading input file")?;
         let mut shell = Shell::new();
-        let name = input.file_stem().unwrap().to_string_lossy();
-        let source = Source::new(&name, contents);
-        if let Err(err) = shell.run(&source) {
-            err.fmt_on(&source, io::stderr())
-                .context("problem writing error to stderr")?;
-        }
+        run_file(input, &mut shell)?;
         return Ok(());
     }
-    start_repl()?;
+    run_repl()?;
 
     Ok(())
 }
 
-fn start_repl() -> Result<()> {
+fn run_file(path: impl AsRef<Path>, shell: &mut Shell) -> Result<()> {
+    let path = path.as_ref();
+    let contents = fs::read_to_string(path).context("error reading input file")?;
+    let name = path.file_stem().unwrap().to_string_lossy();
+    let source = Source::new(&name, contents);
+    if let Err(err) = shell.run(&source) {
+        err.fmt_on(&source, io::stderr())
+            .context("problem writing error to stderr")?;
+    }
+    Ok(())
+}
+
+fn run_repl() -> Result<()> {
     println!("Welcome to wsh, the WebAssembly shell!\n");
     let mut shell = Shell::new();
     let home_dir = dirs::home_dir();
     let mut line_editor = line_editor(home_dir.as_ref().map(|home| home.join(".wsi_history")))?;
     if let Some(rc_file) = home_dir.as_ref().map(|home| home.join(".wsirc")) {
         if rc_file.try_exists().context("error finding .wsirc")? {
-            let contents = fs::read_to_string(&rc_file).context("error reading rc file")?;
-            shell.run(&Source::new(
-                &rc_file.file_stem().unwrap().to_string_lossy(),
-                contents,
-            ))?;
+            run_file(rc_file, &mut shell)?;
         }
     }
 
