@@ -68,6 +68,10 @@ pub enum ErrorKind {
     UnboundVariable(Ident),
     #[error("capture error: {0}")]
     CaptureError(io::Error),
+    #[error("Wasm function arg mismatch: expected {want} args, got {got} args")]
+    WasmArgLenMismatch { want: usize, got: usize },
+    #[error("bad Wasm argument {idx}: {reason}")]
+    BadWasmArg { idx: usize, reason: &'static str },
 }
 
 pub trait WithPosition<T> {

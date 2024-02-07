@@ -1,6 +1,8 @@
 mod allow;
 mod cd;
+mod load;
 mod source;
+mod unload;
 mod which;
 
 use std::{io::Write, iter};
@@ -20,6 +22,8 @@ pub enum Builtin {
     Which,
     Source,
     Allow,
+    Load,
+    Unload,
 }
 
 impl Builtin {
@@ -29,6 +33,8 @@ impl Builtin {
             "which" => Self::Which,
             "source" => Self::Source,
             "allow" => Self::Allow,
+            "load" => Self::Load,
+            "unload" => Self::Unload,
             _ => return None,
         })
     }
@@ -39,6 +45,8 @@ impl Builtin {
             Builtin::Which => "which",
             Builtin::Source => "source",
             Builtin::Allow => "allow",
+            Builtin::Load => "load",
+            Builtin::Unload => "unload",
         }
     }
 
@@ -62,6 +70,8 @@ impl Builtin {
             Builtin::Which => which::which(shell, stdio, args, env),
             Builtin::Source => source::source(shell, stdio, args, env),
             Builtin::Allow => allow::allow(shell, stdio, args, env),
+            Builtin::Load => load::load(shell, stdio, args, env),
+            Builtin::Unload => unload::unload(shell, stdio, args, env),
         } {
             force_writeln!(stderr, "{}: {err:#}", self.name());
             1

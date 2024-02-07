@@ -17,7 +17,7 @@ struct Args {
 }
 
 pub fn which<I, S>(
-    _shell: &mut Shell,
+    shell: &mut Shell,
     mut stdio: Stdio,
     args: I,
     _env: &[(String, String)],
@@ -29,6 +29,12 @@ where
     let args = Args::try_parse_from(args)?;
     for arg in args.cmds {
         let arg = arg.as_ref();
+        if shell.env.get_alias(arg).is_some() {
+            force_writeln!(stdio.stdout, "{arg}: alias");
+        }
+        if shell.env.get_module_func(arg).is_some() {
+            force_writeln!(stdio.stdout, "{arg}: Wasm function");
+        }
         if Builtin::from_name(arg).is_some() {
             force_writeln!(stdio.stdout, "{arg}: shell builtin");
             continue;
@@ -37,7 +43,7 @@ where
             force_writeln!(stdio.stdout, "{}", path.display());
             continue;
         }
-        writeln!(stdio.stdout, "{arg} not found").expect("error writing to stdout");
+        force_writeln!(stdio.stdout, "{arg} not found");
     }
 
     Ok(())

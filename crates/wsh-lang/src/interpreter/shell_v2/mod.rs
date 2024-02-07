@@ -21,7 +21,7 @@ use self::error::Result;
 use crate::{
     shell_v2::{
         builtins::Builtin,
-        env::Env,
+        env::{Env, WasiContext},
         error::{Error, ErrorKind, WithPosition},
         pipeline::Stdio,
         value::{Value, ValueType},
@@ -242,10 +242,10 @@ impl Shell {
             Value::String(s) if s.parse::<f64>().is_ok() => {
                 self.eval_numeric_unop(unop.op, s.parse::<f64>().unwrap())?
             }
-            _ => {
+            Value::String(_) => {
                 return Err(self.error(ErrorKind::UnopTypeError {
                     op: unop.op,
-                    type_: expr.type_(),
+                    type_: ValueType::String,
                 }))
             }
         };
@@ -377,6 +377,8 @@ impl Shell {
         Ok(Value::String(home.into()))
     }
 
+    /// Create a pipeline to execute. The `make_*` familly of methods all contribute to pieces of
+    /// this pipeline.
     fn make_pipeline<'env>(
         &mut self,
         ast: &Ast,
@@ -414,14 +416,14 @@ impl Shell {
         let name = self
             .eval_expr(ast, exprs.first(ast).unwrap().deref(ast))?
             .to_string();
-        let args = exprs
-            .iter(ast)
-            .skip(1)
-            .map(|expr| self.eval_expr(ast, expr.deref(ast)).map(|e| e.to_string()))
-            .collect::<Result<Vec<_>>>()?;
 
         // First, we check if the command is an alias
         if let Some(sub_ast) = self.env.get_alias(&name) {
+            let args = exprs
+                .iter(ast)
+                .skip(1)
+                .map(|expr| self.eval_expr(ast, expr.deref(ast)).map(|e| e.to_string()))
+                .collect::<Result<Vec<_>>>()?;
             let node = sub_ast.first().unwrap();
             let pipeline = node.kind().as_pipeline().unwrap();
             let mut pipeline = self.make_pipeline(&sub_ast, pipeline, env)?;
@@ -430,6 +432,23 @@ impl Shell {
             self.env.set_alias(name, sub_ast);
             return Ok(Either::Right(pipeline));
         }
+
+        // Next, we check if the function was loaded from Wasm
+        if let Some(func) = self.env.get_module_func(&name) {
+            // Note that these args have **not** be converted to strings yet
+            let args = exprs
+                .iter(ast)
+                .skip(1)
+                .map(|expr| self.eval_expr(ast, expr.deref(ast)))
+                .collect::<Result<Vec<_>>>()?;
+            return Ok(Either::Left(self.make_wasm_func(func, args, env)?));
+        }
+
+        let args = exprs
+            .iter(ast)
+            .skip(1)
+            .map(|expr| self.eval_expr(ast, expr.deref(ast)).map(|e| e.to_string()))
+            .collect::<Result<Vec<_>>>()?;
 
         // We check if the command is a built-in
         if let Some(builtin) = Builtin::from_name(&name) {
@@ -467,6 +486,82 @@ impl Shell {
                 .env(env)
                 .args(args)
                 .merge_stderr(cmd.merge_stderr),
+        )))
+    }
+
+    fn make_wasm_func<'env>(
+        &mut self,
+        func: wsh_engine::WasmFuncUntyped,
+        args: Vec<Value>,
+        env: &'env [(String, String)],
+    ) -> Result<pipeline::Command<'env, Self>> {
+        let expect_len = func.arg_types(self.env.store()).len();
+        if expect_len != args.len() {
+            return Err(self.error(ErrorKind::WasmArgLenMismatch {
+                want: expect_len,
+                got: args.len(),
+            }));
+        }
+
+        // Converts wsh `Value`s to Wasm `Value`s
+        let wasm_args = args
+            .into_iter()
+            .zip(func.arg_types(self.env.store()))
+            .enumerate()
+            .map(|(i, (value, expect_ty))| -> Result<_> {
+                let value = match value {
+                    Value::Number(n) => n,
+                    Value::String(s) => s.parse::<f64>().map_err(|_err| {
+                        self.error(ErrorKind::BadWasmArg {
+                            idx: i,
+                            reason: "cannot pass string to Wasm",
+                        })
+                    })?,
+                    Value::Boolean(b) => b as u8 as f64,
+                };
+                let val = match expect_ty {
+                    wsh_parser::ValType::I32 => wsh_engine::Value::I32(value as u32),
+                    wsh_parser::ValType::I64 => wsh_engine::Value::I64(value as u64),
+                    wsh_parser::ValType::F32 => wsh_engine::Value::F32(value as f32),
+                    wsh_parser::ValType::F64 => wsh_engine::Value::F64(value),
+                    _ => {
+                        return Err(self.error(ErrorKind::BadWasmArg {
+                            idx: i,
+                            reason: "cannot call Wasm function that takes in references",
+                        }))
+                    }
+                };
+                Ok(val)
+            })
+            .collect::<Result<Vec<_>>>()?;
+        // This closure will call the Wasm function
+        Ok(pipeline::Command::Closure(pipeline::Closure::wrap(
+            move |shell: &mut Shell,
+                  mut stdio: Stdio,
+                  _args: &[String],
+                  env: &[(String, String)]| {
+                if let Err(err) = shell.env.prepare_wasi(
+                    WasiContext::new(&stdio.stdout, &stdio.stderr, stdio.stdin.as_ref()).env(env),
+                ) {
+                    writeln!(stdio.stderr, "error preparing WASI: {err}")
+                        .expect("write to stderr failed");
+                    return 1;
+                }
+                let ret_vals = match func.call(shell.env.store_mut(), &wasm_args) {
+                    Ok(vals) => vals,
+                    Err(err) => {
+                        writeln!(stdio.stderr, "Wasm function failed: {err}")
+                            .expect("write to stderr failed");
+                        return 1;
+                    }
+                };
+                for ret_val in ret_vals {
+                    writeln!(stdio.stdout, "{ret_val}").expect("write to stdout failed");
+                }
+                0
+            },
+            vec![],
+            env,
         )))
     }
 

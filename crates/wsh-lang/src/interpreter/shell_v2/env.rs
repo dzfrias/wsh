@@ -8,7 +8,7 @@ use std::{
 };
 
 use filedescriptor::{AsRawFileDescriptor, FromRawFileDescriptor};
-use wsh_engine::Store;
+use wsh_engine::{Instance, Store, WasmFuncUntyped};
 use wsh_wasi::{cap_std, WasiCtxBuilder, WasiFile};
 
 use crate::{
@@ -24,6 +24,7 @@ pub struct Env {
     aliases: HashMap<String, Ast>,
 
     store: Store,
+    modules: Vec<Instance>,
     allowed_dirs: Vec<PathBuf>,
     allowed_envs: Vec<String>,
 }
@@ -44,6 +45,7 @@ impl Env {
             vars: HashMap::new(),
             aliases: HashMap::new(),
             store: Store::default(),
+            modules: vec![],
             allowed_dirs: vec![],
             allowed_envs: vec![],
         }
@@ -111,6 +113,26 @@ impl Env {
 
         wsh_wasi::sync::snapshots::preview_1::link(self.store_mut(), &mut ctx);
         Ok(())
+    }
+
+    /// Load a WASM module into the store.
+    pub fn register_module(&mut self, instance: Instance) {
+        self.modules.push(instance);
+    }
+
+    pub fn unload_modules(&mut self) -> usize {
+        let len = self.modules.len();
+        self.modules.clear();
+        self.store.clear();
+        let mut wasi_ctx = wsh_wasi::WasiCtxBuilder::new().build();
+        wsh_wasi::sync::snapshots::preview_1::link(&mut self.store, &mut wasi_ctx);
+        len
+    }
+
+    pub fn get_module_func(&self, name: &str) -> Option<WasmFuncUntyped> {
+        self.modules
+            .iter()
+            .find_map(|m| m.get_func_untyped(&self.store, name).ok())
     }
 
     /// Allow a directory to be modified by WASI modules.
