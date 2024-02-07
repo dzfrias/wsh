@@ -95,7 +95,19 @@ impl Shell {
 
     fn eval_pipeline(&mut self, ast: &Ast, pipeline: &Pipeline) -> Result<()> {
         let pos = self.current_pos;
-        let mut exec = self.make_pipeline(ast, pipeline)?;
+        // Enough information exists for this to be possible in `make_pipeline`, but we do it here
+        // so the lifetime of this Vec outlives the lifetime of the Pipeline returned from
+        // `make_pipeline`. This is so we don't have to clone the environment all the time.
+        let env = pipeline
+            .env
+            .deref(ast)
+            .iter(ast)
+            .map(|env_set| {
+                self.eval_expr(ast, env_set.value.deref(ast))
+                    .map(|value| (env_set.name.deref(ast).to_string(), value.to_string()))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let mut exec = self.make_pipeline(ast, pipeline, &env)?;
         // Configure stdout to the pipeline redirect, if any (defaults to shell stdout)
         let stdout = match &pipeline.end {
             Some(end) => {
@@ -118,7 +130,7 @@ impl Shell {
         let stdio = Stdio {
             stdout,
             stderr: self
-                .global_stdout
+                .global_stderr
                 .try_clone()
                 .map_err(ErrorKind::CommandFailedToStart)
                 .with_position(pos)?,
@@ -348,23 +360,15 @@ impl Shell {
         Ok(Value::String(home.into()))
     }
 
-    fn make_pipeline(
+    fn make_pipeline<'env>(
         &mut self,
         ast: &Ast,
         pipeline: &Pipeline,
-    ) -> Result<pipeline::Pipeline<Shell>> {
-        let env = pipeline
-            .env
-            .deref(ast)
-            .iter(ast)
-            .map(|env_set| {
-                self.eval_expr(ast, env_set.value.deref(ast))
-                    .map(|value| (env_set.name.deref(ast).to_string(), value.to_string()))
-            })
-            .collect::<Result<Vec<_>>>()?;
+        env: &'env [(String, String)],
+    ) -> Result<pipeline::Pipeline<'env, Shell>> {
         let cmds = pipeline.cmds.deref(ast);
         let first = cmds.first(ast).unwrap().deref(ast);
-        let cmd = self.make_cmd(ast, first.kind().as_command().unwrap(), &env)?;
+        let cmd = self.make_cmd(ast, first.kind().as_command().unwrap(), env)?;
         let exec = cmds.iter(ast).skip(1).try_fold(
             match cmd {
                 Either::Left(cmd) => pipeline::Pipeline::new(cmd),
@@ -373,7 +377,7 @@ impl Shell {
             |mut pipeline, cmd| {
                 let deref = cmd.deref(ast);
                 let cmd = deref.kind().as_command().unwrap();
-                match self.make_cmd(ast, cmd, &env)? {
+                match self.make_cmd(ast, cmd, env)? {
                     Either::Left(cmd) => pipeline.pipe(cmd),
                     Either::Right(other) => pipeline.extend(other),
                 }
@@ -383,12 +387,12 @@ impl Shell {
         Ok(exec)
     }
 
-    fn make_cmd(
+    fn make_cmd<'env>(
         &mut self,
         ast: &Ast,
         cmd: &ast::Command,
-        env: &[(String, String)],
-    ) -> Result<Either<pipeline::Command<Self>, pipeline::Pipeline<Self>>> {
+        env: &'env [(String, String)],
+    ) -> Result<Either<pipeline::Command<'env, Self>, pipeline::Pipeline<'env, Self>>> {
         let exprs = cmd.exprs.deref(ast);
         let name = self
             .eval_expr(ast, exprs.first(ast).unwrap().deref(ast))?
@@ -401,7 +405,7 @@ impl Shell {
         if let Some(sub_ast) = self.env.get_alias(&name) {
             let node = sub_ast.first().unwrap();
             let pipeline = node.kind().as_pipeline().unwrap();
-            let mut pipeline = self.make_pipeline(&sub_ast, pipeline)?;
+            let mut pipeline = self.make_pipeline(&sub_ast, pipeline, env)?;
             // We append this command's args to the end of the aliased pipeline
             pipeline.append_args(&args);
             self.env.set_alias(name, sub_ast);
@@ -431,13 +435,13 @@ impl Shell {
                         builtin.run(shell, stdio, args, env)
                     },
                     args,
-                    env.to_vec(),
+                    env,
                 ),
             )));
         }
         Ok(Either::Left(pipeline::Command::Basic(
             pipeline::BasicCommand::new(&name)
-                .env(env.iter().map(|(k, v)| (k, v)))
+                .env(env)
                 .args(args)
                 .merge_stderr(cmd.merge_stderr),
         )))

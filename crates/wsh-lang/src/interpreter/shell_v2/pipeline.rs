@@ -17,18 +17,18 @@ use filedescriptor::{FromRawFileDescriptor, IntoRawFileDescriptor};
 /// Since this pipeline is meant to be used with closures (for support for built-ins and other
 /// custom commands), they may take in a mutable reference to `T` for arbitrary data to work with
 /// while executing.
-pub struct Pipeline<T> {
-    inner: Command<T>,
+pub struct Pipeline<'a, T> {
+    inner: Command<'a, T>,
 }
 
-impl<T> Pipeline<T> {
+impl<'a, T> Pipeline<'a, T> {
     /// Create a new pipeline, starting from a command.
-    pub fn new(cmd: impl Into<Command<T>>) -> Self {
+    pub fn new(cmd: impl Into<Command<'a, T>>) -> Self {
         Self { inner: cmd.into() }
     }
 
     /// Set up a pipe between the last commmand and the provided one.
-    pub fn pipe(&mut self, cmd: impl Into<Command<T>>) {
+    pub fn pipe(&mut self, cmd: impl Into<Command<'a, T>>) {
         let inner = self.take_inner();
         self.inner = Command::Pipe(Box::new(Pipe {
             lhs: inner,
@@ -36,7 +36,7 @@ impl<T> Pipeline<T> {
         }));
     }
 
-    pub fn extend(&mut self, pipeline: Pipeline<T>) {
+    pub fn extend(&mut self, pipeline: Pipeline<'a, T>) {
         self.pipe(pipeline.inner);
     }
 
@@ -53,31 +53,31 @@ impl<T> Pipeline<T> {
     }
 
     /// Run the pipeline, returning a handle to the new process.
-    pub fn spawn(&mut self, data: &mut T, stdio: Stdio) -> io::Result<Handle<T>> {
+    pub fn spawn(&mut self, data: &mut T, stdio: Stdio) -> io::Result<Handle<'a, T>> {
         self.inner.spawn(data, stdio)
     }
 
-    fn take_inner(&mut self) -> Command<T> {
+    fn take_inner(&mut self) -> Command<'a, T> {
         mem::replace(
             &mut self.inner,
             Command::Basic(BasicCommand {
                 cmd: String::new(),
                 merge_stderr: false,
-                env: vec![],
+                env: &[],
                 args: vec![],
             }),
         )
     }
 }
 
-pub struct Closure<T> {
+pub struct Closure<'a, T> {
     inner: Option<PipelineClosure<T>>,
     args: Vec<String>,
-    env: Vec<(String, String)>,
+    env: &'a [(String, String)],
 }
 
-impl<T> Closure<T> {
-    pub fn wrap<F>(f: F, args: Vec<String>, env: Vec<(String, String)>) -> Self
+impl<'a, T> Closure<'a, T> {
+    pub fn wrap<F>(f: F, args: Vec<String>, env: &'a [(String, String)]) -> Self
     where
         F: FnOnce(&mut T, Stdio, &[String], &[(String, String)]) -> i32 + 'static,
     {
@@ -91,26 +91,26 @@ impl<T> Closure<T> {
 
 type PipelineClosure<T> = Box<dyn FnOnce(&mut T, Stdio, &[String], &[(String, String)]) -> i32>;
 
-pub enum Command<T> {
-    Basic(BasicCommand),
-    Closure(Closure<T>),
-    Pipe(Box<Pipe<T>>),
+pub enum Command<'a, T> {
+    Basic(BasicCommand<'a>),
+    Closure(Closure<'a, T>),
+    Pipe(Box<Pipe<'a, T>>),
 }
 
-impl<T> From<BasicCommand> for Command<T> {
-    fn from(value: BasicCommand) -> Self {
+impl<'a, T> From<BasicCommand<'a>> for Command<'a, T> {
+    fn from(value: BasicCommand<'a>) -> Self {
         Self::Basic(value)
     }
 }
 
-impl<T> From<Closure<T>> for Command<T> {
-    fn from(value: Closure<T>) -> Self {
+impl<'a, T> From<Closure<'a, T>> for Command<'a, T> {
+    fn from(value: Closure<'a, T>) -> Self {
         Self::Closure(value)
     }
 }
 
-impl<T> Command<T> {
-    pub fn spawn(&mut self, data: &mut T, stdio: Stdio) -> io::Result<Handle<T>> {
+impl<'a, T> Command<'a, T> {
+    pub fn spawn(&mut self, data: &mut T, stdio: Stdio) -> io::Result<Handle<'a, T>> {
         let handle = match self {
             Command::Basic(c) => HandleInner::Command(c.spawn(stdio)?),
             Command::Closure(c) => HandleInner::Closure(ClosureHandle {
@@ -127,19 +127,19 @@ impl<T> Command<T> {
 }
 
 #[derive(Debug)]
-pub struct BasicCommand {
+pub struct BasicCommand<'a> {
     cmd: String,
     args: Vec<String>,
-    env: Vec<(String, String)>,
+    env: &'a [(String, String)],
     merge_stderr: bool,
 }
 
-impl BasicCommand {
+impl<'a> BasicCommand<'a> {
     pub fn new(cmd: &str) -> Self {
         Self {
             cmd: cmd.to_owned(),
             args: vec![],
-            env: vec![],
+            env: &[],
             merge_stderr: false,
         }
     }
@@ -153,15 +153,8 @@ impl BasicCommand {
         self
     }
 
-    pub fn env<I, S>(mut self, args: I) -> Self
-    where
-        I: IntoIterator<Item = (S, S)>,
-        S: AsRef<str>,
-    {
-        self.env = args
-            .into_iter()
-            .map(|(k, v)| (k.as_ref().to_owned(), v.as_ref().to_owned()))
-            .collect();
+    pub fn env(mut self, env: &'a [(String, String)]) -> Self {
+        self.env = env;
         self
     }
 
@@ -189,13 +182,13 @@ impl BasicCommand {
     }
 }
 
-pub struct Pipe<T> {
-    lhs: Command<T>,
-    rhs: Command<T>,
+pub struct Pipe<'a, T> {
+    lhs: Command<'a, T>,
+    rhs: Command<'a, T>,
 }
 
-impl<T> Pipe<T> {
-    pub fn spawn(&mut self, data: &mut T, stdio: Stdio) -> io::Result<PipeHandle<T>> {
+impl<'a, T> Pipe<'a, T> {
+    pub fn spawn(&mut self, data: &mut T, stdio: Stdio) -> io::Result<PipeHandle<'a, T>> {
         let (reader, writer) = os_pipe::pipe()?;
         // SAFETY: `writer` is a valid raw file descriptor, and can be written to
         let writer = unsafe { File::from_raw_file_descriptor(writer.into_raw_file_descriptor()) };
@@ -239,9 +232,9 @@ impl Stdio {
     }
 }
 
-pub struct Handle<T>(HandleInner<T>);
+pub struct Handle<'a, T>(HandleInner<'a, T>);
 
-impl<T> Handle<T> {
+impl<'a, T> Handle<'a, T> {
     pub fn wait(&mut self, data: &mut T) -> io::Result<process::ExitStatus> {
         match &mut self.0 {
             HandleInner::Command(c) => c.wait(),
@@ -259,10 +252,10 @@ impl<T> Handle<T> {
     }
 }
 
-enum HandleInner<T> {
+enum HandleInner<'a, T> {
     Command(CommandHandle),
-    Pipe(PipeHandle<T>),
-    Closure(ClosureHandle<T>),
+    Pipe(PipeHandle<'a, T>),
+    Closure(ClosureHandle<'a, T>),
 }
 
 #[derive(Debug)]
@@ -280,15 +273,15 @@ impl CommandHandle {
     }
 }
 
-pub struct ClosureHandle<T> {
+pub struct ClosureHandle<'a, T> {
     closure: Option<PipelineClosure<T>>,
     args: Vec<String>,
-    env: Vec<(String, String)>,
+    env: &'a [(String, String)],
     stdio: Option<Stdio>,
     killed: bool,
 }
 
-impl<T> ClosureHandle<T> {
+impl<T> ClosureHandle<'_, T> {
     pub fn wait(&mut self, data: &mut T) -> io::Result<process::ExitStatus> {
         // If killed, we simply prevent the closure from executing
         if self.killed {
@@ -304,7 +297,7 @@ impl<T> ClosureHandle<T> {
             .closure
             .take()
             .expect("cannot wait on closure more than once!"))(
-            data, stdio, &self.args, &self.env
+            data, stdio, &self.args, self.env
         ) as i32;
         Ok(process::ExitStatus::from_raw(result))
     }
@@ -315,12 +308,12 @@ impl<T> ClosureHandle<T> {
     }
 }
 
-pub struct PipeHandle<T> {
-    lhs: Box<Handle<T>>,
-    rhs: Box<Handle<T>>,
+pub struct PipeHandle<'a, T> {
+    lhs: Box<Handle<'a, T>>,
+    rhs: Box<Handle<'a, T>>,
 }
 
-impl<T> PipeHandle<T> {
+impl<T> PipeHandle<'_, T> {
     pub fn wait(&mut self, data: &mut T) -> io::Result<process::ExitStatus> {
         let lhs_res = self.lhs.wait(data);
         let rhs_res = self.rhs.wait(data);
@@ -382,7 +375,7 @@ mod tests {
                 0
             },
             vec![],
-            vec![],
+            &[],
         ));
         let mut handle = pipeline.spawn(&mut (), inherit_stdio()).unwrap();
         handle.wait(&mut ()).unwrap();

@@ -57,13 +57,25 @@ where
 
     // If not a Wasm file, it should be a wsh script
     let contents = String::from_utf8(contents).context("error reading file")?;
+
+    // Set environment variables (for this script run). They will be unset after the script has
+    // finished executing. `$RUST_LOG=trace source test.wsh` should not leak $RUST_LOG into future
+    // commands
+    for (var, value) in env {
+        std::env::set_var(var, value);
+    }
     let old_stdout = shell.set_stdout(stdio.stdout);
     let old_stderr = shell.set_stderr(stdio.stderr);
+
     let name = args.file.file_stem().unwrap().to_string_lossy();
     let source = Source::new(&name, contents);
     let result = shell.run(&source);
     shell.set_stdout(old_stdout);
     let stderr = shell.set_stderr(old_stderr);
+    // Unset environment variables from before
+    for (var, _) in env {
+        std::env::remove_var(var);
+    }
     if let Err(err) = result {
         err.fmt_on(&source, stderr)
             .context("problem writing error to stderr")?;
