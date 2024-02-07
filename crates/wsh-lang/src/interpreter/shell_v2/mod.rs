@@ -9,6 +9,7 @@ use std::os::unix::process::ExitStatusExt;
 #[cfg(windows)]
 use std::os::windows::process::ExitStatusExt;
 use std::{
+    borrow::Cow,
     fs::{self, File},
     io::{self, Read, Write},
 };
@@ -34,10 +35,17 @@ use crate::{
     },
 };
 
+/// The main interpreter of `wsh` source code.
 pub struct Shell {
-    current_pos: usize,
-    last_status: i32,
+    /// The global environment of the shell.
     env: Env,
+
+    /// The current byte offset of the shell in the source code.
+    current_pos: usize,
+    /// The exit status code of the last command run.
+    last_status: i32,
+    /// The global stdout of the shell. Note that while the `File` API describes an object that may
+    /// be read from, the provided file will **never** be read from, meaning pipe ends may be used.
     global_stdout: File,
     global_stderr: File,
 }
@@ -60,7 +68,8 @@ impl Shell {
         }
     }
 
-    /// Run the shell with the given source code.
+    /// Run the shell with the given source code. Note that this may be used in a REPL or file
+    /// context.
     pub fn run(&mut self, source: &Source) -> Result<()> {
         let parser = Parser::new(source);
         let ast = parser
@@ -263,13 +272,21 @@ impl Shell {
             ast,
             capture.pipeline.deref(ast).kind().as_pipeline().unwrap(),
         )?;
+        // This will implicitly drop the write end of the pipe (which was `global_stdout`),
+        // allowing the pipe to be read from without blocking.
         self.set_stdout(old);
         let out = handle
             .join()
             .expect("reader thread should not panic")
             .map_err(ErrorKind::CaptureError)
             .with_position(self.current_pos)?;
-        let mut out = String::from_utf8_lossy(&out).to_string();
+        // This little routine here will prevent us from cloning the byte output if it's already
+        // UTF-8 encoded.
+        let mut out = match String::from_utf8_lossy(&out) {
+            // SAFETY: we just validated that the bytes can be losslessly converted to a String
+            Cow::Borrowed(_) => unsafe { String::from_utf8_unchecked(out) },
+            Cow::Owned(new) => new,
+        };
         while out.ends_with('\n') || out.ends_with('\r') {
             out.truncate(out.len() - 1);
         }
@@ -402,6 +419,8 @@ impl Shell {
             .skip(1)
             .map(|expr| self.eval_expr(ast, expr.deref(ast)).map(|e| e.to_string()))
             .collect::<Result<Vec<_>>>()?;
+
+        // First, we check if the command is an alias
         if let Some(sub_ast) = self.env.get_alias(&name) {
             let node = sub_ast.first().unwrap();
             let pipeline = node.kind().as_pipeline().unwrap();
@@ -411,6 +430,8 @@ impl Shell {
             self.env.set_alias(name, sub_ast);
             return Ok(Either::Right(pipeline));
         }
+
+        // We check if the command is a built-in
         if let Some(builtin) = Builtin::from_name(&name) {
             let merge_stderr = cmd.merge_stderr;
             return Ok(Either::Left(pipeline::Command::from(
@@ -439,6 +460,8 @@ impl Shell {
                 ),
             )));
         }
+
+        // If nothing else, it's a regular command
         Ok(Either::Left(pipeline::Command::Basic(
             pipeline::BasicCommand::new(&name)
                 .env(env)
