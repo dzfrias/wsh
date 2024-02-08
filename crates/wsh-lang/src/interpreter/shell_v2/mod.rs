@@ -24,7 +24,7 @@ use crate::{
         env::{Env, WasiContext},
         error::{Error, ErrorKind, WithPosition},
         pipeline::Stdio,
-        value::{MemFile, Value, ValueType},
+        value::{MemFile, Value},
     },
     v2::{
         ast::{
@@ -214,47 +214,52 @@ impl Shell {
     fn eval_binop(&mut self, ast: &Ast, binop: &Binop) -> Result<Value> {
         let lhs = self.eval_expr(ast, binop.lhs.deref(ast))?;
         let rhs = self.eval_expr(ast, binop.rhs.deref(ast))?;
-        let (lhs_ty, rhs_ty) = (lhs.type_(), rhs.type_());
-        let val = match (lhs, rhs) {
-            (Value::Number(a), Value::Number(b)) => self.eval_numeric_binop(binop.op, a, b),
-            (Value::Number(a), Value::String(s)) if s.parse::<f64>().is_ok() => {
-                self.eval_numeric_binop(binop.op, a, s.parse().unwrap())
-            }
-            (Value::String(s1), Value::String(s2)) => self.eval_object_binop(binop.op, s1, s2)?,
-            (Value::Boolean(b1), Value::Boolean(b2)) => self.eval_bool_binop(binop.op, b1, b2)?,
-            // TODO: string and number infix op
-            _ => {
-                return Err(self.error(ErrorKind::BinopTypeError {
-                    op: binop.op,
-                    lhs: lhs_ty,
-                    rhs: rhs_ty,
-                }))
-            }
+        let types = (lhs.type_(), rhs.type_());
+        let result = match binop.op {
+            BinopKind::Add => lhs.add(rhs),
+            BinopKind::Sub => lhs.sub(rhs),
+            BinopKind::Div => lhs.div(rhs),
+            BinopKind::Mul => lhs.mul(rhs),
+            BinopKind::Lt => lhs.lt(rhs),
+            BinopKind::Gt => lhs.gt(rhs),
+            BinopKind::Le => lhs.le(rhs),
+            BinopKind::Ge => lhs.ge(rhs),
+            BinopKind::Eq => lhs.eq(rhs),
+            BinopKind::Ne => lhs.ne(rhs),
         };
-        Ok(val)
+        result
+            .ok_or(ErrorKind::BinopTypeError {
+                op: binop.op,
+                lhs: types.0,
+                rhs: types.1,
+            })
+            .with_position(self.current_pos)
     }
 
     fn eval_unop(&mut self, ast: &Ast, unop: &Unop) -> Result<Value> {
         let expr = self.eval_expr(ast, unop.expr.deref(ast))?;
-        let val = match expr {
-            Value::Number(n) => self.eval_numeric_unop(unop.op, n)?,
-            Value::Boolean(b) => self.eval_bool_unop(unop.op, b)?,
-            Value::String(s) if unop.op == UnopKind::At => Value::MemFile(
-                MemFile::open(self.env.mem_fs.clone(), &*s)
-                    .map_err(ErrorKind::MemFileError)
-                    .with_position(self.current_pos)?,
-            ),
-            Value::String(s) if s.parse::<f64>().is_ok() => {
-                self.eval_numeric_unop(unop.op, s.parse::<f64>().unwrap())?
-            }
-            _ => {
-                return Err(self.error(ErrorKind::UnopTypeError {
-                    op: unop.op,
-                    type_: expr.type_(),
-                }))
+        let ty = expr.type_();
+        let val = match unop.op {
+            UnopKind::Neg => expr.neg(),
+            UnopKind::Bang => expr.bang(),
+            UnopKind::Sign => expr.sign(),
+            UnopKind::At => {
+                if let Value::String(s) = expr {
+                    Some(Value::MemFile(
+                        MemFile::open(self.env.mem_fs.clone(), &*s)
+                            .map_err(ErrorKind::MemFileError)
+                            .with_position(self.current_pos)?,
+                    ))
+                } else {
+                    None
+                }
             }
         };
-        Ok(val)
+        val.ok_or(ErrorKind::UnopTypeError {
+            op: unop.op,
+            type_: ty,
+        })
+        .with_position(self.current_pos)
     }
 
     fn eval_capture(&mut self, ast: &Ast, capture: &Capture) -> Result<Value> {
@@ -273,10 +278,7 @@ impl Shell {
         let old = self.set_stdout(unsafe {
             File::from_raw_file_descriptor(writer.into_raw_file_descriptor())
         });
-        self.eval_pipeline(
-            ast,
-            capture.pipeline.deref(ast).kind().as_pipeline().unwrap(),
-        )?;
+        self.eval_pipeline(ast, capture.pipeline.deref(ast).kind().as_pipeline())?;
         // This will implicitly drop the write end of the pipe (which was `global_stdout`),
         // allowing the pipe to be read from without blocking.
         self.set_stdout(old);
@@ -298,84 +300,6 @@ impl Shell {
         Ok(Value::String(out.into_boxed_str()))
     }
 
-    fn eval_numeric_unop(&mut self, op: UnopKind, f: f64) -> Result<Value> {
-        let val = match op {
-            UnopKind::Neg => Value::Number(-f),
-            UnopKind::Sign => Value::Number(f),
-            UnopKind::At => Value::MemFile(
-                MemFile::open(self.env.mem_fs.clone(), f.to_string())
-                    .map_err(ErrorKind::MemFileError)
-                    .with_position(self.current_pos)?,
-            ),
-            UnopKind::Bang => {
-                return Err(self.error(ErrorKind::UnopTypeError {
-                    op,
-                    type_: ValueType::Number,
-                }))
-            }
-        };
-        Ok(val)
-    }
-
-    fn eval_object_binop(&mut self, op: BinopKind, lhs: Box<str>, rhs: Box<str>) -> Result<Value> {
-        let val = match op {
-            BinopKind::Add => Value::String(format!("{lhs}{rhs}").into_boxed_str()),
-            BinopKind::Eq => Value::Boolean(lhs == rhs),
-            BinopKind::Ne => Value::Boolean(lhs != rhs),
-            _ => {
-                return Err(self.error(ErrorKind::BinopTypeError {
-                    op,
-                    lhs: ValueType::String,
-                    rhs: ValueType::String,
-                }))
-            }
-        };
-        Ok(val)
-    }
-
-    fn eval_bool_unop(&mut self, op: UnopKind, b: bool) -> Result<Value> {
-        let val = match op {
-            UnopKind::Neg => Value::Boolean(!b),
-            _ => {
-                return Err(self.error(ErrorKind::UnopTypeError {
-                    op,
-                    type_: ValueType::Boolean,
-                }))
-            }
-        };
-        Ok(val)
-    }
-
-    fn eval_numeric_binop(&mut self, op: BinopKind, lhs: f64, rhs: f64) -> Value {
-        match op {
-            BinopKind::Add => Value::Number(lhs + rhs),
-            BinopKind::Sub => Value::Number(lhs - rhs),
-            BinopKind::Div => Value::Number(lhs / rhs),
-            BinopKind::Mul => Value::Number(lhs * rhs),
-            BinopKind::Lt => Value::Boolean(lhs < rhs),
-            BinopKind::Gt => Value::Boolean(lhs > rhs),
-            BinopKind::Le => Value::Boolean(lhs <= rhs),
-            BinopKind::Ge => Value::Boolean(lhs >= rhs),
-            BinopKind::Eq => Value::Boolean(lhs == rhs),
-            BinopKind::Ne => Value::Boolean(lhs != rhs),
-        }
-    }
-
-    fn eval_bool_binop(&mut self, op: BinopKind, lhs: bool, rhs: bool) -> Result<Value> {
-        let val = match op {
-            BinopKind::Eq => Value::Boolean(lhs == rhs),
-            BinopKind::Ne => Value::Boolean(lhs != rhs),
-            _ => {
-                return Err(self.error(ErrorKind::BinopTypeError {
-                    op,
-                    lhs: ValueType::Boolean,
-                    rhs: ValueType::Boolean,
-                }))
-            }
-        };
-        Ok(val)
-    }
-
     fn eval_home_dir(&mut self, _ast: &Ast, _home_dir: &HomeDir) -> Result<Value> {
         let path = dirs::home_dir()
             .ok_or(ErrorKind::HomeDirNotFound)
@@ -385,6 +309,12 @@ impl Shell {
             .ok_or(ErrorKind::HomeDirInvalidUTF8)
             .with_position(self.current_pos)?;
         Ok(Value::String(home.into()))
+    }
+
+    fn eval_env_var(&mut self, ast: &Ast, env_var: EnvVarHandle) -> Value {
+        let env_var = env_var.deref(ast);
+        let value = std::env::var(&**env_var).unwrap_or_default();
+        Value::String(value.into_boxed_str())
     }
 
     /// Create a pipeline to execute. The `make_*` familly of methods all contribute to pieces of
@@ -397,7 +327,7 @@ impl Shell {
     ) -> Result<pipeline::Pipeline<'env, Shell>> {
         let cmds = pipeline.cmds.deref(ast);
         let first = cmds.first(ast).unwrap().deref(ast);
-        let cmd = self.make_cmd(ast, first.kind().as_command().unwrap(), env)?;
+        let cmd = self.make_cmd(ast, first.kind().as_command(), env)?;
         let exec = cmds.iter(ast).skip(1).try_fold(
             match cmd {
                 Either::Left(cmd) => pipeline::Pipeline::new(cmd),
@@ -405,7 +335,7 @@ impl Shell {
             },
             |mut pipeline, cmd| {
                 let deref = cmd.deref(ast);
-                let cmd = deref.kind().as_command().unwrap();
+                let cmd = deref.kind().as_command();
                 match self.make_cmd(ast, cmd, env)? {
                     Either::Left(cmd) => pipeline.pipe(cmd),
                     Either::Right(other) => pipeline.extend(other),
@@ -469,7 +399,7 @@ impl Shell {
         // Next, we check if the command is an alias
         if let Some(sub_ast) = self.env.get_alias(&name) {
             let node = sub_ast.first().unwrap();
-            let pipeline = node.kind().as_pipeline().unwrap();
+            let pipeline = node.kind().as_pipeline();
             let mut pipeline = self.make_pipeline(&sub_ast, pipeline, env)?;
             // We append this command's args to the end of the aliased pipeline
             pipeline.append_args(&args);
@@ -599,12 +529,6 @@ impl Shell {
             vec![],
             env,
         )))
-    }
-
-    fn eval_env_var(&mut self, ast: &Ast, env_var: EnvVarHandle) -> Value {
-        let env_var = env_var.deref(ast);
-        let value = std::env::var(&**env_var).unwrap_or_default();
-        Value::String(value.into_boxed_str())
     }
 
     fn error(&self, kind: ErrorKind) -> Error {

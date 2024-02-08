@@ -54,27 +54,27 @@ pub enum NodeKind {
 }
 
 impl NodeKind {
-    pub fn as_string(&self) -> Option<&StringHandle> {
+    pub fn as_string(&self) -> &StringHandle {
         if let Self::String(v) = self {
-            Some(v)
+            v
         } else {
-            None
+            panic!("should not call on {self:?}")
         }
     }
 
-    pub fn as_env_var(&self) -> Option<&EnvVarHandle> {
+    pub fn as_env_var(&self) -> &EnvVarHandle {
         if let Self::EnvVar(v) = self {
-            Some(v)
+            v
         } else {
-            None
+            panic!("should not call on {self:?}")
         }
     }
 
-    pub fn as_ident(&self) -> Option<&IdentHandle> {
+    pub fn as_ident(&self) -> &IdentHandle {
         if let Self::Ident(v) = self {
-            Some(v)
+            v
         } else {
-            None
+            panic!("should not call on {self:?}")
         }
     }
 }
@@ -83,11 +83,11 @@ macro_rules! as_impl {
     ($(fn $name:ident() -> $ty:tt);* $(;)?) => {
         impl NodeKind {
             $(
-                pub fn $name(&self) -> Option<&$ty> {
+                pub fn $name(&self) -> &$ty {
                     if let Self::$ty(v) = self {
-                        Some(v)
+                        v
                     } else {
-                        None
+                        panic!("should not call on {self:?}")
                     }
                 }
              )*
