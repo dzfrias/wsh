@@ -397,7 +397,7 @@ impl Shell {
             .collect::<Result<Vec<_>>>()?;
 
         // Next, we check if the command is an alias
-        if let Some(sub_ast) = self.env.get_alias(&name) {
+        if let Some(sub_ast) = self.env.take_alias(&name) {
             let node = sub_ast.first().unwrap();
             let pipeline = node.kind().as_pipeline();
             let mut pipeline = self.make_pipeline(&sub_ast, pipeline, env)?;

@@ -56,8 +56,12 @@ impl Env {
         }
     }
 
-    pub fn get_alias(&mut self, ident: &str) -> Option<Ast> {
+    pub fn take_alias(&mut self, ident: &str) -> Option<Ast> {
         self.aliases.remove(ident)
+    }
+
+    pub fn get_alias(&mut self, ident: &str) -> Option<&Ast> {
+        self.aliases.get(ident)
     }
 
     pub fn set_alias(&mut self, ident: String, ast: Ast) {
