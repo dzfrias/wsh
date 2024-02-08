@@ -54,7 +54,7 @@ impl<'a, T> Pipeline<'a, T> {
     }
 
     /// Run the pipeline, returning a handle to the new process.
-    pub fn spawn(&mut self, data: &mut T, stdio: Stdio) -> io::Result<Handle<'a, T>> {
+    pub fn spawn(self, data: &mut T, stdio: Stdio) -> io::Result<Handle<'a, T>> {
         self.inner.spawn(data, stdio)
     }
 
@@ -73,7 +73,7 @@ impl<'a, T> Pipeline<'a, T> {
 }
 
 pub struct Closure<'a, T> {
-    inner: Option<PipelineClosure<T>>,
+    inner: PipelineClosure<T>,
     args: Vec<String>,
     env: &'a [(String, String)],
 }
@@ -84,7 +84,7 @@ impl<'a, T> Closure<'a, T> {
         F: FnOnce(&mut T, Stdio, &[String], &[(String, String)]) -> i32 + 'static,
     {
         Self {
-            inner: Some(Box::new(f)),
+            inner: Box::new(f),
             args,
             env,
         }
@@ -112,13 +112,13 @@ impl<'a, T> From<Closure<'a, T>> for Command<'a, T> {
 }
 
 impl<'a, T> Command<'a, T> {
-    pub fn spawn(&mut self, data: &mut T, stdio: Stdio) -> io::Result<Handle<'a, T>> {
+    pub fn spawn(self, data: &mut T, stdio: Stdio) -> io::Result<Handle<'a, T>> {
         let handle = match self {
             Command::Basic(c) => HandleInner::Command(c.spawn(stdio)?),
             Command::Closure(c) => HandleInner::Closure(ClosureHandle {
-                closure: c.inner.take(),
-                args: std::mem::take(&mut c.args),
-                env: std::mem::take(&mut c.env),
+                closure: Some(c.inner),
+                args: c.args,
+                env: c.env,
                 stdio: Some(stdio),
                 killed: false,
             }),
@@ -172,7 +172,7 @@ impl<'a> BasicCommand<'a> {
         self
     }
 
-    pub fn spawn(&mut self, stdio: Stdio) -> io::Result<CommandHandle> {
+    pub fn spawn(self, stdio: Stdio) -> io::Result<CommandHandle> {
         let stderr = if self.merge_stderr {
             stdio.stdout.try_clone()?
         } else {
@@ -185,12 +185,13 @@ impl<'a> BasicCommand<'a> {
             .stdout(stdio.stdout)
             .stderr(stderr)
             .fd_mappings(
-                // TOOD: make all spawn API's consume self
-                std::mem::take(&mut self.pass_fds)
+                self.pass_fds
                     .into_iter()
                     .map(|file| {
                         let raw = file.as_raw_file_descriptor();
                         FdMapping {
+                            // SAFETY: `file` is a valid file descriptor, as it's already an open
+                            // file
                             parent_fd: unsafe {
                                 std::os::fd::OwnedFd::from_raw_file_descriptor(
                                     file.into_raw_file_descriptor(),
@@ -201,7 +202,7 @@ impl<'a> BasicCommand<'a> {
                     })
                     .collect(),
             )
-            .expect("should have no fd collisions");
+            .expect("BUG: fd mapping collision");
         if let Some(stdin) = stdio.stdin {
             cmd.stdin(stdin);
         }
@@ -215,7 +216,7 @@ pub struct Pipe<'a, T> {
 }
 
 impl<'a, T> Pipe<'a, T> {
-    pub fn spawn(&mut self, data: &mut T, stdio: Stdio) -> io::Result<PipeHandle<'a, T>> {
+    pub fn spawn(self, data: &mut T, stdio: Stdio) -> io::Result<PipeHandle<'a, T>> {
         let (reader, writer) = os_pipe::pipe()?;
         // SAFETY: `writer` is a valid raw file descriptor, and can be written to
         let writer = unsafe { File::from_raw_file_descriptor(writer.into_raw_file_descriptor()) };

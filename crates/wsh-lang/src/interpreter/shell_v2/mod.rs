@@ -116,7 +116,7 @@ impl Shell {
                     .map(|value| (env_set.name.deref(ast).to_string(), value.to_string()))
             })
             .collect::<Result<Vec<_>>>()?;
-        let mut exec = self.make_pipeline(ast, pipeline, &env)?;
+        let exec = self.make_pipeline(ast, pipeline, &env)?;
         // Configure stdout to the pipeline redirect, if any (defaults to shell stdout)
         let stdout = match &pipeline.end {
             Some(end) => {
