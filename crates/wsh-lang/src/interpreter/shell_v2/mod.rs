@@ -24,7 +24,7 @@ use crate::{
         env::{Env, WasiContext},
         error::{Error, ErrorKind, WithPosition},
         pipeline::Stdio,
-        value::{Value, ValueType},
+        value::{MemFile, Value, ValueType},
     },
     v2::{
         ast::{
@@ -239,13 +239,18 @@ impl Shell {
         let val = match expr {
             Value::Number(n) => self.eval_numeric_unop(unop.op, n)?,
             Value::Boolean(b) => self.eval_bool_unop(unop.op, b)?,
+            Value::String(s) if unop.op == UnopKind::At => Value::MemFile(
+                MemFile::open(self.env.mem_fs.clone(), &*s)
+                    .map_err(ErrorKind::MemFileError)
+                    .with_position(self.current_pos)?,
+            ),
             Value::String(s) if s.parse::<f64>().is_ok() => {
                 self.eval_numeric_unop(unop.op, s.parse::<f64>().unwrap())?
             }
-            Value::String(_) => {
+            _ => {
                 return Err(self.error(ErrorKind::UnopTypeError {
                     op: unop.op,
-                    type_: ValueType::String,
+                    type_: expr.type_(),
                 }))
             }
         };
@@ -297,6 +302,11 @@ impl Shell {
         let val = match op {
             UnopKind::Neg => Value::Number(-f),
             UnopKind::Sign => Value::Number(f),
+            UnopKind::At => Value::MemFile(
+                MemFile::open(self.env.mem_fs.clone(), f.to_string())
+                    .map_err(ErrorKind::MemFileError)
+                    .with_position(self.current_pos)?,
+            ),
             UnopKind::Bang => {
                 return Err(self.error(ErrorKind::UnopTypeError {
                     op,
@@ -406,6 +416,8 @@ impl Shell {
         Ok(exec)
     }
 
+    /// Create a `pipeline::Command` for a pipeline. This covers aliases, built-ins, Wasm
+    /// functions, and more.
     fn make_cmd<'env>(
         &mut self,
         ast: &Ast,
@@ -417,25 +429,9 @@ impl Shell {
             .eval_expr(ast, exprs.first(ast).unwrap().deref(ast))?
             .to_string();
 
-        // First, we check if the command is an alias
-        if let Some(sub_ast) = self.env.get_alias(&name) {
-            let args = exprs
-                .iter(ast)
-                .skip(1)
-                .map(|expr| self.eval_expr(ast, expr.deref(ast)).map(|e| e.to_string()))
-                .collect::<Result<Vec<_>>>()?;
-            let node = sub_ast.first().unwrap();
-            let pipeline = node.kind().as_pipeline().unwrap();
-            let mut pipeline = self.make_pipeline(&sub_ast, pipeline, env)?;
-            // We append this command's args to the end of the aliased pipeline
-            pipeline.append_args(&args);
-            self.env.set_alias(name, sub_ast);
-            return Ok(Either::Right(pipeline));
-        }
-
-        // Next, we check if the function was loaded from Wasm
+        // First, we check if the function was loaded from Wasm
         if let Some(func) = self.env.get_module_func(&name) {
-            // Note that these args have **not** be converted to strings yet
+            // Note that these args have **not** been converted to strings yet
             let args = exprs
                 .iter(ast)
                 .skip(1)
@@ -444,11 +440,42 @@ impl Shell {
             return Ok(Either::Left(self.make_wasm_func(func, args, env)?));
         }
 
+        let mut fd_mappings = vec![];
+        // This will be a vector of strings for the arguments of the command
         let args = exprs
             .iter(ast)
             .skip(1)
-            .map(|expr| self.eval_expr(ast, expr.deref(ast)).map(|e| e.to_string()))
+            .map(|expr| -> Result<String> {
+                let val = self.eval_expr(ast, expr.deref(ast))?;
+                // If the value is a MemFile, clone the open File and return /dev/fd/{n} to pass in
+                // a path to the open fd. This allows the in-memory data to be treated like a file
+                // on disk.
+                //
+                // This is similar to the technique used in process substitution, see
+                // https://en.wikipedia.org/wiki/Process_substitution#Mechanism.
+                if let Value::MemFile(ref file) = val {
+                    let clone = file
+                        .try_clone_inner()
+                        .map_err(ErrorKind::MemFileError)
+                        .with_position(self.current_pos)?;
+                    let s = format!("/dev/fd/{}", clone.as_raw_file_descriptor());
+                    fd_mappings.push(clone);
+                    return Ok(s);
+                }
+                Ok(val.to_string())
+            })
             .collect::<Result<Vec<_>>>()?;
+
+        // Next, we check if the command is an alias
+        if let Some(sub_ast) = self.env.get_alias(&name) {
+            let node = sub_ast.first().unwrap();
+            let pipeline = node.kind().as_pipeline().unwrap();
+            let mut pipeline = self.make_pipeline(&sub_ast, pipeline, env)?;
+            // We append this command's args to the end of the aliased pipeline
+            pipeline.append_args(&args);
+            self.env.set_alias(name, sub_ast);
+            return Ok(Either::Right(pipeline));
+        }
 
         // We check if the command is a built-in
         if let Some(builtin) = Builtin::from_name(&name) {
@@ -485,10 +512,12 @@ impl Shell {
             pipeline::BasicCommand::new(&name)
                 .env(env)
                 .args(args)
+                .pass_fds(fd_mappings)
                 .merge_stderr(cmd.merge_stderr),
         )))
     }
 
+    /// Create a `pipeline::Command` that wraps the calling of a WebAssembly function.
     fn make_wasm_func<'env>(
         &mut self,
         func: wsh_engine::WasmFuncUntyped,
@@ -518,6 +547,12 @@ impl Shell {
                         })
                     })?,
                     Value::Boolean(b) => b as u8 as f64,
+                    Value::MemFile(_) => {
+                        return Err(self.error(ErrorKind::BadWasmArg {
+                            idx: i,
+                            reason: "cannot pass memfile to Wasm",
+                        }))
+                    }
                 };
                 let val = match expect_ty {
                     wsh_parser::ValType::I32 => wsh_engine::Value::I32(value as u32),
@@ -534,6 +569,7 @@ impl Shell {
                 Ok(val)
             })
             .collect::<Result<Vec<_>>>()?;
+
         // This closure will call the Wasm function
         Ok(pipeline::Command::Closure(pipeline::Closure::wrap(
             move |shell: &mut Shell,

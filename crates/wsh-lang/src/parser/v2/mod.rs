@@ -437,7 +437,9 @@ impl<'src> Parser<'src> {
             TokenKind::LParen => self.parse_grouped_expr(ast)?,
             TokenKind::QuestionMark => self.parse_last_status(ast),
             TokenKind::Tilde => self.parse_home_dir(ast),
-            TokenKind::Bang | TokenKind::Minus | TokenKind::Plus => self.parse_prefix(ast)?,
+            TokenKind::Bang | TokenKind::Minus | TokenKind::Plus | TokenKind::At => {
+                self.parse_prefix(ast)?
+            }
             TokenKind::Backtick => self.parse_capture(ast)?,
             _ => {
                 return Err(Error::new(start, "expected vaild expression"))
@@ -534,6 +536,7 @@ impl<'src> Parser<'src> {
             TokenKind::Minus => NodeInfoKind::Neg,
             TokenKind::Bang => NodeInfoKind::Bang,
             TokenKind::Plus => NodeInfoKind::Sign,
+            TokenKind::At => NodeInfoKind::At,
             _ => panic!("BUG: should not call when not on unop token!"),
         };
         self.next_token();

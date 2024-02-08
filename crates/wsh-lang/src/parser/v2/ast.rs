@@ -236,6 +236,7 @@ pub enum UnopKind {
     Neg,
     Bang,
     Sign,
+    At,
 }
 
 /// A boolean literal, either `true` or `false`.
@@ -507,6 +508,10 @@ impl Ast {
             NodeInfoKind::Sign => NodeKind::Unop(Unop {
                 expr: NodeHandle(p1),
                 op: UnopKind::Sign,
+            }),
+            NodeInfoKind::At => NodeKind::Unop(Unop {
+                expr: NodeHandle(p1),
+                op: UnopKind::At,
             }),
         };
 
@@ -947,6 +952,8 @@ pub(super) enum NodeInfoKind {
     Bang,
     /// `+p1`
     Sign,
+    /// `@p1`
+    At,
 }
 
 impl Node {
@@ -1093,6 +1100,7 @@ impl fmt::Display for UnopKind {
             UnopKind::Neg => write!(f, "-"),
             UnopKind::Bang => write!(f, "!"),
             UnopKind::Sign => write!(f, "+"),
+            UnopKind::At => write!(f, "@"),
         }
     }
 }

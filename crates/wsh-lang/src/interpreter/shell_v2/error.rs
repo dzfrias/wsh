@@ -72,6 +72,8 @@ pub enum ErrorKind {
     WasmArgLenMismatch { want: usize, got: usize },
     #[error("bad Wasm argument {idx}: {reason}")]
     BadWasmArg { idx: usize, reason: &'static str },
+    #[error("error opening memfile: {0}")]
+    MemFileError(io::Error),
 }
 
 pub trait WithPosition<T> {

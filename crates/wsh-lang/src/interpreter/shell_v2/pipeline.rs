@@ -10,7 +10,8 @@ use std::os::unix::process::ExitStatusExt;
 use std::os::windows::process::ExitStatusExt;
 use std::{fs::File, io, mem, process};
 
-use filedescriptor::{FromRawFileDescriptor, IntoRawFileDescriptor};
+use command_fds::{CommandFdExt, FdMapping};
+use filedescriptor::{AsRawFileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor};
 
 /// A command pipeline generic over `T`.
 ///
@@ -65,6 +66,7 @@ impl<'a, T> Pipeline<'a, T> {
                 merge_stderr: false,
                 env: &[],
                 args: vec![],
+                pass_fds: vec![],
             }),
         )
     }
@@ -131,6 +133,7 @@ pub struct BasicCommand<'a> {
     cmd: String,
     args: Vec<String>,
     env: &'a [(String, String)],
+    pass_fds: Vec<File>,
     merge_stderr: bool,
 }
 
@@ -140,6 +143,7 @@ impl<'a> BasicCommand<'a> {
             cmd: cmd.to_owned(),
             args: vec![],
             env: &[],
+            pass_fds: vec![],
             merge_stderr: false,
         }
     }
@@ -155,6 +159,11 @@ impl<'a> BasicCommand<'a> {
 
     pub fn env(mut self, env: &'a [(String, String)]) -> Self {
         self.env = env;
+        self
+    }
+
+    pub fn pass_fds(mut self, fds: Vec<File>) -> Self {
+        self.pass_fds = fds;
         self
     }
 
@@ -174,7 +183,25 @@ impl<'a> BasicCommand<'a> {
         cmd.args(&self.args)
             .envs(self.env.iter().map(|(k, v)| (k, v)))
             .stdout(stdio.stdout)
-            .stderr(stderr);
+            .stderr(stderr)
+            .fd_mappings(
+                // TOOD: make all spawn API's consume self
+                std::mem::take(&mut self.pass_fds)
+                    .into_iter()
+                    .map(|file| {
+                        let raw = file.as_raw_file_descriptor();
+                        FdMapping {
+                            parent_fd: unsafe {
+                                std::os::fd::OwnedFd::from_raw_file_descriptor(
+                                    file.into_raw_file_descriptor(),
+                                )
+                            },
+                            child_fd: raw,
+                        }
+                    })
+                    .collect(),
+            )
+            .expect("should have no fd collisions");
         if let Some(stdin) = stdio.stdin {
             cmd.stdin(stdin);
         }

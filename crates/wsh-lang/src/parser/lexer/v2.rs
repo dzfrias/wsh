@@ -67,6 +67,7 @@ pub enum TokenKind<'src> {
     Tilde,
     Colon,
     ColonAssign,
+    At,
 
     LParen,
     RParen,
@@ -137,7 +138,7 @@ impl TokenKind<'_> {
             | TokenKind::Lt
             | TokenKind::Write
             | TokenKind::Tilde
-            | TokenKind::Colon => 1,
+            | TokenKind::Colon | TokenKind::At => 1,
             TokenKind::Eq
             | TokenKind::Ne
             | TokenKind::If
@@ -312,6 +313,9 @@ impl<'src> Lexer<'src> {
             '`' => TokenKind::Backtick,
             ';' => TokenKind::Semicolon,
             '~' if mode.is_normal() => TokenKind::Tilde,
+            '@' if mode.is_normal() && !matches!(self.peek(), ' ' | '\t' | '\n' | '\0') => {
+                TokenKind::At
+            }
             '^' => {
                 self.consume();
                 consume_next = false;
@@ -692,5 +696,18 @@ mod tests {
         tilde,
         "~/code co~de",
         [Normal Tilde, Normal String("/code"), Normal Space, Normal String("co~de")]
+    );
+
+    lexer_test!(
+        at,
+        "@hello @ hel@lo",
+        [
+            Normal At,
+            Normal String("hello"),
+            Normal Space,
+            Normal String("@"),
+            Normal Space,
+            Normal String("hel@lo")
+        ]
     );
 }
