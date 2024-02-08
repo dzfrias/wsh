@@ -28,8 +28,6 @@ use path_absolutize::Absolutize;
 use smol_str::SmolStr;
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
-#[cfg(windows)]
-use std::os::windows::process::ExitStatusExt;
 #[cfg(unix)]
 use std::path::{Path, PathBuf};
 use std::{
@@ -568,7 +566,9 @@ impl Shell {
                 .or_else(|| out.signal().map(|s| s + 128))
                 .unwrap_or(0);
             #[cfg(windows)]
-            let out = out.status.code().unwrap();
+            let out = out
+                .code()
+                .expect("all Windows programs should have an exit status");
 
             return Ok(out);
         }
