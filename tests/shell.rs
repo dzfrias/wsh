@@ -27,17 +27,17 @@ macro_rules! shell_test {
         }
     };
     ($name:ident, $input:expr, $expect:expr) => {
-        shell_test!($name, $input, concat!($expect, "\n"), "");
+        shell_test!($name, $input, format!("{}\n", $expect), "");
     };
     ($name:ident, $input:expr, @stderr $expect:expr) => {
-        shell_test!($name, $input, "", concat!($expect, "\n"));
+        shell_test!($name, $input, "", format!("{}\n", $expect));
     };
     ($name:ident, $input:expr, @stdout $expect:expr, @stderr $expect_stderr:expr) => {
         shell_test!(
             $name,
             $input,
-            concat!($expect, "\n"),
-            concat!($expect_stderr, "\n")
+            format!("{}\n", $expect),
+            format!("{}\n", $expect_stderr)
         );
     };
     (@fail $name:ident, $input:expr) => {
@@ -75,7 +75,7 @@ shell_test!(last_status_in_piping, "false | echo .?", "0");
 shell_test!(
     tilde_expansion,
     "echo ~/.vimrc",
-    concat!(::std::env!("HOME"), "/.vimrc")
+    dirs::home_dir().unwrap().join("/.vimrc").display()
 );
 shell_test!(aliases, "alias foo = echo hi\nfoo", "hi");
 shell_test!(assignments, ".x = 10 + 10\necho .x", "20");
