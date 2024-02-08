@@ -231,6 +231,7 @@ impl Env {
             if relative == Path::new("") {
                 relative = PathBuf::from(".");
             }
+            dbg!(&relative);
             let dir: Box<dyn WasiDir> = match location {
                 Location::Memory => match self.mem_fs.entry(path).unwrap() {
                     Entry::Directory(dir) => Box::new(dir),
