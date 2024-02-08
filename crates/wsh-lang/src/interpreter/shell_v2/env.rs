@@ -9,9 +9,10 @@ use std::{
 
 use filedescriptor::{AsRawFileDescriptor, FromRawFileDescriptor};
 use wsh_engine::{Instance, Store, WasmFuncUntyped};
-use wsh_wasi::{cap_std, WasiCtxBuilder, WasiFile};
+use wsh_wasi::{cap_std, WasiCtxBuilder, WasiDir, WasiFile};
 
 use crate::{
+    interpreter::memfs::{self, MemFs},
     shell_v2::value::Value,
     v2::ast::{Ast, Ident},
 };
@@ -20,16 +21,19 @@ use crate::{
 // Perhaps this would be better split up among different structs, but for right now it's convenient
 // to have it in just one. There hasn't been a clear advantage to either implementation, right now.
 pub struct Env {
+    pub mem_fs: MemFs,
+
     vars: HashMap<Ident, Value>,
     aliases: HashMap<String, Ast>,
 
     store: Store,
     modules: Vec<Instance>,
-    allowed_dirs: Vec<PathBuf>,
+    allowed_dirs: Vec<(PathBuf, Location)>,
     allowed_envs: Vec<String>,
 }
 
 impl Env {
+    /// Create a new, empty environment.
     pub fn new() -> Self {
         let mut store = Store::default();
         let mut wasi_ctx = WasiCtxBuilder::new().build();
@@ -42,6 +46,7 @@ impl Env {
         // necessary.
         wsh_wasi::sync::snapshots::preview_1::link(&mut store, &mut wasi_ctx);
         Self {
+            mem_fs: MemFs::new(),
             vars: HashMap::new(),
             aliases: HashMap::new(),
             store: Store::default(),
@@ -95,8 +100,8 @@ impl Env {
         }
 
         // Set up allowed WASI dirs
-        for path in &self.allowed_dirs {
-            let dir = wasi_dir(path)?;
+        for (path, loc) in &self.allowed_dirs {
+            let dir = wasi_dir(path, *loc, self.mem_fs.clone())?;
             ctx.push_preopened_dir(dir, path)?;
             let Some(mut relative) = std::env::current_dir()
                 .ok()
@@ -107,7 +112,11 @@ impl Env {
             if relative == Path::new("") {
                 relative = PathBuf::from(".");
             }
-            let dir = wasi_dir(&relative)?;
+            let rel_path = match loc {
+                Location::Disk => &relative,
+                Location::Memory => path,
+            };
+            let dir = wasi_dir(rel_path, *loc, self.mem_fs.clone())?;
             ctx.push_preopened_dir(dir, relative)?;
         }
 
@@ -115,11 +124,12 @@ impl Env {
         Ok(())
     }
 
-    /// Load a WASM module into the store.
+    /// Load a Wasm module into the store.
     pub fn register_module(&mut self, instance: Instance) {
         self.modules.push(instance);
     }
 
+    /// Unload all modules from the store, returning the number of cleared items.
     pub fn unload_modules(&mut self) -> usize {
         let len = self.modules.len();
         self.modules.clear();
@@ -129,6 +139,7 @@ impl Env {
         len
     }
 
+    /// Get a WebAssembly function from a registered module, by name.
     pub fn get_module_func(&self, name: &str) -> Option<WasmFuncUntyped> {
         self.modules
             .iter()
@@ -136,7 +147,7 @@ impl Env {
     }
 
     /// Allow a directory to be modified by WASI modules.
-    pub fn allow_dir(&mut self, p: impl AsRef<Path>) -> io::Result<()> {
+    pub fn allow_dir(&mut self, p: impl AsRef<Path>, loc: Location) -> io::Result<()> {
         if !p.as_ref().is_dir() {
             return Err(io::Error::new(
                 io::ErrorKind::Other,
@@ -144,7 +155,7 @@ impl Env {
             ));
         }
         let abs_path = std::fs::canonicalize(p.as_ref())?;
-        self.allowed_dirs.push(abs_path);
+        self.allowed_dirs.push((abs_path, loc));
         Ok(())
     }
 
@@ -162,6 +173,12 @@ impl Env {
     pub fn store_mut(&mut self) -> &mut Store {
         &mut self.store
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Location {
+    Disk,
+    Memory,
 }
 
 #[derive(Debug)]
@@ -209,9 +226,38 @@ fn to_wasi_file(file: &std::fs::File) -> NoDropWasiFile<wsh_wasi::sync::file::Fi
     NoDropWasiFile::new(wsh_wasi::sync::file::File::from_cap_std(file))
 }
 
-fn wasi_dir(path: impl AsRef<Path>) -> Result<Box<wsh_wasi::sync::dir::Dir>, wsh_wasi::WasiError> {
-    let cap_std_dir = cap_std::fs::Dir::open_ambient_dir(path, cap_std::ambient_authority())?;
-    let dir = Box::new(wsh_wasi::sync::dir::Dir::from_cap_std(cap_std_dir));
+/// Create a WasiDir using the given path and location.
+///
+/// This will use an in-memory directory if loc == Location::Memory, and a disk disk directory
+/// otherwise.
+fn wasi_dir(
+    path: impl AsRef<Path>,
+    loc: Location,
+    mem_fs: MemFs,
+) -> Result<Box<dyn WasiDir>, wsh_wasi::WasiError> {
+    let path = path.as_ref();
+    let dir: Box<dyn WasiDir> = match loc {
+        Location::Disk => {
+            let cap_std_dir =
+                cap_std::fs::Dir::open_ambient_dir(path, cap_std::ambient_authority())?;
+            Box::new(wsh_wasi::sync::dir::Dir::from_cap_std(cap_std_dir))
+        }
+        Location::Memory => mem_fs
+            .entry(path)
+            .map_or_else(
+                || {
+                    Ok(mem_fs
+                        .create_dir(path)
+                        .expect("BUG: creating directory should not fail, but got: {err}"))
+                },
+                |entry| match entry {
+                    memfs::Entry::Directory(dir) => Ok(dir),
+                    memfs::Entry::File(_) => Err(anyhow::anyhow!("cannot pre-open virtual file")),
+                },
+            )
+            .map(Box::new)
+            .map_err(wsh_wasi::WasiError::trap)?,
+    };
     Ok(dir)
 }
 
