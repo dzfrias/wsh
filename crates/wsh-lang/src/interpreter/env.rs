@@ -226,19 +226,17 @@ impl Env {
             let Ok(current_dir) = std::env::current_dir() else {
                 continue;
             };
-            #[cfg(target_os = "windows")]
-            dbg!(
-                path.components().collect::<Vec<_>>(),
-                current_dir.components().collect::<Vec<_>>()
-            );
-            let Some(mut relative) = diff_paths::diff_paths(path, current_dir) else {
+            let Some(mut relative) = diff_paths::diff_paths(
+                path,
+                current_dir
+                    .canonicalize()
+                    .map_err(|err| WasiError::trap(anyhow::anyhow!(err)))?,
+            ) else {
                 continue;
             };
             if relative == Path::new("") {
                 relative = PathBuf::from(".");
             }
-            #[cfg(target_os = "windows")]
-            dbg!(&relative);
             let dir: Box<dyn WasiDir> = match location {
                 Location::Memory => match self.mem_fs.entry(path).unwrap() {
                     Entry::Directory(dir) => Box::new(dir),
