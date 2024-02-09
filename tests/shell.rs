@@ -75,7 +75,7 @@ shell_test!(last_status_in_piping, "false | echo .?", "0");
 shell_test!(
     tilde_expansion,
     "echo ~/.vimrc",
-    dirs::home_dir().unwrap().join(".vimrc").display()
+    format!("{}/.vimrc", dirs::home_dir().unwrap().display())
 );
 shell_test!(aliases, "alias foo = echo hi\nfoo", "hi");
 shell_test!(assignments, ".x = 10 + 10\necho .x", "20");
