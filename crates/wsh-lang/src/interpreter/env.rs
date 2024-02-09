@@ -18,6 +18,7 @@ use wsh_wasi::{cap_std, sync::file::File, WasiCtxBuilder, WasiDir, WasiError, Wa
 use crate::{
     ast::{Def, Pipeline},
     interpreter::{
+        diff_paths,
         memfs::{Entry, MemFs},
         value::Value,
     },
@@ -225,14 +226,12 @@ impl Env {
             let Ok(current_dir) = std::env::current_dir() else {
                 continue;
             };
-            let Some(mut relative) = pathdiff::diff_paths(path, current_dir) else {
+            let Some(mut relative) = diff_paths::diff_paths(path, current_dir) else {
                 continue;
             };
             if relative == Path::new("") {
                 relative = PathBuf::from(".");
             }
-            #[cfg(target_os = "windows")]
-            dbg!(&relative);
             let dir: Box<dyn WasiDir> = match location {
                 Location::Memory => match self.mem_fs.entry(path).unwrap() {
                     Entry::Directory(dir) => Box::new(dir),

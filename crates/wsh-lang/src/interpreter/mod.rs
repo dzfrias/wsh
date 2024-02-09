@@ -1,4 +1,5 @@
 mod builtins;
+mod diff_paths;
 mod env;
 mod error;
 mod memfs;
