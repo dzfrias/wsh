@@ -18,7 +18,6 @@ use wsh_wasi::{cap_std, sync::file::File, WasiCtxBuilder, WasiDir, WasiError, Wa
 use crate::{
     ast::{Def, Pipeline},
     interpreter::{
-        diff_paths,
         memfs::{Entry, MemFs},
         value::Value,
     },
@@ -226,7 +225,7 @@ impl Env {
             let Ok(current_dir) = std::env::current_dir() else {
                 continue;
             };
-            let Some(mut relative) = diff_paths::diff_paths(
+            let Some(mut relative) = pathdiff::diff_paths(
                 path,
                 current_dir
                     .canonicalize()
