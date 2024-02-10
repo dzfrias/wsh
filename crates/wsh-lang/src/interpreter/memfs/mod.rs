@@ -1028,12 +1028,18 @@ impl WasiDir for MemDir {
 
 #[cfg(test)]
 mod tests {
+    use std::path::MAIN_SEPARATOR;
+
     use super::*;
+
+    fn root() -> PathBuf {
+        PathBuf::from(MAIN_SEPARATOR.to_string())
+    }
 
     #[test]
     fn create_requires_write() {
         let fs = MemFs::new();
-        let dir = fs.create_dir("/test").unwrap();
+        let dir = fs.create_dir(root().join("test")).unwrap();
         assert!(dir
             .open("hello.txt", OFlags::CREATE, false, true, FdFlags::empty())
             .is_ok());
@@ -1058,7 +1064,7 @@ mod tests {
     #[test]
     fn truncate_requires_write() {
         let fs = MemFs::new();
-        let dir = fs.create_dir("/test").unwrap();
+        let dir = fs.create_dir(root().join("test")).unwrap();
         dir.open("hello.txt", OFlags::CREATE, false, true, FdFlags::empty())
             .unwrap();
         assert!(dir
@@ -1080,7 +1086,7 @@ mod tests {
     #[test]
     fn create_exclusive() {
         let fs = MemFs::new();
-        let dir = fs.create_dir("/test").unwrap();
+        let dir = fs.create_dir(root().join("test")).unwrap();
         dir.open("hello.txt", OFlags::CREATE, false, true, FdFlags::empty())
             .unwrap();
         assert!(dir
@@ -1101,7 +1107,7 @@ mod tests {
     #[test]
     fn directory_oflags_are_exclusive() {
         let fs = MemFs::new();
-        let dir = fs.create_dir("/test").unwrap();
+        let dir = fs.create_dir(root().join("test")).unwrap();
         assert!(dir
             .open(
                 "hi",
@@ -1126,13 +1132,13 @@ mod tests {
     #[test]
     fn cannot_create_entry_over_directory() {
         let fs = MemFs::new();
-        fs.create_dir("/test").unwrap();
+        fs.create_dir(root().join("test")).unwrap();
         assert!(matches!(
-            fs.create_file("/test", false),
+            fs.create_file(root().join("test"), false),
             Err(MemFsError::IsDir)
         ));
         assert!(matches!(
-            fs.create_dir("/test"),
+            fs.create_dir(root().join("test")),
             Err(MemFsError::AlreadyExists)
         ));
         assert_eq!(1, fs.entry_count());
@@ -1141,16 +1147,16 @@ mod tests {
     #[test]
     fn create_file_overwrites_old() {
         let fs = MemFs::new();
-        let mut f = fs.create_file("/hello.txt", false).unwrap();
+        let mut f = fs.create_file(root().join("hello.txt"), false).unwrap();
         f.write(b"hi").unwrap();
-        let f = fs.create_file("/hello.txt", false).unwrap();
+        let f = fs.create_file(root().join("hello.txt"), false).unwrap();
         assert!(f.is_empty());
     }
 
     #[test]
     fn open_directory_but_got_file_fails() {
         let fs = MemFs::new();
-        let dir = fs.create_dir("/test").unwrap();
+        let dir = fs.create_dir(root().join("hello")).unwrap();
         dir.open("hello", OFlags::CREATE, false, true, FdFlags::empty())
             .unwrap();
         assert!(matches!(
@@ -1163,18 +1169,21 @@ mod tests {
     #[test]
     fn unlink() {
         let fs = MemFs::new();
-        fs.create_file("/hello.txt", false).unwrap();
-        assert!(fs.unlink("/hello.txt").is_ok());
+        fs.create_file(root().join("hello.txt"), false).unwrap();
+        assert!(fs.unlink(root().join("hello.txt")).is_ok());
         assert!(fs.is_empty());
-        fs.create_dir("/nice").unwrap();
-        assert!(matches!(fs.unlink("/nice"), Err(MemFsError::IsDir)));
+        fs.create_dir(root().join("nice")).unwrap();
+        assert!(matches!(
+            fs.unlink(root().join("nice")),
+            Err(MemFsError::IsDir)
+        ));
         assert_eq!(1, fs.entry_count());
     }
 
     #[test]
     fn dir_create_dir() {
         let fs = MemFs::new();
-        let dir = fs.create_dir("/hello").unwrap();
+        let dir = fs.create_dir(root().join("hello")).unwrap();
         assert!(dir.create_dir("nice").is_ok());
         assert!(matches!(
             dir.create_dir("nice"),
@@ -1187,7 +1196,7 @@ mod tests {
     #[test]
     fn remove_dir() {
         let fs = MemFs::new();
-        let dir = fs.create_dir("/hello").unwrap();
+        let dir = fs.create_dir(root().join("hello")).unwrap();
         dir.create_dir("nice").unwrap();
         let sub_dir = dir.create_dir("woah").unwrap();
         sub_dir
@@ -1214,40 +1223,44 @@ mod tests {
     #[test]
     fn rename() {
         let fs = MemFs::new();
-        let dir = fs.create_dir("/hello").unwrap();
-        let not_empty = fs.create_dir("/not_empty").unwrap();
+        let dir = fs.create_dir(root().join("hello")).unwrap();
+        let not_empty = fs.create_dir(root().join("not_empty")).unwrap();
         not_empty
             .open("hello.txt", OFlags::CREATE, false, true, FdFlags::empty())
             .unwrap();
-        let file = fs.create_file("/hello.txt", false).unwrap();
-        fs.create_file("/nice.txt", false).unwrap();
-        assert!(fs.rename("/hello", "/hi").is_ok());
-        assert!(fs.rename("/hello.txt", "/hi.txt").is_ok());
+        let file = fs.create_file(root().join("hello.txt"), false).unwrap();
+        fs.create_file(root().join("nice.txt"), false).unwrap();
+        assert!(fs.rename(root().join("hello"), root().join("hi")).is_ok());
+        assert!(fs
+            .rename(root().join("hello.txt"), root().join("hi.txt"))
+            .is_ok());
         assert!(matches!(
-            fs.rename("/hi", "/nice.txt"),
+            fs.rename(root().join("hi"), root().join("nice.txt")),
             Err(MemFsError::Notdir)
         ));
         assert!(matches!(
-            fs.rename("/hi", "/not_empty"),
+            fs.rename(root().join("hi"), root().join("not_empty")),
             Err(MemFsError::NotEmpty)
         ));
         not_empty.unlink("hello.txt").unwrap();
         // Should be empty now
-        assert!(fs.rename("/not_empty", "/hi").is_ok());
+        assert!(fs
+            .rename(root().join("not_empty"), root().join("hi"))
+            .is_ok());
         assert!(matches!(
-            fs.rename("/nice.txt", "/hi"),
+            fs.rename(root().join("nice.txt"), root().join("hi")),
             Err(MemFsError::IsDir)
         ));
-        assert_eq!(Path::new("/hi"), dir.borrow().path());
-        assert_eq!(Path::new("/hi.txt"), file.borrow().path());
+        assert_eq!(root().join("hi"), dir.borrow().path());
+        assert_eq!(root().join("hi.txt"), file.borrow().path());
         assert_eq!(3, fs.entry_count());
     }
 
     #[test]
     fn get_with_parent_path() {
         let fs = MemFs::new();
-        let dir = fs.create_dir("/hello").unwrap();
-        fs.create_file("/hello.txt", false).unwrap();
+        let dir = fs.create_dir(root().join("hello")).unwrap();
+        fs.create_file(root().join("hello.txt"), false).unwrap();
         assert!(dir
             .open(
                 "../hello.txt",
