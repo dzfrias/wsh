@@ -370,6 +370,7 @@ impl Shell {
             return Ok(Either::Left(self.make_wasm_func(func, args, env)?));
         }
 
+        #[cfg(unix)]
         let mut fd_mappings = vec![];
         // This will be a vector of strings for the arguments of the command
         let args = exprs
@@ -384,13 +385,20 @@ impl Shell {
                 // This is similar to the technique used in process substitution, see
                 // https://en.wikipedia.org/wiki/Process_substitution#Mechanism.
                 if let Value::MemFile(ref file) = val {
-                    let clone = file
-                        .try_clone_inner()
-                        .map_err(ErrorKind::MemFileError)
-                        .with_position(self.current_pos)?;
-                    let s = format!("/dev/fd/{}", clone.as_raw_file_descriptor());
-                    fd_mappings.push(clone);
-                    return Ok(s);
+                    #[cfg(unix)]
+                    {
+                        let clone = file
+                            .try_clone_inner()
+                            .map_err(ErrorKind::MemFileError)
+                            .with_position(self.current_pos)?;
+                        let s = format!("/dev/fd/{}", clone.as_raw_file_descriptor());
+                        fd_mappings.push(clone);
+                        return Ok(s);
+                    }
+                    #[cfg(target_os = "windows")]
+                    {
+                        return Err(self.error(ErrorKind::MemFilesNotSupported));
+                    }
                 }
                 Ok(val.to_string())
             })
@@ -438,13 +446,13 @@ impl Shell {
         }
 
         // If nothing else, it's a regular command
-        Ok(Either::Left(pipeline::Command::Basic(
-            pipeline::BasicCommand::new(&name)
-                .env(env)
-                .args(args)
-                .pass_fds(fd_mappings)
-                .merge_stderr(cmd.merge_stderr),
-        )))
+        let cmd = pipeline::BasicCommand::new(&name)
+            .env(env)
+            .args(args)
+            .merge_stderr(cmd.merge_stderr);
+        #[cfg(unix)]
+        let cmd = cmd.pass_fds(fd_mappings);
+        Ok(Either::Left(pipeline::Command::Basic(cmd)))
     }
 
     /// Create a `pipeline::Command` that wraps the calling of a WebAssembly function.

@@ -109,7 +109,7 @@ impl Env {
             ctx.push_preopened_dir(dir, path)?;
             let Some(mut relative) = std::env::current_dir()
                 .ok()
-                .and_then(|cwd| pathdiff::diff_paths(path, cwd))
+                .and_then(|cwd| pathdiff::diff_paths(path, cwd.canonicalize().ok()?))
             else {
                 continue;
             };
@@ -256,11 +256,13 @@ fn wasi_dir(
                 },
                 |entry| match entry {
                     memfs::Entry::Directory(dir) => Ok(dir),
-                    memfs::Entry::File(_) => Err(anyhow::anyhow!("cannot pre-open virtual file")),
+                    memfs::Entry::File(_) => Err(io::Error::new(
+                        io::ErrorKind::Other,
+                        "expected an in-memory directory",
+                    )),
                 },
             )
-            .map(Box::new)
-            .map_err(wsh_wasi::WasiError::trap)?,
+            .map(Box::new)?,
     };
     Ok(dir)
 }

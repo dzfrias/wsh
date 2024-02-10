@@ -2,7 +2,8 @@
 //! great [duct](https://docs.rs/duct/0.13.7/duct/index.html) crate. Many subtle nuances of process
 //! management are extremely well-documented and clear, making modules like this possible. We
 //! don't use the duct itself to support things like built-in functions, that aren't actually
-//! commands but are stil constructs in the shell.
+//! commands but are still constructs in the shell. Namely, this module allows for closures to be
+//! piped around, with arbitrary data attached.
 
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
@@ -89,6 +90,16 @@ impl<'a, T> Closure<'a, T> {
             env,
         }
     }
+
+    pub fn spawn(self, stdio: Stdio) -> ClosureHandle<'a, T> {
+        ClosureHandle {
+            closure: Some(self.inner),
+            args: self.args,
+            env: self.env,
+            stdio: Some(stdio),
+            killed: false,
+        }
+    }
 }
 
 type PipelineClosure<T> = Box<dyn FnOnce(&mut T, Stdio, &[String], &[(String, String)]) -> i32>;
@@ -115,13 +126,7 @@ impl<'a, T> Command<'a, T> {
     pub fn spawn(self, data: &mut T, stdio: Stdio) -> io::Result<Handle<'a, T>> {
         let handle = match self {
             Command::Basic(c) => HandleInner::Command(c.spawn(stdio)?),
-            Command::Closure(c) => HandleInner::Closure(ClosureHandle {
-                closure: Some(c.inner),
-                args: c.args,
-                env: c.env,
-                stdio: Some(stdio),
-                killed: false,
-            }),
+            Command::Closure(c) => HandleInner::Closure(c.spawn(stdio)),
             Command::Pipe(p) => HandleInner::Pipe(p.spawn(data, stdio)?),
         };
         Ok(Handle(handle))
@@ -162,6 +167,7 @@ impl<'a> BasicCommand<'a> {
         self
     }
 
+    #[cfg(unix)]
     pub fn pass_fds(mut self, fds: Vec<File>) -> Self {
         self.pass_fds = fds;
         self

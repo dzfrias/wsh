@@ -74,6 +74,8 @@ pub enum ErrorKind {
     BadWasmArg { idx: usize, reason: &'static str },
     #[error("error opening memfile: {0}")]
     MemFileError(io::Error),
+    #[error("memfiles are not supported on this platform yet!")]
+    MemFilesNotSupported,
 }
 
 pub trait WithPosition<T> {

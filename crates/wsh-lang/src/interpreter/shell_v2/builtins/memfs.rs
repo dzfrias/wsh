@@ -117,6 +117,6 @@ fn get_status(shell: &mut Shell) -> (Vec<PathBuf>, Vec<PathBuf>, Vec<(PathBuf, m
 fn relative_to_cwd(path: &Path) -> Cow<'_, Path> {
     std::env::current_dir()
         .ok()
-        .and_then(|cwd| pathdiff::diff_paths(path, cwd).map(Cow::Owned))
+        .and_then(|cwd| pathdiff::diff_paths(path, cwd.canonicalize().ok()?).map(Cow::Owned))
         .unwrap_or(Cow::Borrowed(path))
 }
