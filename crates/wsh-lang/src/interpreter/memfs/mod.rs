@@ -21,9 +21,10 @@ mod error;
 
 use std::{
     any::Any,
+    borrow::Cow,
     collections::HashMap,
     io::{self, Read, Seek, Write},
-    path::{Path, PathBuf},
+    path::{Path, PathBuf, MAIN_SEPARATOR_STR},
     sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard, Weak},
 };
 
@@ -51,42 +52,37 @@ impl MemFs {
 
     /// Obtain an `Entry` at `path`, returning `None` if it does not exist.
     pub fn entry(&self, path: impl AsRef<Path>) -> Option<Entry> {
-        self.borrow().path_table.get(path.as_ref()).cloned()
+        let path = to_absolute(path.as_ref());
+        self.borrow().path_table.get(&*path).cloned()
     }
 
-    /// Create a new directory at the **absolute** `path`.
+    /// Create a new directory at `path`.
     ///
     /// This will return:
     /// - MemFsError::AlreadyExists if the directory already exists
     pub fn create_dir(&self, path: impl AsRef<Path>) -> Result<MemDir, MemFsError> {
-        if path.as_ref().is_relative() {
-            panic!("should not provide a relative path to a MemDir");
-        }
-        if self.entry(path.as_ref()).is_some() {
+        let path = to_absolute(path.as_ref());
+        if self.entry(&path).is_some() {
             return Err(MemFsError::AlreadyExists);
         }
 
-        let dir = MemDir::new(self.downgrade(), path.as_ref(), self.new_inode());
+        let dir = MemDir::new(self.downgrade(), &path, self.new_inode());
+        self.try_unremove(&path);
         self.borrow_mut()
             .path_table
-            .insert(path.as_ref().to_path_buf(), Entry::Directory(dir.clone()));
-        self.try_unremove(path);
+            .insert(path.into_owned(), Entry::Directory(dir.clone()));
 
         Ok(dir)
     }
 
-    /// Create a new file at the **absolute** `path`. This will overwrite the previous file, unless
-    /// `excl` is passed.
+    /// Create a new file at `path`. This will overwrite the previous file, unless `excl` is passed.
     ///
     /// This will return:
     /// - MemFsError::IsDir if the path is already taken by a directory.
     /// - MemFsError::AlreadyExists if `excl` is true and the file already exists.
     pub fn create_file(&self, path: impl AsRef<Path>, excl: bool) -> Result<MemFile, MemFsError> {
-        if path.as_ref().is_relative() {
-            panic!("should not provide a relative path to a MemFile");
-        }
-
-        if let Some(entry) = self.entry(path.as_ref()) {
+        let path = to_absolute(path.as_ref());
+        if let Some(entry) = self.entry(&path) {
             return match entry {
                 Entry::Directory(_) => Err(MemFsError::IsDir),
                 Entry::File(file) if !excl => {
@@ -97,11 +93,11 @@ impl MemFs {
             };
         }
 
-        let file = MemFile::empty(self.downgrade(), path.as_ref(), self.new_inode());
+        let file = MemFile::empty(self.downgrade(), &path, self.new_inode());
+        self.try_unremove(&path);
         self.borrow_mut()
             .path_table
-            .insert(path.as_ref().to_path_buf(), Entry::File(file.clone()));
-        self.try_unremove(path);
+            .insert(path.into_owned(), Entry::File(file.clone()));
 
         Ok(file)
     }
@@ -139,7 +135,8 @@ impl MemFs {
 
     /// Check if a path exists (no fallback to disk, only checks memfs files).
     pub fn exists(&self, path: impl AsRef<Path>) -> bool {
-        self.borrow().path_table.get(path.as_ref()).is_some()
+        let path = to_absolute(path.as_ref());
+        self.borrow().path_table.get(&*path).is_some()
     }
 
     /// Unlink the file from the file system.
@@ -148,8 +145,8 @@ impl MemFs {
     /// - MemFsError::IsDir if the handle points to a directory.
     /// - MemFsError::Noent if the file does not exist.
     pub fn unlink(&self, path: impl AsRef<Path>) -> Result<(), MemFsError> {
-        let path = path.as_ref();
-        let Some(entry) = self.entry(path) else {
+        let path = to_absolute(path.as_ref());
+        let Some(entry) = self.entry(&path) else {
             if path.exists() {
                 if path.is_dir() {
                     return Err(MemFsError::IsDir);
@@ -177,8 +174,8 @@ impl MemFs {
     /// - MemFsError::NotEmpty if the directory is not empty
     /// - MemFsError::Noent if the directory does not exist
     pub fn remove_dir(&self, path: impl AsRef<Path>) -> Result<(), MemFsError> {
-        let path = path.as_ref();
-        let Some(entry) = self.entry(path) else {
+        let path = to_absolute(path.as_ref());
+        let Some(entry) = self.entry(&path) else {
             if path.exists() {
                 if path.is_file() {
                     return Err(MemFsError::Notdir);
@@ -211,17 +208,17 @@ impl MemFs {
     /// - Any errors from `create_file` or `create_dir`
     /// - Any disk io errors encountered
     pub fn load(&self, path: impl AsRef<Path>) -> Result<Entry, MemFsError> {
-        let path = path.as_ref();
-        if self.exists(path) {
+        let path = to_absolute(path.as_ref());
+        if self.exists(&path) {
             return Err(MemFsError::AlreadyExists);
         }
         // If it's already been removed in memfs, it shouldn't exist
-        if self.borrow().removals.iter().any(|(p, _)| p == path) || !path.try_exists()? {
+        if self.borrow().removals.iter().any(|(p, _)| p == &path) || !path.try_exists()? {
             return Err(MemFsError::Noent);
         }
 
         if path.is_file() {
-            let contents = std::fs::read(path)?;
+            let contents = std::fs::read(&path)?;
             let file = self.create_file(path, false)?;
             file.borrow_mut().data.write_all(&contents)?;
             return Ok(Entry::File(file));
@@ -239,25 +236,25 @@ impl MemFs {
     /// - MemFsError::NotDir if the src entry is a directory but the dst entry is a file
     /// - MemFsError::NotEmpty if the dst entry is a directory but is not empty
     pub fn rename(&self, src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Result<(), MemFsError> {
-        let src = src.as_ref();
-        let dst = dst.as_ref();
+        let src = to_absolute(src.as_ref());
+        let dst = to_absolute(dst.as_ref());
         match self
-            .entry(src)
+            .entry(&src)
             .ok_or(MemFsError::Noent)
-            .or_else(|_err| self.load(src))?
+            .or_else(|_err| self.load(&src))?
         {
             Entry::File(file) => {
-                if matches!(self.entry(dst), Some(Entry::Directory(_))) {
+                if matches!(self.entry(&dst), Some(Entry::Directory(_))) {
                     return Err(MemFsError::IsDir);
                 }
                 file.borrow_mut().path = dst.to_path_buf();
                 self.borrow_mut()
                     .path_table
-                    .insert(dst.to_path_buf(), Entry::File(file));
-                self.did_remove(src, EntryType::File);
+                    .insert(dst.into_owned(), Entry::File(file));
+                self.did_remove(&src, EntryType::File);
             }
             Entry::Directory(dir) => {
-                if let Some(entry) = self.entry(dst) {
+                if let Some(entry) = self.entry(&dst) {
                     let Entry::Directory(dst_dir) = entry else {
                         return Err(MemFsError::Notdir);
                     };
@@ -268,13 +265,13 @@ impl MemFs {
                 dir.borrow_mut().path = dst.to_path_buf();
                 self.borrow_mut()
                     .path_table
-                    .insert(dst.to_path_buf(), Entry::Directory(dir));
-                self.did_remove(src, EntryType::Directory);
+                    .insert(dst.into_owned(), Entry::Directory(dir));
+                self.did_remove(&src, EntryType::Directory);
             }
         }
         self.borrow_mut()
             .path_table
-            .remove(src)
+            .remove(&*src)
             .expect("src should be in path table");
 
         Ok(())
@@ -301,7 +298,7 @@ impl MemFs {
         write: bool,
         fd_flags: FdFlags,
     ) -> Result<Entry, MemFsError> {
-        let path = path.as_ref();
+        let path = to_absolute(path.as_ref());
         if oflags.contains(OFlags::DIRECTORY)
             && oflags.intersects(OFlags::CREATE | OFlags::EXCLUSIVE | OFlags::TRUNCATE)
         {
@@ -337,7 +334,7 @@ impl MemFs {
         //   GET ../test.txt FROM /Users/dzfrias/code/wsh/tests/test.txt
         // Would error. In order to solve this, all .. and . components would have to be resolved
         // in the file system, which is a simple fix but still important.
-        let entry = self.entry(path).ok_or(MemFsError::Noent).or_else(|err| {
+        let entry = self.entry(&path).ok_or(MemFsError::Noent).or_else(|err| {
             if !path.try_exists()? {
                 return Err(err);
             }
@@ -397,11 +394,12 @@ impl MemFs {
     }
 
     fn try_unremove(&self, path: impl AsRef<Path>) {
+        let path = to_absolute(path.as_ref());
         let mut borrow = self.borrow_mut();
         let Some(pos) = borrow
             .removals
             .iter()
-            .position(|(removed, _)| path.as_ref() == removed)
+            .position(|(removed, _)| &path == removed)
         else {
             return;
         };
@@ -409,9 +407,10 @@ impl MemFs {
     }
 
     fn did_remove(&self, path: impl AsRef<Path>, entry_type: EntryType) {
+        let path = to_absolute(path.as_ref());
         self.borrow_mut()
             .removals
-            .push((path.as_ref().to_path_buf(), entry_type));
+            .push((path.into_owned(), entry_type));
     }
 
     fn new_inode(&self) -> u64 {
@@ -433,6 +432,17 @@ impl MemFs {
     }
 }
 
+/// A helper function to turn a path into an absolute one if it's relative.
+fn to_absolute(path: &Path) -> Cow<'_, Path> {
+    let path = if path.is_relative() {
+        let path = Path::new(MAIN_SEPARATOR_STR).join(path);
+        Cow::Owned(path)
+    } else {
+        Cow::Borrowed(path)
+    };
+    path
+}
+
 /// An entry into the file system. This can either be a MemFile or a MemDir.
 #[derive(Debug, Clone)]
 pub enum Entry {
@@ -440,6 +450,7 @@ pub enum Entry {
     File(MemFile),
 }
 
+/// The type of the entry. Right now, this is just a Directory or a File.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EntryType {
     Directory,
@@ -568,7 +579,7 @@ impl MemDirInner {
 }
 
 impl MemDir {
-    /// Create a new `MemDir` at the provided (**absolute**) path.
+    /// Create a new `MemDir` at the provided path.
     fn new(fs: WeakMemFs, path: impl AsRef<Path>, inode: u64) -> Self {
         Self(Arc::new(RwLock::new(MemDirInner {
             fs,
@@ -1077,10 +1088,11 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
-    fn panic_on_relative_path() {
+    fn relative_to_absolute() {
         let fs = MemFs::new();
-        fs.create_dir("relative").unwrap();
+        let dir = fs.create_dir("relative").unwrap();
+        assert_eq!(1, fs.entry_count());
+        assert_eq!(Path::new("/relative"), dir.borrow().path());
     }
 
     #[test]
