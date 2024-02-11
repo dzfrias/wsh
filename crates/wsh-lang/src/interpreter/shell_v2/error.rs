@@ -60,6 +60,8 @@ pub enum ErrorKind {
     HomeDirInvalidUTF8,
     #[error("command failed to start: {0}")]
     CommandFailedToStart(io::Error),
+    #[error("command not found")]
+    CommandNotFound,
     #[error("command failed: {0}")]
     CommandFailed(io::Error),
     #[error("bad redirect: {0}")]

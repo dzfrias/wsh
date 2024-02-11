@@ -1,14 +1,12 @@
 ---
 source: tests/shell.rs
-expression: stdout
+expression: stderr
 ---
-Error: unexpected token: eof, expected rparen to close expression
-   ╭─[unclosed_paren.tmp:1:12]
+Error: expected rparen to close grouped expression
+   ╭─[unclosed_paren:1:13]
    │
  1 │ echo .(1 + 1
-   │       ┬    ┬  
-   │       ╰─────── lparen found here
-   │            │  
-   │            ╰── error happened here
+   │       ───┬──  
+   │          ╰──── this grouped expression
 ───╯
 

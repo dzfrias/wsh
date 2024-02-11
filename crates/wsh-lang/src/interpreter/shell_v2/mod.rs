@@ -148,11 +148,11 @@ impl Shell {
         let mut handle = exec
             .spawn(self, stdio)
             .map_err(|err| {
-                self.last_status = if err.kind() == io::ErrorKind::NotFound {
-                    127
-                } else {
-                    1
-                };
+                if err.kind() == io::ErrorKind::NotFound {
+                    self.last_status = 127;
+                    return ErrorKind::CommandNotFound;
+                }
+                self.last_status = 1;
                 ErrorKind::CommandFailedToStart(err)
             })
             .with_position(pos)?;

@@ -1,12 +1,12 @@
 ---
 source: tests/shell.rs
-expression: stdout
+expression: stderr
 ---
-Error: unfinished pipeline
-   ╭─[unfinished_pipe.tmp:1:9]
+Error: expected vaild expression
+   ╭─[unfinished_pipe:1:10]
    │
  1 │ echo hi |
-   │         ┬  
-   │         ╰── error happened here
+   │          │ 
+   │          ╰─ found here
 ───╯
 

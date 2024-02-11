@@ -1,5 +1,6 @@
 mod allow;
 mod cd;
+mod error;
 mod load;
 mod memfs;
 mod source;
@@ -18,6 +19,12 @@ macro_rules! force_writeln {
         writeln!($f).expect("error writing to stdio stream!")
     };
 }
+macro_rules! force_write {
+    ($f:expr, $($arg:tt)*) => {
+        write!($f, $($arg)*).expect("error writing to stdio stream!")
+    };
+}
+use force_write;
 use force_writeln;
 
 #[derive(Debug, Clone, Copy)]
@@ -29,6 +36,7 @@ pub enum Builtin {
     Load,
     Unload,
     MemFs,
+    Error,
 }
 
 impl Builtin {
@@ -41,6 +49,7 @@ impl Builtin {
             "load" => Self::Load,
             "unload" => Self::Unload,
             "memfs" => Self::MemFs,
+            "_error" => Self::Error,
             _ => return None,
         })
     }
@@ -54,6 +63,7 @@ impl Builtin {
             Builtin::Load => "load",
             Builtin::Unload => "unload",
             Builtin::MemFs => "memfs",
+            Builtin::Error => "_error",
         }
     }
 
@@ -80,6 +90,7 @@ impl Builtin {
             Builtin::Load => load::load(shell, stdio, args, env),
             Builtin::Unload => unload::unload(shell, stdio, args, env),
             Builtin::MemFs => memfs::memfs(shell, stdio, args, env),
+            Builtin::Error => error::error(shell, stdio, args, env),
         } {
             force_writeln!(stderr, "{}: {err:#}", self.name());
             1

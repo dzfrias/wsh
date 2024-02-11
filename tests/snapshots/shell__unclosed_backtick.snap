@@ -1,14 +1,12 @@
 ---
 source: tests/shell.rs
-expression: stdout
+expression: stderr
 ---
-Error: unexpected token: eof, expected backtick to close command
-   ╭─[unclosed_backtick.tmp:1:13]
+Error: expected closing backtick
+   ╭─[unclosed_backtick:1:14]
    │
  1 │ echo `echo hi
-   │      ┬      ┬  
-   │      ╰───────── backtick found here
-   │             │  
-   │             ╰── error happened here
+   │      ┬  
+   │      ╰── for this backtick
 ───╯
 

@@ -381,6 +381,7 @@ impl<'src> Lexer<'src> {
                 | TokenKind::String(_)
                 | TokenKind::Ident(_)
                 | TokenKind::Tilde
+                | TokenKind::QuestionMark
                 | TokenKind::Number(_)
                 | TokenKind::RParen
                 | TokenKind::End

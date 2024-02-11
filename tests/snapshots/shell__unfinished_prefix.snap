@@ -1,12 +1,12 @@
 ---
 source: tests/shell.rs
-expression: stdout
+expression: stderr
 ---
-Error: unexpected token: rparen, expected valid expression
-   ╭─[unfinished_prefix.tmp:1:9]
+Error: expected vaild expression
+   ╭─[unfinished_prefix:1:9]
    │
  1 │ echo .(!)
    │         ┬  
-   │         ╰── error happened here
+   │         ╰── found here
 ───╯
 

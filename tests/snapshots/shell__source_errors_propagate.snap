@@ -1,12 +1,12 @@
 ---
 source: tests/shell.rs
-expression: stdout
+expression: stderr
 ---
-Error: unexpected token: newline, expected valid expression
-   ╭─[__bad_tmp.wsi:1:8]
+Error: expected vaild expression
+   ╭─[__bad_tmp:1:9]
    │
  1 │ echo .(
-   │        ┬  
-   │        ╰── error happened here
+   │         │ 
+   │         ╰─ found here
 ───╯
 
