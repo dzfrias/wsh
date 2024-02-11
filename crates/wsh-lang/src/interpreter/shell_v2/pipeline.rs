@@ -409,10 +409,11 @@ mod tests {
         let cmd = BasicCommand::new("echo").args(Some("hello world"));
         let mut pipeline = Pipeline::new(cmd);
         pipeline.pipe(BasicCommand::new("wc").args(Some("-w")));
+        pipeline.pipe(BasicCommand::new("xargs"));
         let (stdio, mut read) = piped_stdio();
         let mut handle = pipeline.spawn(&mut (), stdio).unwrap();
         handle.wait(&mut ()).unwrap();
-        assert_read!(read, "       2")
+        assert_read!(read, "2")
     }
 
     #[test]
