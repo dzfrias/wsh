@@ -366,35 +366,53 @@ impl<T> PipeHandle<'_, T> {
 
 #[cfg(test)]
 mod tests {
-    use filedescriptor::AsRawFileDescriptor;
+    use os_pipe::PipeReader;
     use std::io::{Read, Write};
 
     use super::*;
 
-    fn inherit_stdio() -> Stdio {
-        let stdout =
-            unsafe { File::from_raw_file_descriptor(io::stdout().as_raw_file_descriptor()) };
-        let stdout_clone = stdout.try_clone().unwrap();
-        mem::forget(stdout);
-        let stderr =
-            unsafe { File::from_raw_file_descriptor(io::stderr().as_raw_file_descriptor()) };
-        let stderr_clone = stderr.try_clone().unwrap();
-        mem::forget(stderr);
-        Stdio {
-            stdout: stdout_clone,
-            stderr: stderr_clone,
+    fn piped_stdio() -> (Stdio, PipeReader) {
+        let (read, write) = os_pipe::pipe().unwrap();
+        let stdout = unsafe { File::from_raw_file_descriptor(write.into_raw_file_descriptor()) };
+        let stdio = Stdio {
+            stdout: stdout.try_clone().unwrap(),
+            stderr: stdout,
             stdin: None,
-        }
+        };
+        (stdio, read)
+    }
+
+    macro_rules! assert_read {
+        ($reader:expr, $contents:expr) => {{
+            let mut buf = vec![];
+            $reader.read_to_end(&mut buf).unwrap();
+            while buf.last().is_some_and(|c| *c == b'\n') {
+                buf.pop();
+            }
+            let s = String::from_utf8(buf).expect("out contained invalid UTF-8");
+            assert_eq!($contents, s);
+        }};
     }
 
     #[test]
     fn basic_commands() {
         let cmd = BasicCommand::new("echo").args(Some("hello"));
-        let mut pipeline = Pipeline::new(cmd);
-        pipeline.pipe(BasicCommand::new("wc").args(Some("-l")));
-        let mut handle = pipeline.spawn(&mut (), inherit_stdio()).unwrap();
+        let pipeline = Pipeline::new(cmd);
+        let (stdio, mut read) = piped_stdio();
+        let mut handle = pipeline.spawn(&mut (), stdio).unwrap();
         handle.wait(&mut ()).unwrap();
-        assert!(false)
+        assert_read!(read, "hello")
+    }
+
+    #[test]
+    fn piping() {
+        let cmd = BasicCommand::new("echo").args(Some("hello world"));
+        let mut pipeline = Pipeline::new(cmd);
+        pipeline.pipe(BasicCommand::new("wc").args(Some("-w")));
+        let (stdio, mut read) = piped_stdio();
+        let mut handle = pipeline.spawn(&mut (), stdio).unwrap();
+        handle.wait(&mut ()).unwrap();
+        assert_read!(read, "       2")
     }
 
     #[test]
@@ -411,8 +429,9 @@ mod tests {
             vec![],
             &[],
         ));
-        let mut handle = pipeline.spawn(&mut (), inherit_stdio()).unwrap();
+        let (stdio, mut read) = piped_stdio();
+        let mut handle = pipeline.spawn(&mut (), stdio).unwrap();
         handle.wait(&mut ()).unwrap();
-        assert!(false)
+        assert_read!(read, "got: hello");
     }
 }
