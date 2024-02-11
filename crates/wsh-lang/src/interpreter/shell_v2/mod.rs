@@ -1,9 +1,12 @@
 mod builtins;
 mod env;
 pub mod error;
+mod memfile;
 mod pipeline;
 mod value;
 
+#[cfg(windows)]
+use std::path::PathBuf;
 use std::{
     borrow::Cow,
     fs::{self, File},
@@ -19,8 +22,9 @@ use crate::{
         builtins::Builtin,
         env::{Env, WasiContext},
         error::{Error, ErrorKind, WithPosition},
+        memfile::MemFile,
         pipeline::Stdio,
-        value::{MemFile, Value},
+        value::Value,
     },
     v2::{
         ast::{
@@ -44,6 +48,11 @@ pub struct Shell {
     /// be read from, the provided file will **never** be read from, meaning pipe ends may be used.
     global_stdout: File,
     global_stderr: File,
+
+    // TODO: remove this by making the pipeline take ownership of memfiles, removes
+    // platform-specific code
+    #[cfg(windows)]
+    to_remove: Vec<PathBuf>,
 }
 
 impl Shell {
@@ -61,6 +70,9 @@ impl Shell {
             global_stderr: unsafe {
                 File::from_raw_file_descriptor(io::stderr().as_raw_file_descriptor())
             },
+
+            #[cfg(windows)]
+            to_remove: vec![],
         }
     }
 
@@ -157,6 +169,10 @@ impl Shell {
             .map_err(ErrorKind::CommandFailed)
             .with_position(pos)?
             .code();
+        #[cfg(windows)]
+        for to_remove in std::mem::take(&mut self.to_remove) {
+            let _ = fs::remove_file(to_remove);
+        }
         Ok(())
     }
 
@@ -378,22 +394,16 @@ impl Shell {
                 //
                 // This is similar to the technique used in process substitution, see
                 // https://en.wikipedia.org/wiki/Process_substitution#Mechanism.
-                #[allow(unused_variables)]
-                if let Value::MemFile(ref file) = val {
+                if let Value::MemFile(file) = val {
+                    let s = file.to_string();
                     #[cfg(unix)]
-                    {
-                        let clone = file
-                            .try_clone_inner()
-                            .map_err(ErrorKind::MemFileError)
-                            .with_position(self.current_pos)?;
-                        let s = format!("/dev/fd/{}", clone.as_raw_file_descriptor());
-                        fd_mappings.push(clone);
-                        return Ok(s);
-                    }
+                    fd_mappings.push(
+                        file.into_inner()
+                            .expect("there should be no outstanding references"),
+                    );
                     #[cfg(windows)]
-                    {
-                        return Err(self.error(ErrorKind::MemFilesNotSupported));
-                    }
+                    self.to_remove.push(file.into_path());
+                    return Ok(s);
                 }
                 Ok(val.to_string())
             })

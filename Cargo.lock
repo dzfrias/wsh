@@ -3508,6 +3508,7 @@ dependencies = [
  "os_pipe",
  "path-absolutize",
  "pathdiff",
+ "rand 0.8.5",
  "rustix",
  "smol_str",
  "system-interface 0.27.0",

@@ -211,15 +211,15 @@ shell_test!(
 shell_test!(
     wasi_sandboxing,
     "source .($WASM_PATH + \"/new_file.wasm\")",
-    @stderr "thread \'main\' panicked at src/main.rs:4:31:
+    @stderr "thread \'main\' panicked at src/main.rs:2:48:
 called `Result::unwrap()` on an `Err` value: Custom { kind: Uncategorized, error: \"failed to find a pre-opened file descriptor through which \\\"hello.txt\\\" could be opened\" }
 note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 source: error running wasm file: trap: unreachable encountered: unreachable encountered"
 );
 shell_test!(
     wasi_sandboxing_allow,
-    "allow\nsource .($WASM_PATH + \"/new_file.wasm\")\ncat hello.txt\necho works!",
-    "works!"
+    "allow\nsource .($WASM_PATH + \"/new_file.wasm\")\ncat hello.txt | xargs echo",
+    "hello world"
 );
 shell_test!(
     wasi_sandboxing_args,
@@ -290,6 +290,11 @@ shell_test!(
     memfs_rename,
     "allow --virtual\ntouch hello.txt\nsource .($WASM_PATH + \"/rename.wasm\")\nmemfs",
     "Created entries:\n    + nice.txt\n\nRemoved entries:\n    - hello.txt"
+);
+shell_test!(
+    memfiles,
+    "allow --virtual\nsource .($WASM_PATH + \"/new_file.wasm\")\ncat @hello.txt | xargs echo",
+    "hello world"
 );
 
 shell_test!(@fail unclosed_paren, "echo .(1 + 1");
