@@ -152,12 +152,11 @@ impl Shell {
                 ErrorKind::CommandFailedToStart(err)
             })
             .with_position(pos)?;
-        let exit_status = handle
+        self.last_status = handle
             .wait(self)
             .map_err(ErrorKind::CommandFailed)
-            .with_position(pos)?;
-        let out = exit_status.code();
-        self.last_status = out;
+            .with_position(pos)?
+            .code();
         Ok(())
     }
 

@@ -1,5 +1,7 @@
 use std::io;
 
+use ariadne::Color;
+use itertools::Itertools;
 use thiserror::Error;
 
 use crate::{
@@ -38,7 +40,37 @@ impl SourceError for Error {
         if let ErrorKind::ParseError(parse_error) = self.kind() {
             return parse_error.fmt_on(source, writer);
         }
-        writeln!(writer, "wsh: {}", self.kind())
+        let lines = source.contents().lines().collect_vec();
+        let linenr = {
+            let mut current = 0;
+            lines
+                .iter()
+                .enumerate()
+                .find_map(|(i, line)| {
+                    current += line.len() + 1;
+                    if current > self.offset() {
+                        Some(i)
+                    } else {
+                        None
+                    }
+                })
+                .expect("offset should be in source")
+        };
+        writeln!(
+            writer,
+            "{}: {}",
+            Color::Red.paint("wsh error").bold(),
+            Color::White.paint(self.kind()).bold(),
+        )?;
+        if lines.len() > 1 {
+            writeln!(
+                writer,
+                "{} {}",
+                Color::Blue.paint(format_args!("{}|", linenr + 1)).bold(),
+                lines[linenr],
+            )?;
+        }
+        Ok(())
     }
 }
 
