@@ -66,6 +66,7 @@ impl<'a, T> Pipeline<'a, T> {
                 merge_stderr: false,
                 env: &[],
                 args: vec![],
+                #[cfg(unix)]
                 pass_fds: vec![],
             }),
         )
