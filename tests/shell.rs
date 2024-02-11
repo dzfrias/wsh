@@ -70,7 +70,7 @@ macro_rules! shell_test {
 shell_test!(basic_command_execution, "echo hi", "hi");
 shell_test!(piping, "echo \"hello world\" | wc -w | xargs", "2");
 shell_test!(nested_commands, "echo `echo .(1 / 1)`", "1");
-shell_test!(last_status, "false\necho .?\ntrue\necho .?", "256\n0");
+shell_test!(last_status, "false\necho .?\ntrue\necho .?", "1\n0");
 shell_test!(last_status_in_piping, "false | echo .?", "0");
 shell_test!(
     tilde_expansion,
