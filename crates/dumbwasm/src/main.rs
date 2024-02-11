@@ -3,10 +3,9 @@ mod cli;
 use std::{
     fs::{self, File},
     io::Write,
-    process,
 };
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use clap::Parser;
 use console::StyledObject;
 use dumbwasm::{parse, WriteError};
@@ -25,9 +24,7 @@ fn main() -> Result<()> {
         Ok(buf) => buf,
         Err(err) => {
             print_err(&input, err, &args);
-            // We use exit here to avoid printing the anyhow backtrace
-            #[allow(clippy::exit)]
-            process::exit(1);
+            bail!("parse error");
         }
     };
     let out_file_path = args

@@ -6,4 +6,5 @@ error: unclosed section
 
 1|  function {  
  •           ^
+Error: parse error
 

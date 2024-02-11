@@ -8,4 +8,5 @@ error: unknown keyword: `inst`
  •  ^^^^
 
 help: perhaps you meant: `instrs`
+Error: parse error
 

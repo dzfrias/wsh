@@ -8,4 +8,5 @@ error: unexpected token: `U8`
  •       ^^
 
 help: only float type tokens are allowed here!
+Error: parse error
 
