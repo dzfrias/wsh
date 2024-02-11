@@ -2,6 +2,8 @@ mod cli;
 mod file_suggest;
 
 use std::{
+    borrow::Cow,
+    cell::Cell,
     fs, io,
     path::{Path, PathBuf},
 };
@@ -9,8 +11,8 @@ use std::{
 use anyhow::{Context, Result};
 use clap::Parser as CliParser;
 use reedline::{
-    ColumnarMenu, DefaultPrompt, Emacs, FileBackedHistory, KeyCode, KeyModifiers, Reedline,
-    ReedlineEvent, ReedlineMenu, Signal,
+    ColumnarMenu, Emacs, FileBackedHistory, KeyCode, KeyModifiers, Prompt, Reedline, ReedlineEvent,
+    ReedlineMenu, Signal,
 };
 use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
 use wsh_cmp::completer::Completer;
@@ -76,11 +78,12 @@ fn run_repl() -> Result<()> {
         }
     }
 
+    let prompt = WshPrompt {
+        cwd: current_dir_string()
+            .context("invalid current directory!")?
+            .into(),
+    };
     loop {
-        let prompt = DefaultPrompt::new(
-            reedline::DefaultPromptSegment::WorkingDirectory,
-            reedline::DefaultPromptSegment::Empty,
-        );
         let sig = line_editor.read_line(&prompt);
         match sig {
             Ok(Signal::Success(input)) => {
@@ -125,4 +128,61 @@ fn line_editor(history_file: Option<PathBuf>) -> Result<Reedline> {
     }
 
     Ok(line_editor)
+}
+
+fn current_dir_string() -> Option<String> {
+    std::env::current_dir()
+        .ok()
+        .map(|dir| dir.file_stem().unwrap().to_string_lossy().to_string())
+}
+
+struct WshPrompt {
+    cwd: Cell<String>,
+}
+
+impl Prompt for WshPrompt {
+    fn render_prompt_left(&self) -> Cow<str> {
+        if let Some(cwd) = current_dir_string() {
+            self.cwd.set(cwd)
+        }
+        let cwd = self.cwd.take();
+        let prompt = format!("{cwd} ");
+        self.cwd.set(cwd);
+        Cow::Owned(prompt)
+    }
+
+    fn render_prompt_right(&self) -> Cow<str> {
+        Cow::Borrowed("")
+    }
+
+    fn render_prompt_indicator(&self, _prompt_mode: reedline::PromptEditMode) -> Cow<str> {
+        Cow::Borrowed("$ ")
+    }
+
+    fn render_prompt_multiline_indicator(&self) -> Cow<str> {
+        Cow::Borrowed("> ")
+    }
+
+    fn render_prompt_history_search_indicator(
+        &self,
+        history_search: reedline::PromptHistorySearch,
+    ) -> Cow<str> {
+        let prefix = match history_search.status {
+            reedline::PromptHistorySearchStatus::Passing => "",
+            reedline::PromptHistorySearchStatus::Failing => "failing ",
+        };
+
+        Cow::Owned(format!(
+            "({}reverse-search: {}) ",
+            prefix, history_search.term
+        ))
+    }
+
+    fn get_prompt_color(&self) -> reedline::Color {
+        reedline::Color::White
+    }
+
+    fn get_indicator_color(&self) -> reedline::Color {
+        reedline::Color::White
+    }
 }

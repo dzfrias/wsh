@@ -32,6 +32,7 @@ command-fds = "0.3.0"
 
 [target.'cfg(unix)'.dependencies]
 rustix = "0.38.28"
+command-fds = "0.3.0"
 
 [target.'cfg(windows)'.dependencies]
 io-extras = "0.18.1"

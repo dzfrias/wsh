@@ -125,6 +125,7 @@ pub enum Expr {
     Ident(Ident),
     Env(Ident),
     String(SmolStr),
+    AtFile(SmolStr),
     Number(f64),
     Pipeline(Pipeline),
     Bool(bool),

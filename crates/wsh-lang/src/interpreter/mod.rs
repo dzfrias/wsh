@@ -17,16 +17,20 @@ use crate::{
     parser::ast::{Command, Expr, InfixExpr, PrefixExpr, Stmt},
     Ident, Lexer, Parser,
 };
+#[cfg(unix)]
+use command_fds::{CommandFdExt, FdMapping};
 pub use error::*;
 use filedescriptor::{
     AsRawFileDescriptor, FileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor,
     RawFileDescriptor,
 };
+#[cfg(unix)]
+use path_absolutize::Absolutize;
 use smol_str::SmolStr;
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
-#[cfg(windows)]
-use std::os::windows::process::ExitStatusExt;
+#[cfg(unix)]
+use std::path::{Path, PathBuf};
 use std::{
     borrow::Cow,
     fs::{File, OpenOptions},
@@ -56,6 +60,8 @@ pub struct Shell {
     stdout: RawFileDescriptor,
     stderr: RawFileDescriptor,
     last_status: i32,
+    #[cfg(unix)]
+    open_memfs_pipes: Vec<FileDescriptor>,
 }
 
 // TODO: right now, there's quite a bit of unsafe code in the implemenation. This is mostly a
@@ -67,6 +73,8 @@ impl Shell {
             env: Env::new(),
             stdout: io::stdout().as_raw_file_descriptor(),
             stderr: io::stderr().as_raw_file_descriptor(),
+            #[cfg(unix)]
+            open_memfs_pipes: vec![],
             last_status: 0,
         }
     }
@@ -520,6 +528,24 @@ impl Shell {
             command.stdin(stdin);
         }
 
+        #[cfg(unix)]
+        command
+            .fd_mappings(
+                (std::mem::take(&mut self.open_memfs_pipes))
+                    .into_iter()
+                    .map(|fd| {
+                        let raw = fd.into_raw_file_descriptor();
+                        // SAFETY: these will be valid because they came from a FileDescriptor
+                        let owned = unsafe { std::os::fd::OwnedFd::from_raw_file_descriptor(raw) };
+                        FdMapping {
+                            parent_fd: owned,
+                            child_fd: raw,
+                        }
+                    })
+                    .collect(),
+            )
+            .expect("should have no fd-collisions");
+
         let mut child = command
             .spawn()
             .map_err(|err| match err.kind() {
@@ -541,7 +567,9 @@ impl Shell {
                 .or_else(|| out.signal().map(|s| s + 128))
                 .unwrap_or(0);
             #[cfg(windows)]
-            let out = out.status.code().unwrap();
+            let out = out
+                .code()
+                .expect("all Windows programs should have an exit status");
 
             return Ok(out);
         }
@@ -599,6 +627,37 @@ impl Shell {
             Expr::Tilde => Value::String(SmolStr::new(
                 dirs::home_dir().unwrap_or_default().to_string_lossy(),
             )),
+            Expr::AtFile(path) => {
+                #[cfg(not(unix))]
+                {
+                    self.print_err(ShellError::AtFilesNotSupported);
+                    return Err(());
+                }
+
+                #[cfg(unix)]
+                {
+                    let (reader, mut writer) = os_pipe::pipe().unwrap();
+                    let path = std::env::current_dir()
+                        .map(|dir| Path::new(path.as_str()).absolutize_from(dir).unwrap())
+                        .unwrap_or(Cow::Borrowed(Path::new(path.as_str())));
+                    let Some(memfs::Entry::File(memfs_file)) = self.env.mem_fs.entry(&path) else {
+                        self.print_err(ShellError::MemfsNotFound(path.to_path_buf()));
+                        return Err(());
+                    };
+                    writer
+                        .write_all(memfs_file.borrow().data())
+                        .map_err(ShellError::PipeError)
+                        .map_err(|err| self.print_err(err))?;
+                    drop(writer);
+                    let fd = unsafe {
+                        FileDescriptor::from_raw_file_descriptor(reader.into_raw_file_descriptor())
+                    };
+                    let raw = fd.as_raw_file_descriptor();
+                    let path = PathBuf::from("/dev/fd").join(raw.to_string());
+                    self.open_memfs_pipes.push(fd);
+                    Value::String(path.to_string_lossy().into())
+                }
+            }
         })
     }
 

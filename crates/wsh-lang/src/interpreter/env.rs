@@ -196,23 +196,25 @@ impl Env {
         let mut ctx = builder.build();
         for Allowed { path, location } in &self.allowed {
             let dir: Box<dyn WasiDir> = match location {
-                Location::Memory => self
-                    .mem_fs
-                    .entry(path)
-                    .map_or_else(
-                        || {
-                            Ok(self
-                                .mem_fs
-                                .create_dir(path)
-                                .expect("BUG: creating directory should not fail, but got: {err}"))
-                        },
-                        |entry| match entry {
-                            Entry::Directory(dir) => Ok(dir),
-                            Entry::File(_) => Err(anyhow::anyhow!("cannot pre-open virtual file!")),
-                        },
-                    )
-                    .map(Box::new)
-                    .map_err(WasiError::trap)?,
+                Location::Memory => {
+                    self.mem_fs
+                        .entry(path)
+                        .map_or_else(
+                            || {
+                                Ok(self.mem_fs.create_dir(path).expect(
+                                    "BUG: creating directory should not fail, but got: {err}",
+                                ))
+                            },
+                            |entry| match entry {
+                                Entry::Directory(dir) => Ok(dir),
+                                Entry::File(_) => Err(io::Error::new(
+                                    io::ErrorKind::Other,
+                                    "expected in-memory directory, got file",
+                                )),
+                            },
+                        )
+                        .map(Box::new)?
+                }
                 Location::Disk => {
                     let cap_std_dir =
                         cap_std::fs::Dir::open_ambient_dir(path, cap_std::ambient_authority())?;
@@ -225,7 +227,7 @@ impl Env {
             let Ok(current_dir) = std::env::current_dir() else {
                 continue;
             };
-            let Some(mut relative) = pathdiff::diff_paths(path, current_dir) else {
+            let Some(mut relative) = pathdiff::diff_paths(path, current_dir.canonicalize()?) else {
                 continue;
             };
             if relative == Path::new("") {

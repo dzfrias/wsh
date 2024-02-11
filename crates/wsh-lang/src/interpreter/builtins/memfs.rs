@@ -236,6 +236,7 @@ impl fmt::Display for Color {
 fn relative_to_cwd(path: &Path) -> Cow<'_, Path> {
     std::env::current_dir()
         .ok()
+        .and_then(|cwd| cwd.canonicalize().ok())
         .and_then(|cwd| pathdiff::diff_paths(path, cwd).map(Cow::Owned))
         .unwrap_or(Cow::Borrowed(path))
 }

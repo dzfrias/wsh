@@ -134,6 +134,11 @@ impl<'src> Lexer<'src> {
                     self.next();
                     push!(Ident(token::Ident::new(self.consume_ident())));
                 }
+                '@' if !self.strict() => {
+                    self.next();
+                    let s = self.consume_str();
+                    push!(AtFile(s.into()));
+                }
                 '$' => {
                     push!(Dollar);
                     if self
@@ -896,6 +901,20 @@ mod tests {
             Token::String("echo".into()),
             Token::Space,
             Token::Ident(Ident::new("end")),
+            Token::Eof
+        );
+        assert_eq!(expect, buf);
+    }
+
+    #[test]
+    fn at_file() {
+        let input = "echo @hello.txt";
+        let lexer = Lexer::new(input);
+        let buf = lexer.lex();
+        let expect = token_buf!(
+            Token::String("echo".into()),
+            Token::Space,
+            Token::AtFile("hello.txt".into()),
             Token::Eof
         );
         assert_eq!(expect, buf);

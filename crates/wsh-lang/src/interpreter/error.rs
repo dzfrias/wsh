@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, path::PathBuf};
 
 use smol_str::SmolStr;
 use thiserror::Error;
@@ -30,6 +30,10 @@ pub enum ShellError {
     BuiltinWriteError(io::Error),
     #[error("error opening fd for redirection: {0}")]
     RedirectError(io::Error),
+    #[error("at files are currently not supported on non-unix platforms!")]
+    AtFilesNotSupported,
+    #[error("file not found in memfs: {0}")]
+    MemfsNotFound(PathBuf),
 }
 
 pub type ShellResult<T> = std::result::Result<T, ()>;
