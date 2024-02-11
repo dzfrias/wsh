@@ -4,10 +4,6 @@ pub mod error;
 mod pipeline;
 mod value;
 
-#[cfg(unix)]
-use std::os::unix::process::ExitStatusExt;
-#[cfg(windows)]
-use std::os::windows::process::ExitStatusExt;
 use std::{
     borrow::Cow,
     fs::{self, File},
@@ -160,9 +156,8 @@ impl Shell {
             .wait(self)
             .map_err(ErrorKind::CommandFailed)
             .with_position(pos)?;
-        #[allow(clippy::unnecessary_cast)]
-        let exit_status = exit_status.into_raw() as i32;
-        self.last_status = exit_status;
+        let out = exit_status.code();
+        self.last_status = out;
         Ok(())
     }
 
@@ -384,6 +379,7 @@ impl Shell {
                 //
                 // This is similar to the technique used in process substitution, see
                 // https://en.wikipedia.org/wiki/Process_substitution#Mechanism.
+                #[allow(unused_variables)]
                 if let Value::MemFile(ref file) = val {
                     #[cfg(unix)]
                     {
@@ -395,7 +391,7 @@ impl Shell {
                         fd_mappings.push(clone);
                         return Ok(s);
                     }
-                    #[cfg(target_os = "windows")]
+                    #[cfg(windows)]
                     {
                         return Err(self.error(ErrorKind::MemFilesNotSupported));
                     }

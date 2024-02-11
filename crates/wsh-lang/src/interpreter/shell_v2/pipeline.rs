@@ -7,10 +7,9 @@
 
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
-#[cfg(windows)]
-use std::os::windows::process::ExitStatusExt;
 use std::{fs::File, io, mem, process};
 
+#[cfg(unix)]
 use command_fds::{CommandFdExt, FdMapping};
 use filedescriptor::{AsRawFileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor};
 
@@ -102,6 +101,15 @@ impl<'a, T> Closure<'a, T> {
     }
 }
 
+#[derive(Debug, Clone, Copy, Hash)]
+pub struct ExitStatus(i32);
+
+impl ExitStatus {
+    pub fn code(self) -> i32 {
+        self.0
+    }
+}
+
 type PipelineClosure<T> = Box<dyn FnOnce(&mut T, Stdio, &[String], &[(String, String)]) -> i32>;
 
 pub enum Command<'a, T> {
@@ -138,6 +146,7 @@ pub struct BasicCommand<'a> {
     cmd: String,
     args: Vec<String>,
     env: &'a [(String, String)],
+    #[cfg(unix)]
     pass_fds: Vec<File>,
     merge_stderr: bool,
 }
@@ -148,6 +157,7 @@ impl<'a> BasicCommand<'a> {
             cmd: cmd.to_owned(),
             args: vec![],
             env: &[],
+            #[cfg(unix)]
             pass_fds: vec![],
             merge_stderr: false,
         }
@@ -189,26 +199,27 @@ impl<'a> BasicCommand<'a> {
         cmd.args(&self.args)
             .envs(self.env.iter().map(|(k, v)| (k, v)))
             .stdout(stdio.stdout)
-            .stderr(stderr)
-            .fd_mappings(
-                self.pass_fds
-                    .into_iter()
-                    .map(|file| {
-                        let raw = file.as_raw_file_descriptor();
-                        FdMapping {
-                            // SAFETY: `file` is a valid file descriptor, as it's already an open
-                            // file
-                            parent_fd: unsafe {
-                                std::os::fd::OwnedFd::from_raw_file_descriptor(
-                                    file.into_raw_file_descriptor(),
-                                )
-                            },
-                            child_fd: raw,
-                        }
-                    })
-                    .collect(),
-            )
-            .expect("BUG: fd mapping collision");
+            .stderr(stderr);
+        #[cfg(unix)]
+        cmd.fd_mappings(
+            self.pass_fds
+                .into_iter()
+                .map(|file| {
+                    let raw = file.as_raw_file_descriptor();
+                    FdMapping {
+                        // SAFETY: `file` is a valid file descriptor, as it's already an open
+                        // file
+                        parent_fd: unsafe {
+                            std::os::fd::OwnedFd::from_raw_file_descriptor(
+                                file.into_raw_file_descriptor(),
+                            )
+                        },
+                        child_fd: raw,
+                    }
+                })
+                .collect(),
+        )
+        .expect("BUG: fd mapping collision");
         if let Some(stdin) = stdio.stdin {
             cmd.stdin(stdin);
         }
@@ -269,7 +280,7 @@ impl Stdio {
 pub struct Handle<'a, T>(HandleInner<'a, T>);
 
 impl<'a, T> Handle<'a, T> {
-    pub fn wait(&mut self, data: &mut T) -> io::Result<process::ExitStatus> {
+    pub fn wait(&mut self, data: &mut T) -> io::Result<ExitStatus> {
         match &mut self.0 {
             HandleInner::Command(c) => c.wait(),
             HandleInner::Closure(c) => c.wait(data),
@@ -298,8 +309,16 @@ pub struct CommandHandle {
 }
 
 impl CommandHandle {
-    pub fn wait(&mut self) -> io::Result<process::ExitStatus> {
-        self.inner.wait()
+    pub fn wait(&mut self) -> io::Result<ExitStatus> {
+        let status = self.inner.wait()?;
+        #[cfg(unix)]
+        let code = status
+            .code()
+            .or_else(|| status.signal().map(|s| s + 128))
+            .unwrap_or_default();
+        #[cfg(windows)]
+        let code = status.code().unwrap_or_default();
+        Ok(ExitStatus(code))
     }
 
     pub fn kill(&mut self) -> io::Result<()> {
@@ -316,24 +335,23 @@ pub struct ClosureHandle<'a, T> {
 }
 
 impl<T> ClosureHandle<'_, T> {
-    pub fn wait(&mut self, data: &mut T) -> io::Result<process::ExitStatus> {
+    pub fn wait(&mut self, data: &mut T) -> io::Result<ExitStatus> {
         // If killed, we simply prevent the closure from executing
         if self.killed {
-            return Ok(process::ExitStatus::from_raw(0));
+            return Ok(ExitStatus(0));
         }
         // Avoiding a deadlock! We need `stdio` to be dropped in case it's a pipe end
         let stdio = self
             .stdio
             .take()
             .expect("cannot wait on closure more than once!");
-        #[allow(clippy::unnecessary_cast)]
         let result = (self
             .closure
             .take()
             .expect("cannot wait on closure more than once!"))(
             data, stdio, &self.args, self.env
-        ) as i32;
-        Ok(process::ExitStatus::from_raw(result))
+        );
+        Ok(ExitStatus(result))
     }
 
     pub fn kill(&mut self) -> io::Result<()> {
@@ -348,7 +366,7 @@ pub struct PipeHandle<'a, T> {
 }
 
 impl<T> PipeHandle<'_, T> {
-    pub fn wait(&mut self, data: &mut T) -> io::Result<process::ExitStatus> {
+    pub fn wait(&mut self, data: &mut T) -> io::Result<ExitStatus> {
         let lhs_res = self.lhs.wait(data);
         let rhs_res = self.rhs.wait(data);
         lhs_res?;
