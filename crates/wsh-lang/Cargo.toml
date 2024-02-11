@@ -28,7 +28,6 @@ clap = { version = "4.4.16", features = ["derive", "string"] }
 diffy = "0.3.0"
 atty = "0.2.14"
 path-absolutize = "3.1.1"
-command-fds = "0.3.0"
 
 [target.'cfg(unix)'.dependencies]
 rustix = "0.38.28"
