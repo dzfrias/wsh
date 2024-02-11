@@ -1,7 +1,7 @@
 use std::{
     borrow::Cow,
     env, fmt,
-    fs::File,
+    fs::{self, File},
     io::{self, Write},
     path::{Path, PathBuf},
     rc::Rc,
@@ -24,6 +24,7 @@ impl MemFile {
     /// Open a new in-memory file at the given path.
     pub fn open(mem_fs: MemFs, path: impl AsRef<Path>) -> io::Result<Self> {
         let path = env::current_dir()
+            .and_then(fs::canonicalize)
             .map(|dir| {
                 Path::new(path.as_ref())
                     .absolutize_from(dir)
@@ -33,7 +34,7 @@ impl MemFile {
         let Some(memfs::Entry::File(memfs_file)) = mem_fs.entry(&path) else {
             return Err(io::Error::new(
                 io::ErrorKind::NotFound,
-                "in-memory file not found",
+                format!("in-memory file `{}` not found", path.display()),
             ));
         };
         if cfg!(unix) {
