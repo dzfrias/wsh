@@ -6,4 +6,5 @@ error: unclosed array
 
 1|  i32 [0, 1
  •      ^
+Error: parse error
 

@@ -6,4 +6,5 @@ error: unclosed instrs
 
 1|  instrs {  
  •         ^
+Error: parse error
 

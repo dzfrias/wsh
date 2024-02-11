@@ -8,4 +8,5 @@ error: unknown keyword: `i32.cons`
  •  ^^^^^^^^
 
 help: perhaps you meant: `i32.const`
+Error: parse error
 

@@ -8,4 +8,5 @@ error: unexpected token: `Rbracket`
  •          ^
 
 help: perhaps you meant to start a vector earlier?
+Error: parse error
 

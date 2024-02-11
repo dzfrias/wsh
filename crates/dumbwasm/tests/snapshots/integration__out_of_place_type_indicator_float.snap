@@ -8,4 +8,5 @@ error: unexpected token: `F32`
  •     ^^^
 
 help: only integer type tokens are allowed here!
+Error: parse error
 
