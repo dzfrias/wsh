@@ -45,7 +45,7 @@ impl Error {
 }
 
 impl SourceError for Error {
-    fn fmt_on(&self, source: &Source, writer: impl io::Write) -> io::Result<()> {
+    fn fmt_on(&self, source: &Source, writer: impl io::Write, color: bool) -> io::Result<()> {
         use ariadne::{Color, Label, Report, ReportKind, Source};
 
         Report::build(ReportKind::Error, source.name(), self.offset())
@@ -55,6 +55,7 @@ impl SourceError for Error {
                     .with_message(&label.msg)
                     .with_color(Color::Blue)
             }))
+            .with_config(ariadne::Config::default().with_color(color))
             .finish()
             .write((source.name(), Source::from(source.contents())), writer)
     }

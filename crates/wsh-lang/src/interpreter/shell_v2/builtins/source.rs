@@ -1,4 +1,4 @@
-use std::{ffi::OsString, fs, path::PathBuf};
+use std::{ffi::OsString, fs, io::IsTerminal, path::PathBuf};
 
 use clap::Parser;
 
@@ -77,7 +77,8 @@ where
         std::env::remove_var(var);
     }
     if let Err(err) = result {
-        err.fmt_on(&source, stderr)
+        let is_terminal = stderr.is_terminal();
+        err.fmt_on(&source, stderr, is_terminal)
             .context("problem writing error to stderr")?;
     }
 

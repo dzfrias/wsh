@@ -36,9 +36,9 @@ impl Error {
 }
 
 impl SourceError for Error {
-    fn fmt_on(&self, source: &Source, mut writer: impl io::Write) -> io::Result<()> {
+    fn fmt_on(&self, source: &Source, mut writer: impl io::Write, color: bool) -> io::Result<()> {
         if let ErrorKind::ParseError(parse_error) = self.kind() {
-            return parse_error.fmt_on(source, writer);
+            return parse_error.fmt_on(source, writer, color);
         }
         let lines = source.contents().lines().collect_vec();
         let linenr = {
@@ -56,19 +56,27 @@ impl SourceError for Error {
                 })
                 .expect("offset should be in source")
         };
-        writeln!(
-            writer,
-            "{}: {}",
-            Color::Red.paint("wsh error").bold(),
-            Color::White.paint(self.kind()).bold(),
-        )?;
-        if lines.len() > 1 {
+        if color {
             writeln!(
                 writer,
-                "{} {}",
-                Color::Blue.paint(format_args!("{}|", linenr + 1)).bold(),
-                lines[linenr],
+                "{}: {}",
+                Color::Red.paint("wsh error").bold(),
+                Color::White.paint(self.kind()).bold(),
             )?;
+        } else {
+            writeln!(writer, "wsh error: {}", self.kind())?;
+        }
+        if lines.len() > 1 {
+            if color {
+                writeln!(
+                    writer,
+                    "{} {}",
+                    Color::Blue.paint(format_args!("{}|", linenr + 1)).bold(),
+                    lines[linenr],
+                )?;
+            } else {
+                writeln!(writer, "{}| {}", linenr + 1, lines[linenr])?;
+            }
         }
         Ok(())
     }

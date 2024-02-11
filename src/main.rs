@@ -4,7 +4,8 @@ mod file_suggest;
 use std::{
     borrow::Cow,
     cell::Cell,
-    fs, io,
+    fs,
+    io::{self, IsTerminal},
     path::{Path, PathBuf},
 };
 
@@ -61,7 +62,7 @@ fn run_file(path: impl AsRef<Path>, shell: &mut Shell) -> Result<()> {
     let name = path.file_stem().unwrap().to_string_lossy();
     let source = Source::new(&name, contents);
     if let Err(err) = shell.run(&source) {
-        err.fmt_on(&source, io::stderr())
+        err.fmt_on(&source, io::stderr(), io::stderr().is_terminal())
             .context("problem writing error to stderr")?;
     }
     Ok(())
@@ -78,6 +79,7 @@ fn run_repl() -> Result<()> {
         }
     }
 
+    let is_terminal = io::stderr().is_terminal();
     let prompt = WshPrompt {
         cwd: current_dir_string()
             .context("invalid current directory!")?
@@ -89,7 +91,7 @@ fn run_repl() -> Result<()> {
             Ok(Signal::Success(input)) => {
                 let source = Source::new("<prompt>", input);
                 if let Err(err) = shell.run(&source) {
-                    err.fmt_on(&source, io::stderr())
+                    err.fmt_on(&source, io::stderr(), is_terminal)
                         .context("problem writing error to stderr")?;
                 }
             }

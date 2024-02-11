@@ -139,14 +139,14 @@ shell_test!(
 shell_test!(
     fail_fast_on_errs,
     "__UNDEFINED\necho .?",
-    @stderr "wsh: command not found"
+    @stderr "wsh error: command not found\n1| __UNDEFINED"
 );
 // Should fail as a result of `__should_not_be_defined` not being a valid command. Note that this
 // CAN possibly fail if the user has a command named `__should_not_be_defined` in their PATH.
 shell_test!(
     recursive_alias,
     "alias __should_not_be_defined = __should_not_be_defined\n__should_not_be_defined",
-    @stderr "wsh: command not found"
+    @stderr "wsh error: command not found\n2| __should_not_be_defined"
 );
 // shell_test!(simple_functions, "def f do echo hi end\nf", "hi");
 // shell_test!(
@@ -176,7 +176,7 @@ shell_test!(
     wasm_unload,
     "load .($WASM_PATH + \"/fib.wasm\")\nunload\nfib 10",
     @stdout "unloaded 1 modules",
-    @stderr "wsh: command not found"
+    @stderr "wsh error: command not found\n3| fib 10"
 );
 shell_test!(
     wasm_piping,
@@ -186,7 +186,7 @@ shell_test!(
 shell_test!(
     wasm_bad_args,
     "load .($WASM_PATH + \"/fib.wasm\")\nfib hello",
-    @stderr "wsh: bad Wasm argument 0: cannot pass string to Wasm"
+    @stderr "wsh error: bad Wasm argument 0: cannot pass string to Wasm\n2| fib hello"
 );
 shell_test!(
     source_wasi,

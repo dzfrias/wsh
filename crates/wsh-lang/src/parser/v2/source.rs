@@ -25,5 +25,5 @@ impl<'a> Source<'a> {
 }
 
 pub trait SourceError {
-    fn fmt_on(&self, source: &Source, writer: impl io::Write) -> io::Result<()>;
+    fn fmt_on(&self, source: &Source, writer: impl io::Write, color: bool) -> io::Result<()>;
 }
