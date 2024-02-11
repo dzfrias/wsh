@@ -78,6 +78,7 @@ impl MemFile {
     }
 
     /// Return the path of the file.
+    #[allow(dead_code)]
     pub fn path(&self) -> &Path {
         &self.path
     }
@@ -85,11 +86,12 @@ impl MemFile {
 
 impl fmt::Display for MemFile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if cfg!(unix) {
+        #[cfg(unix)]
+        {
             let fd = self.inner.as_raw_file_descriptor();
             write!(f, "/dev/fd/{fd}")
-        } else {
-            write!(f, "{}", self.path().display())
         }
+        #[cfg(windows)]
+        write!(f, "{}", self.path().display())
     }
 }
