@@ -26,8 +26,9 @@ use crate::{
     },
     v2::{
         ast::{
-            self, Alias, Assignment, Ast, Binop, BinopKind, Boolean, Capture, EnvVarHandle, Export,
-            HomeDir, Node, NodeKind, Pipeline, PipelineEndKind, Unop, UnopKind,
+            self, Alias, Assignment, Ast, Binop, BinopKind, Boolean, Capture, DataArray,
+            EnvVarHandle, Export, HomeDir, If, Node, NodeHandle, NodeKind, Pipeline,
+            PipelineEndKind, Unop, UnopKind,
         },
         Parser, Source,
     },
@@ -97,8 +98,26 @@ impl Shell {
             NodeKind::Export(export) => self.eval_export(ast, export),
             NodeKind::Assignment(assignment) => self.eval_assignment(ast, assignment),
             NodeKind::Alias(alias) => self.eval_alias(ast, alias),
+            NodeKind::If(if_) => self.eval_if(ast, if_),
             s => todo!("stmt for {s:?}"),
         }
+    }
+
+    fn eval_if(&mut self, ast: &Ast, if_: &If) -> Result<()> {
+        if self.eval_expr(ast, if_.condition.deref(ast))?.is_truthy() {
+            self.eval_block(ast, if_.body.deref(ast))
+        } else if let Some(else_) = if_.else_body.as_ref() {
+            self.eval_block(ast, else_.deref(ast))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn eval_block(&mut self, ast: &Ast, body: DataArray<NodeHandle>) -> Result<()> {
+        for stmt in body.iter(ast) {
+            self.eval_stmt(ast, stmt.deref(ast))?;
+        }
+        Ok(())
     }
 
     fn eval_pipeline(&mut self, ast: &Ast, pipeline: &Pipeline) -> Result<()> {

@@ -3,7 +3,7 @@ source: crates/wsh-lang/src/parser/v2/mod.rs
 expression: ast
 ---
 ROOT
-  WHILE
+  IF
     BINOP `==`
       IDENT `x`
       NUMBER `3`

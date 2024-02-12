@@ -286,6 +286,7 @@ impl<'src> Parser<'src> {
         let cond_end = self.current.end();
         self.expect_next(TokenKind::Then, "expected `then` after if condition")
             .attach(Label::new(cond_start..cond_end, "after this expression"))?;
+        self.mode = LexMode::Normal;
         self.next_token();
         let body = self.parse_block(ast, true)?;
         let (kind, p2) = if self.current.kind() == TokenKind::Else {
@@ -322,6 +323,7 @@ impl<'src> Parser<'src> {
         let cond_end = self.current.end();
         self.expect_next(TokenKind::Do, "expected `do` after while condition")
             .attach(Label::new(cond_start..cond_end, "after this expression"))?;
+        self.mode = LexMode::Normal;
         self.next_token();
         self.enter_scope(Scope::Loop);
         let body = self.parse_block(ast, false)?;
@@ -850,6 +852,7 @@ mod tests {
     parser_test!(home_dir, "echo ~/code");
     parser_test!(export, "export HELLO = 1 + 1\necho hi");
     parser_test!(if_, "if x == 3 then echo hi\necho hi end");
+    parser_test!(if_with_newlines, "if x == 3 then\necho hi\nend");
     parser_test!(if_else, "if x == 3 then echo hi else echo hi end");
     parser_test!(while_, "while x == 3 do echo hi end");
     parser_test!(captures, "echo `echo hi | wc -l`");

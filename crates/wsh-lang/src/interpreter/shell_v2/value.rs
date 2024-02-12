@@ -36,6 +36,15 @@ impl Value {
         }
     }
 
+    pub fn is_truthy(&self) -> bool {
+        match self {
+            Value::Number(n) => *n != 0.0,
+            Value::String(s) => !s.is_empty(),
+            Value::Boolean(b) => *b,
+            Value::MemFile(_) => false,
+        }
+    }
+
     pub fn add(self, other: Self) -> Option<Self> {
         let a = self.coerce_number();
         let b = other.coerce_number();

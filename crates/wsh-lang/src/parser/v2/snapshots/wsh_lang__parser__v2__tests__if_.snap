@@ -10,10 +10,10 @@ ROOT
     BODY
       PIPELINE
         COMMAND
-          IDENT `echo`
-          IDENT `hi`
+          STRING `echo`
+          STRING `hi`
       PIPELINE
         COMMAND
-          IDENT `echo`
-          IDENT `hi`
+          STRING `echo`
+          STRING `hi`
 
