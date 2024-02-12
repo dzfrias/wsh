@@ -11,7 +11,9 @@ use std::{fs::File, io, mem, process};
 
 #[cfg(unix)]
 use command_fds::{CommandFdExt, FdMapping};
-use filedescriptor::{AsRawFileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor};
+#[cfg(unix)]
+use filedescriptor::AsRawFileDescriptor;
+use filedescriptor::{FromRawFileDescriptor, IntoRawFileDescriptor};
 
 use crate::shell_v2::memfile::MemFile;
 

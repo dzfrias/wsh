@@ -7,7 +7,9 @@ use std::{
     rc::Rc,
 };
 
-use filedescriptor::{AsRawFileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor};
+#[cfg(unix)]
+use filedescriptor::AsRawFileDescriptor;
+use filedescriptor::{FromRawFileDescriptor, IntoRawFileDescriptor};
 use path_absolutize::Absolutize;
 use rand::{distributions::Alphanumeric, Rng};
 
@@ -71,6 +73,7 @@ impl MemFile {
     /// reference exists to this `MemFile`.
     ///
     /// On Windows, the caller is responsible for removing the temporary file stored at `path`.
+    #[allow(dead_code)]
     pub fn into_inner(mut self) -> io::Result<File> {
         let inner = self.inner.take().unwrap();
         match Rc::try_unwrap(inner) {
