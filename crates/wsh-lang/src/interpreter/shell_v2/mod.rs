@@ -5,8 +5,6 @@ mod memfile;
 mod pipeline;
 mod value;
 
-#[cfg(windows)]
-use std::path::PathBuf;
 use std::{
     borrow::Cow,
     fs::{self, File},
@@ -48,11 +46,6 @@ pub struct Shell {
     /// be read from, the provided file will **never** be read from, meaning pipe ends may be used.
     global_stdout: File,
     global_stderr: File,
-
-    // TODO: remove this by making the pipeline take ownership of memfiles, removes
-    // platform-specific code
-    #[cfg(windows)]
-    to_remove: Vec<PathBuf>,
 }
 
 impl Shell {
@@ -70,9 +63,6 @@ impl Shell {
             global_stderr: unsafe {
                 File::from_raw_file_descriptor(io::stderr().as_raw_file_descriptor())
             },
-
-            #[cfg(windows)]
-            to_remove: vec![],
         }
     }
 
@@ -169,10 +159,6 @@ impl Shell {
             .map_err(ErrorKind::CommandFailed)
             .with_position(pos)?
             .code();
-        #[cfg(windows)]
-        for to_remove in std::mem::take(&mut self.to_remove) {
-            let _ = fs::remove_file(to_remove);
-        }
         Ok(())
     }
 
@@ -380,8 +366,7 @@ impl Shell {
             return Ok(Either::Left(self.make_wasm_func(func, args, env)?));
         }
 
-        #[cfg(unix)]
-        let mut fd_mappings = vec![];
+        let mut memfiles = vec![];
         // This will be a vector of strings for the arguments of the command
         let args = exprs
             .iter(ast)
@@ -396,13 +381,7 @@ impl Shell {
                 // https://en.wikipedia.org/wiki/Process_substitution#Mechanism.
                 if let Value::MemFile(file) = val {
                     let s = file.to_string();
-                    #[cfg(unix)]
-                    fd_mappings.push(
-                        file.into_inner()
-                            .expect("there should be no outstanding references"),
-                    );
-                    #[cfg(windows)]
-                    self.to_remove.push(file.into_path());
+                    memfiles.push(file);
                     return Ok(s);
                 }
                 Ok(val.to_string())
@@ -454,9 +433,8 @@ impl Shell {
         let cmd = pipeline::BasicCommand::new(&name)
             .env(env)
             .args(args)
+            .map_memfiles(memfiles)
             .merge_stderr(cmd.merge_stderr);
-        #[cfg(unix)]
-        let cmd = cmd.pass_fds(fd_mappings);
         Ok(Either::Left(pipeline::Command::Basic(cmd)))
     }
 

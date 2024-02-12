@@ -14,9 +14,10 @@ use rand::{distributions::Alphanumeric, Rng};
 use crate::interpreter::memfs::{self, MemFs};
 
 /// A file that exists in memory.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct MemFile {
-    inner: Rc<File>,
+    // This is an Option so we can take the inner file without running the destructor.
+    inner: Option<Rc<File>>,
     path: PathBuf,
 }
 
@@ -43,7 +44,7 @@ impl MemFile {
             // SAFETY: `reader` is a valid file descriptor open for reading
             Ok(Self {
                 inner: unsafe {
-                    File::from_raw_file_descriptor(reader.into_raw_file_descriptor()).into()
+                    Some(File::from_raw_file_descriptor(reader.into_raw_file_descriptor()).into())
                 },
                 path: path.into_owned(),
             })
@@ -60,22 +61,22 @@ impl MemFile {
             let mut file = File::create(&path)?;
             file.write_all(memfs_file.borrow().data())?;
             Ok(Self {
-                inner: Rc::new(file),
+                inner: Some(Rc::new(file)),
                 path,
             })
         }
     }
 
-    /// Return the inner `File` of the in-memory file, or [`None`] if there is another reference to
-    /// it.
-    pub fn into_inner(self) -> Option<File> {
-        Rc::try_unwrap(self.inner).ok()
-    }
-
-    /// Return the owned path to the file.
-    #[allow(dead_code)]
-    pub fn into_path(self) -> PathBuf {
-        self.path
+    /// Return the inner `File` of the in-memory file, or a duplicated version if an outstanding
+    /// reference exists to this `MemFile`.
+    ///
+    /// On Windows, the caller is responsible for removing the temporary file stored at `path`.
+    pub fn into_inner(mut self) -> io::Result<File> {
+        let inner = self.inner.take().unwrap();
+        match Rc::try_unwrap(inner) {
+            Ok(file) => Ok(file),
+            Err(r) => r.try_clone(),
+        }
     }
 
     /// Return the path of the file.
@@ -89,10 +90,25 @@ impl fmt::Display for MemFile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         #[cfg(unix)]
         {
-            let fd = self.inner.as_raw_file_descriptor();
+            let fd = self.inner.as_ref().unwrap().as_raw_file_descriptor();
             write!(f, "/dev/fd/{fd}")
         }
         #[cfg(windows)]
         write!(f, "{}", self.path().display())
+    }
+}
+
+#[cfg(windows)]
+impl Drop for MemFile {
+    fn drop(&mut self) {
+        let Some(ref inner) = self.inner else {
+            // `into_inner` was called, do not try to remove file
+            return;
+        };
+        if Rc::strong_count(inner) > 1 {
+            // There are other things that point to this file, do not remove the file.
+            return;
+        }
+        let _ = fs::remove_file(self.path());
     }
 }

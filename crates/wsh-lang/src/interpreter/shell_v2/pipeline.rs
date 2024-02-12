@@ -13,6 +13,8 @@ use std::{fs::File, io, mem, process};
 use command_fds::{CommandFdExt, FdMapping};
 use filedescriptor::{AsRawFileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor};
 
+use crate::shell_v2::memfile::MemFile;
+
 /// A command pipeline generic over `T`.
 ///
 /// Since this pipeline is meant to be used with closures (for support for built-ins and other
@@ -66,8 +68,7 @@ impl<'a, T> Pipeline<'a, T> {
                 merge_stderr: false,
                 env: &[],
                 args: vec![],
-                #[cfg(unix)]
-                pass_fds: vec![],
+                memfiles: vec![],
             }),
         )
     }
@@ -147,8 +148,7 @@ pub struct BasicCommand<'a> {
     cmd: String,
     args: Vec<String>,
     env: &'a [(String, String)],
-    #[cfg(unix)]
-    pass_fds: Vec<File>,
+    memfiles: Vec<MemFile>,
     merge_stderr: bool,
 }
 
@@ -158,8 +158,7 @@ impl<'a> BasicCommand<'a> {
             cmd: cmd.to_owned(),
             args: vec![],
             env: &[],
-            #[cfg(unix)]
-            pass_fds: vec![],
+            memfiles: vec![],
             merge_stderr: false,
         }
     }
@@ -178,9 +177,8 @@ impl<'a> BasicCommand<'a> {
         self
     }
 
-    #[cfg(unix)]
-    pub fn pass_fds(mut self, fds: Vec<File>) -> Self {
-        self.pass_fds = fds;
+    pub fn map_memfiles(mut self, memfiles: Vec<MemFile>) -> Self {
+        self.memfiles = memfiles;
         self
     }
 
@@ -203,28 +201,33 @@ impl<'a> BasicCommand<'a> {
             .stderr(stderr);
         #[cfg(unix)]
         cmd.fd_mappings(
-            self.pass_fds
+            self.memfiles
                 .into_iter()
-                .map(|file| {
-                    let raw = file.as_raw_file_descriptor();
-                    FdMapping {
+                .map(|file| -> io::Result<FdMapping> {
+                    let inner = file.into_inner()?;
+                    let raw = inner.as_raw_file_descriptor();
+                    Ok(FdMapping {
                         // SAFETY: `file` is a valid file descriptor, as it's already an open
                         // file
                         parent_fd: unsafe {
                             std::os::fd::OwnedFd::from_raw_file_descriptor(
-                                file.into_raw_file_descriptor(),
+                                inner.into_raw_file_descriptor(),
                             )
                         },
                         child_fd: raw,
-                    }
+                    })
                 })
-                .collect(),
+                .collect::<io::Result<Vec<_>>>()?,
         )
         .expect("BUG: fd mapping collision");
         if let Some(stdin) = stdio.stdin {
             cmd.stdin(stdin);
         }
-        cmd.spawn().map(|child| CommandHandle { inner: child })
+        cmd.spawn().map(|child| CommandHandle {
+            inner: child,
+            #[cfg(windows)]
+            memfiles: self.memfiles,
+        })
     }
 }
 
@@ -307,6 +310,11 @@ enum HandleInner<'a, T> {
 #[derive(Debug)]
 pub struct CommandHandle {
     inner: process::Child,
+    // We hold on to the `MemFile`s while the child is running so the volatile temp files are
+    // deleted on drop
+    #[allow(dead_code)]
+    #[cfg(windows)]
+    memfiles: Vec<MemFile>,
 }
 
 impl CommandHandle {
