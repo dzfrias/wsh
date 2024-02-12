@@ -47,7 +47,7 @@ fn main() -> Result<()> {
 
     let args = Cli::parse();
     if let Some(input) = args.input {
-        let mut shell = Shell::new();
+        let mut shell = Shell::new().context("error initializing shell")?;
         run_file(input, &mut shell)?;
         return Ok(());
     }
@@ -70,7 +70,7 @@ fn run_file(path: impl AsRef<Path>, shell: &mut Shell) -> Result<()> {
 
 fn run_repl() -> Result<()> {
     println!("Welcome to wsh, the WebAssembly shell!\n");
-    let mut shell = Shell::new();
+    let mut shell = Shell::new().context("error initializing shell")?;
     let home_dir = dirs::home_dir();
     let mut line_editor = line_editor(home_dir.as_ref().map(|home| home.join(".wsi_history")))?;
     if let Some(rc_file) = home_dir.as_ref().map(|home| home.join(".wsirc")) {

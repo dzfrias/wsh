@@ -49,21 +49,22 @@ pub struct Shell {
 }
 
 impl Shell {
-    /// Create a new `Shell`.
-    pub fn new() -> Self {
-        Shell {
+    /// Create a new `Shell`. This will return an error if there was a problem during
+    /// initialization (i.e. stdout and stderr could not be dup'd).
+    pub fn new() -> io::Result<Self> {
+        let clone = |fd| -> io::Result<File> {
+            let file = unsafe { File::from_raw_file_descriptor(fd) };
+            let clone = file.try_clone()?;
+            std::mem::forget(file);
+            Ok(clone)
+        };
+        Ok(Shell {
             current_pos: 0,
             last_status: 0,
             env: Env::new(),
-            // SAFETY: io::stdout() is a valid raw file descriptor.
-            global_stdout: unsafe {
-                File::from_raw_file_descriptor(io::stdout().as_raw_file_descriptor())
-            },
-            // SAFETY: io::stderr() is a valid raw file descriptor.
-            global_stderr: unsafe {
-                File::from_raw_file_descriptor(io::stderr().as_raw_file_descriptor())
-            },
-        }
+            global_stdout: clone(io::stdout().as_raw_file_descriptor())?,
+            global_stderr: clone(io::stderr().as_raw_file_descriptor())?,
+        })
     }
 
     /// Run the shell with the given source code. Note that this may be used in a REPL or file
@@ -524,11 +525,5 @@ impl Shell {
 
     fn error(&self, kind: ErrorKind) -> Error {
         Error::new(kind, self.current_pos)
-    }
-}
-
-impl Default for Shell {
-    fn default() -> Self {
-        Self::new()
     }
 }

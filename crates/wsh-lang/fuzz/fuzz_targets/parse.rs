@@ -1,9 +1,9 @@
 #![no_main]
 
 use libfuzzer_sys::fuzz_target;
-use wsh_lang::{Lexer, Parser};
+use wsh_lang::v2::{Parser, Source};
 
 fuzz_target!(|data: &str| {
-    let buf = Lexer::new(data).lex();
-    let _ = Parser::new(&buf).parse();
+    let source = Source::new("<fuzz>", data.to_string());
+    let _ = Parser::new(&source).parse();
 });

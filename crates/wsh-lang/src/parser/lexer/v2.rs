@@ -191,6 +191,7 @@ pub struct Lexer<'src> {
 
     current: char,
     pos: usize,
+    nested_parens: usize,
     insert_semi: bool,
 }
 
@@ -202,6 +203,7 @@ impl<'src> Lexer<'src> {
             chars: src.chars(),
             current: '\0',
             pos: 0,
+            nested_parens: 0,
             peek_buf: VecDeque::new(),
             insert_semi: false,
         };
@@ -269,8 +271,19 @@ impl<'src> Lexer<'src> {
             '/' if mode.is_strict() => TokenKind::Slash,
             ':' if mode.is_strict() => TokenKind::Colon,
             '=' if mode.is_strict() => TokenKind::Assign,
-            '(' if mode.is_strict() => TokenKind::LParen,
-            ')' if mode.is_strict() => TokenKind::RParen,
+            '(' if mode.is_strict() => {
+                self.nested_parens += 1;
+                // Too many nested parens will cause a stack overflow in the parser, and the lexer can prevent that
+                if self.nested_parens > 32 {
+                    TokenKind::Invalid
+                } else {
+                    TokenKind::LParen
+                }
+            }
+            ')' if mode.is_strict() => {
+                self.nested_parens = self.nested_parens.saturating_sub(1);
+                TokenKind::RParen
+            }
             i if i.is_ascii_digit() && mode.is_strict() => {
                 let n = self.consume_while(|c| c.is_ascii_alphanumeric() || c == '.');
                 consume_next = false;
@@ -312,6 +325,11 @@ impl<'src> Lexer<'src> {
             '>' => TokenKind::Write,
             '`' => TokenKind::Backtick,
             ';' => TokenKind::Semicolon,
+            // This is a special edge case. If this was not here, we would go to the default case
+            // (`consume_unquoted_str`), which would see the '%' and not move any further, causing
+            // the lexer to get stuck. This makes sure that a single (unaccompanied) '%' will make
+            // progress in the lexer.
+            '%' => TokenKind::Invalid,
             '~' if mode.is_normal() => TokenKind::Tilde,
             '@' if mode.is_normal() && !matches!(self.peek(), ' ' | '\t' | '\n' | '\0') => {
                 TokenKind::At
@@ -447,9 +465,7 @@ impl<'src> Lexer<'src> {
     }
 
     fn consume_unquoted_str(&mut self) -> &'src str {
-        self.consume_while(|c| {
-            !c.is_whitespace() && !matches!(c, ';' | '|' | '%' | '>' | '`' | '$')
-        })
+        self.consume_while(|c| !matches!(c, ';' | '|' | '%' | '>' | '`' | '$' | ' ' | '\t' | '\n'))
     }
 
     fn consume_quoted_str(&mut self) -> (&'src str, bool) {
@@ -471,6 +487,7 @@ impl<'src> Lexer<'src> {
     /// Returns `true` if the current position is viable for semicolon insertion. See the comment
     /// in the `next_token` method for the precise rules.
     fn should_semicolon(&mut self, mode: LexMode) -> bool {
+        // TODO: memchr optimizations here?
         let mut current = self.current;
         while is_horizontal_ws(current) {
             current = self.chars.next().unwrap_or('\0');

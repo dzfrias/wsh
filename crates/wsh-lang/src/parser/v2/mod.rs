@@ -531,7 +531,7 @@ impl<'src> Parser<'src> {
     }
 
     fn parse_prefix(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
-        debug!("began parsing infix expr");
+        debug!("began parsing prefix expr");
         let unop = match self.current.kind() {
             TokenKind::Minus => NodeInfoKind::Neg,
             TokenKind::Bang => NodeInfoKind::Bang,
