@@ -1,0 +1,13 @@
+---
+stdout: |
+  1
+  unloaded 1 modules
+stderr: |
+  wsh error: command not found
+  5| fib 10
+---
+
+load $WASM_PATH/fib.wasm
+fib 1
+unload
+fib 10

@@ -1,0 +1,9 @@
+---
+stdout: |
+  Hello, world!
+  2
+---
+
+source $WASM_PATH/hello_wasi.wasm
+# Piping
+source $WASM_PATH/hello_wasi.wasm | wc -w | xargs

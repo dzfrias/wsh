@@ -1,0 +1,12 @@
+---
+stdout: |
+  Created entries:
+      + hello/
+  0
+---
+
+allow --virtual
+source $WASM_PATH/new_dir.wasm
+memfs
+mkdir hello
+memfs | wc -l | xargs

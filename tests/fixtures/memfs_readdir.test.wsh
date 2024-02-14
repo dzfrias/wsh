@@ -1,0 +1,11 @@
+---
+stdout: |
+  ./hi.txt
+  ./memfs_readdir.test.wsh
+  ./nice.txt
+---
+
+allow --virtual
+touch nice.txt
+touch hi.txt
+source $WASM_PATH/read_dir.wasm

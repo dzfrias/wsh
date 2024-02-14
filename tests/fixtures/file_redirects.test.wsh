@@ -1,0 +1,10 @@
+---
+stdout: |
+  hi
+  hello world
+---
+
+echo hi > file.txt
+cat file.txt
+echo hello world > file.txt
+cat file.txt

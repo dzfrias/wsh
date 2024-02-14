@@ -1,0 +1,8 @@
+---
+stderr: |
+  wsh error: command not found
+  2| __UNDEFINED
+---
+
+__UNDEFINED
+echo .?

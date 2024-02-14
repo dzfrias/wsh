@@ -1,0 +1,6 @@
+---
+stderr: |
+  source: error running wasm file: function not found "_start"
+---
+
+source $WASM_PATH/fib.wasm

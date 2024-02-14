@@ -53,6 +53,10 @@ wsh-parser = { path = "crates/wsh-parser" }
 wsh-engine = { path = "crates/wsh-engine" }
 wast = "67.0.1"
 tempdir = "0.3.7"
+serde = { version = "1.0.196", features = ["derive"] }
+serde_yaml = "0.9.31"
+predicates = "3.1.0"
+dir-test = { path = "../dir-test/dir-test" }
 
 [workspace.dependencies]
 anyhow = "1.0.75"

@@ -1,0 +1,6 @@
+---
+stdout: ""
+---
+
+# Could fail if the user has $FOO_NO_ASSIGN set in their environment.
+echo $FOO_NO_ASSIGN

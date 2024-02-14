@@ -1,0 +1,17 @@
+---
+stdout: |
+  hi
+  hello world these are some arguments
+  2
+---
+
+# Basic aliases
+alias foo = echo hi
+foo
+
+# Arguments
+alias bar = echo
+bar hello world these are some arguments
+
+# Piping
+bar piping works | wc -w | xargs

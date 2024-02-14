@@ -1,0 +1,9 @@
+---
+stderr: |
+  wsh error: command not found
+  4| __should_not_be_defined
+---
+
+# Could fail if __should_not_be_defined is actually defined in the environment
+alias __should_not_be_defined = __should_not_be_defined
+__should_not_be_defined

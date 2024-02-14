@@ -1,0 +1,6 @@
+---
+stdout: foo
+---
+
+echo "echo foo" > file.wsi
+source file.wsi

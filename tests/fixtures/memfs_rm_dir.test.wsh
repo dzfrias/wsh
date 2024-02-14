@@ -1,0 +1,12 @@
+---
+stdout: |
+  Removed entries:
+      - hello/
+  2
+---
+
+mkdir hello
+allow --virtual
+source $WASM_PATH/rm_dir.wasm
+memfs
+ls | wc -l | xargs

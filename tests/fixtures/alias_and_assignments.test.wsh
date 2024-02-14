@@ -1,0 +1,7 @@
+---
+stdout: hi
+---
+
+alias foo = echo hi
+.x = `foo`
+echo .x

@@ -1,0 +1,7 @@
+---
+stdout: nice
+---
+
+export HELLO = "nice"
+allow --env HELLO
+source $WASM_PATH/env.wasm

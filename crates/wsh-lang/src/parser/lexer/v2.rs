@@ -398,6 +398,7 @@ impl<'src> Lexer<'src> {
                 | TokenKind::BoolTrue
                 | TokenKind::String(_)
                 | TokenKind::Ident(_)
+                | TokenKind::EnvVar(_)
                 | TokenKind::Tilde
                 | TokenKind::QuestionMark
                 | TokenKind::Number(_)

@@ -1,0 +1,10 @@
+---
+stdout: |
+  55
+  lines: 1
+---
+
+load $WASM_PATH/fib.wasm
+fib 10
+# Piping
+fib 9 | wc -l | xargs echo lines:

@@ -1,0 +1,11 @@
+---
+stdout: |
+  2
+  1
+---
+
+allow .
+echo stuff > hello.txt
+ls | wc -l | xargs
+source $WASM_PATH/rm.wasm
+ls | wc -l | xargs

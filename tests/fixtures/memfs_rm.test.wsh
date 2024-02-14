@@ -1,0 +1,12 @@
+---
+stdout: |
+  Removed entries:
+      - hello.txt
+  2
+---
+
+echo stuff > hello.txt
+allow --virtual
+source $WASM_PATH/rm.wasm
+memfs
+ls | wc -l | xargs

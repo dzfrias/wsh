@@ -1,0 +1,11 @@
+---
+stdout: |
+  unloaded 0 modules
+  Hello, world!
+  unloaded 0 modules
+---
+
+unload
+source $WASM_PATH/hello_wasi.wasm
+unload
+load $WASM_PATH/hello_wasi.wasm

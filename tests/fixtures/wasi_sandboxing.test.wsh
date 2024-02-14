@@ -1,0 +1,9 @@
+---
+stderr: |
+  thread 'main' panicked at src/main.rs:2:48:
+  called `Result::unwrap()` on an `Err` value: Custom { kind: Uncategorized, error: "failed to find a pre-opened file descriptor through which \"hello.txt\" could be opened" }
+  note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+  source: error running wasm file: trap: unreachable encountered: unreachable encountered
+---
+
+source $WASM_PATH/new_file.wasm

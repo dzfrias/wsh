@@ -1,0 +1,13 @@
+---
+stdout: |
+  1
+  0
+  0
+---
+
+false
+echo .?
+true
+echo .?
+# TODO: this should yield a 1
+false | echo .?

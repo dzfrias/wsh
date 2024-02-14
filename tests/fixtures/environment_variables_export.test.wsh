@@ -1,0 +1,6 @@
+---
+stdout: bar
+---
+
+export FOO = "bar"
+echo $FOO

@@ -1,0 +1,10 @@
+---
+stdout: |
+  hello world
+  nice
+---
+
+echo hello world
+touch .(1 + 1)
+echo nice > 2
+cat 2

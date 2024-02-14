@@ -1,0 +1,13 @@
+---
+stdout: |
+  NOT HERE
+  nice
+  NOT HERE
+---
+
+source $WASM_PATH/env.wasm
+$HELLO=nice source $WASM_PATH/env.wasm
+
+# Cannot access from parent
+export HELLO = "nice"
+source $WASM_PATH/env.wasm

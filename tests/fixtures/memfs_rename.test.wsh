@@ -1,0 +1,13 @@
+---
+stdout: |
+  Created entries:
+      + nice.txt
+  
+  Removed entries:
+      - hello.txt
+---
+
+allow --virtual
+touch hello.txt
+source $WASM_PATH/rename.wasm
+memfs

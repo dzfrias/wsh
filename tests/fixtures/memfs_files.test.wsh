@@ -1,0 +1,19 @@
+---
+stdout: |
+  Created entries:
+      + hello.txt
+  1
+  Modified entries:
+      ~ hello.txt
+  0
+---
+
+allow --virtual
+source $WASM_PATH/new_file.wasm
+memfs
+ls | wc -l | xargs
+echo stuff > hello.txt
+memfs
+rm hello.txt
+source $WASM_PATH/rm.wasm
+memfs | wc -l | xargs

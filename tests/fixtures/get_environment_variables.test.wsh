@@ -1,0 +1,8 @@
+---
+stdout: |
+  test
+  test/nice
+---
+
+echo $WSH_ENV
+echo $WSH_ENV/nice

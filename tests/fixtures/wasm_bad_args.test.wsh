@@ -1,0 +1,8 @@
+---
+stderr: |
+  wsh error: bad Wasm argument 0: cannot pass string to Wasm
+  3| fib hello
+---
+
+load $WASM_PATH/fib.wasm
+fib hello

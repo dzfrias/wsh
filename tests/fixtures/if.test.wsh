@@ -1,0 +1,41 @@
+---
+stdout: |
+  hello
+  nice
+  good!
+  conditions
+  empty string
+  non-empty string
+---
+
+if true then
+  echo hello
+end
+
+if false then
+  echo hello
+else
+  echo nice
+end
+
+if 0 then
+  echo bad!
+end
+if 103.10 then
+  echo good!
+end
+
+if 40 > 2 then
+  echo conditions
+end
+
+.x = ""
+if x then
+  echo bad!
+else
+  echo empty string
+end
+.x = "stuff"
+if x then
+  echo non-empty string
+end

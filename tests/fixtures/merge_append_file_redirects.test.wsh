@@ -1,0 +1,10 @@
+---
+stdout: |
+  hello
+  hi
+disable_windows: true
+---
+
+_error hello %>> merge_t.txt
+_error hi %>> merge_t.txt
+cat merge_t.txt
