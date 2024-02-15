@@ -1,10 +1,10 @@
 ---
 stdout: |
   2
-  6
-  6
+  bytes: 16
+  16
 ---
 
 echo "hello world" | wc -w | xargs
-echo "some stuff here" | cut -w -f2 | wc -c | tee out.txt | xargs
-cat out.txt | xargs
+echo "some stuff here" | wc -c | xargs | tee out.txt | xargs echo bytes: 
+cat out.txt
