@@ -810,6 +810,8 @@ dependencies = [
 [[package]]
 name = "dir-test"
 version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "786d8143e44a15668bec3989643621c8cdcbbc53387dec04c2c0801c0d07c2db"
 dependencies = [
  "dir-test-macros",
 ]
@@ -817,6 +819,8 @@ dependencies = [
 [[package]]
 name = "dir-test-macros"
 version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "07ff4ea493e7938a68a1b71386e0328b96d4f2a17bd4dad7706a7493eb03fd27"
 dependencies = [
  "glob",
  "proc-macro2",
