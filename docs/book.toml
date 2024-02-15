@@ -1,6 +1,10 @@
 [book]
+title = "wsh Documentation"
 authors = ["Diego Frias <styx5242@gmail.com>"]
 language = "en"
 multilingual = false
 src = "src"
-title = "wsh Documentation"
+
+[output.html]
+git-repository-url = "https://github.com/dzfrias/wsh/tree/main/docs"
+edit-url-template = "https://github.com/dzfrias/wsh/tree/main/docs/{path}"

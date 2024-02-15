@@ -1,8 +1,9 @@
 # Installing
 
-Since this project is still in infancy, the best way to install `wsh` is through
-Rust's package manager, [`cargo`](https://doc.rust-lang.org/cargo/). In the
-future, more package managers, along with pre-built binaries, will be supported.
+Since this project is still in infancy (see [Project Status](../status.md)), the
+best way to install `wsh` is through Rust's package manager,
+[`cargo`](https://doc.rust-lang.org/cargo/). In the future, more package
+managers, along with pre-built binaries, will be supported.
 
 After installing the binary, you may start it up `wsh`:
 
