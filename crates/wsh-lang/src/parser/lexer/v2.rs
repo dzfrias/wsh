@@ -240,15 +240,15 @@ impl<'src> Lexer<'src> {
         if !self.insert_semi {
             self.consume_while(|c| c == '\n');
         }
-        // Dots will force us into strict mode
-        if self.current == '.' && !matches!(self.peek(), '.' | ' ' | '\0' | '\t') {
-            self.consume();
-            mode = LexMode::Strict;
-        }
         // Skip comments
         if self.current == '#' {
             self.consume_while(|c| c != '\n');
             self.consume();
+        }
+        // Dots will force us into strict mode
+        if self.current == '.' && !matches!(self.peek(), '.' | ' ' | '\0' | '\t') {
+            self.consume();
+            mode = LexMode::Strict;
         }
 
         let mut consume_next = true;
