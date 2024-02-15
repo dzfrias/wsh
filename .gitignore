@@ -1,4 +1,3 @@
 /target
 /*.wasm
 /*.wat
-/index.html
