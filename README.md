@@ -13,10 +13,9 @@
 shell, providing an interactive interface for manipulating and restricting Wasm
 executables. This allows a programmer to:
 
-- Restrict an executable's disk access
-- Diff changes executables attempt to make, via a virtual file system
-- Load _individual functions_ into the shell environment for testing
-- Change program behavior post-compilation, via linking overrides
+- Run executables in a contained envrionment
+- Suspend an executable's disk side effects in-memory
+- Load functions from executables into the shell environment for testing
 - Share the binaries to any system!
 
 `wsh` empowers a WebAssembly-oriented workflow, taking advantage of the

@@ -1,5 +1,7 @@
 # Introduction
 
+> This book is **not** complete, so do not expect all chapters to be finished.
+
 `wsh` is the [WebAssembly](https://webassembly.org/)-based shell, bringing the
 power of Wasm to the everyday programmer! This shell aims to be a comfortable
 experience to those familiar with traditional shell languages, but provides a
