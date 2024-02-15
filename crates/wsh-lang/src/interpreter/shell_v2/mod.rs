@@ -28,7 +28,7 @@ use crate::{
         ast::{
             self, Alias, Assignment, Ast, Binop, BinopKind, Boolean, Capture, DataArray,
             EnvVarHandle, Export, HomeDir, If, Node, NodeHandle, NodeKind, Pipeline,
-            PipelineEndKind, Unop, UnopKind,
+            PipelineEndKind, Unop, UnopKind, While,
         },
         Parser, Source,
     },
@@ -76,7 +76,8 @@ impl Shell {
             .parse()
             .map_err(|err| Error::new(ErrorKind::ParseError(err), 0))?;
         for stmt in ast.root().stmts.deref(&ast).iter(&ast) {
-            self.eval_stmt(&ast, stmt.deref(&ast))?;
+            // Special control flow should not reach top level in a correct AST
+            let _ = self.eval_stmt(&ast, stmt.deref(&ast))?;
         }
         Ok(())
     }
@@ -91,33 +92,54 @@ impl Shell {
         std::mem::replace(&mut self.global_stderr, stdout)
     }
 
-    fn eval_stmt(&mut self, ast: &Ast, node: Node) -> Result<()> {
+    fn eval_stmt(&mut self, ast: &Ast, node: Node) -> Result<ControlFlow> {
         self.current_pos = node.offset();
         match node.kind() {
-            NodeKind::Pipeline(pipeline) => self.eval_pipeline(ast, pipeline),
-            NodeKind::Export(export) => self.eval_export(ast, export),
-            NodeKind::Assignment(assignment) => self.eval_assignment(ast, assignment),
-            NodeKind::Alias(alias) => self.eval_alias(ast, alias),
-            NodeKind::If(if_) => self.eval_if(ast, if_),
+            NodeKind::Pipeline(pipeline) => self.eval_pipeline(ast, pipeline)?,
+            NodeKind::Export(export) => self.eval_export(ast, export)?,
+            NodeKind::Assignment(assignment) => self.eval_assignment(ast, assignment)?,
+            NodeKind::Alias(alias) => self.eval_alias(ast, alias)?,
+            NodeKind::If(if_) => return self.eval_if(ast, if_),
+            NodeKind::While(while_) => return self.eval_while(ast, while_),
+            NodeKind::Continue(_) => return Ok(ControlFlow::Continue),
+            NodeKind::Break(_) => return Ok(ControlFlow::Break),
             s => todo!("stmt for {s:?}"),
         }
+        Ok(ControlFlow::Normal)
     }
 
-    fn eval_if(&mut self, ast: &Ast, if_: &If) -> Result<()> {
+    fn eval_if(&mut self, ast: &Ast, if_: &If) -> Result<ControlFlow> {
         if self.eval_expr(ast, if_.condition.deref(ast))?.is_truthy() {
             self.eval_block(ast, if_.body.deref(ast))
         } else if let Some(else_) = if_.else_body.as_ref() {
             self.eval_block(ast, else_.deref(ast))
         } else {
-            Ok(())
+            Ok(ControlFlow::Normal)
         }
     }
 
-    fn eval_block(&mut self, ast: &Ast, body: DataArray<NodeHandle>) -> Result<()> {
-        for stmt in body.iter(ast) {
-            self.eval_stmt(ast, stmt.deref(ast))?;
+    fn eval_while(&mut self, ast: &Ast, while_: &While) -> Result<ControlFlow> {
+        while self
+            .eval_expr(ast, while_.condition.deref(ast))?
+            .is_truthy()
+        {
+            match self.eval_block(ast, while_.body.deref(ast))? {
+                ControlFlow::Continue => continue,
+                ControlFlow::Break => break,
+                ControlFlow::Normal => (),
+            }
         }
-        Ok(())
+        Ok(ControlFlow::Normal)
+    }
+
+    fn eval_block(&mut self, ast: &Ast, body: DataArray<NodeHandle>) -> Result<ControlFlow> {
+        for stmt in body.iter(ast) {
+            let control_flow = self.eval_stmt(ast, stmt.deref(ast))?;
+            if !matches!(control_flow, ControlFlow::Normal) {
+                return Ok(control_flow);
+            }
+        }
+        Ok(ControlFlow::Normal)
     }
 
     fn eval_pipeline(&mut self, ast: &Ast, pipeline: &Pipeline) -> Result<()> {
@@ -545,4 +567,12 @@ impl Shell {
     fn error(&self, kind: ErrorKind) -> Error {
         Error::new(kind, self.current_pos)
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[must_use]
+pub enum ControlFlow {
+    Normal,
+    Continue,
+    Break,
 }
