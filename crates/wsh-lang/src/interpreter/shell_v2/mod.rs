@@ -12,7 +12,6 @@ use std::{
 };
 
 use filedescriptor::{AsRawFileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor};
-use itertools::Either;
 
 use self::error::Result;
 use crate::{
@@ -363,35 +362,25 @@ impl Shell {
         pipeline: &Pipeline,
         env: &'env [(String, String)],
     ) -> Result<pipeline::Pipeline<'env, Shell>> {
-        let cmds = pipeline.cmds.deref(ast);
-        let first = cmds.first(ast).unwrap().deref(ast);
-        let cmd = self.make_cmd(ast, first.kind().as_command(), env)?;
-        let exec = cmds.iter(ast).skip(1).try_fold(
-            match cmd {
-                Either::Left(cmd) => pipeline::Pipeline::new(cmd),
-                Either::Right(pipeline) => pipeline,
-            },
+        pipeline.cmds.deref(ast).iter(ast).try_fold(
+            pipeline::Pipeline::empty(),
             |mut pipeline, cmd| {
                 let deref = cmd.deref(ast);
                 let cmd = deref.kind().as_command();
-                match self.make_cmd(ast, cmd, env)? {
-                    Either::Left(cmd) => pipeline.pipe(cmd),
-                    Either::Right(other) => pipeline.extend(other),
-                }
+                self.make_cmd(ast, cmd, env, &mut pipeline)?;
                 Ok(pipeline)
             },
-        )?;
-        Ok(exec)
+        )
     }
 
-    /// Create a `pipeline::Command` for a pipeline. This covers aliases, built-ins, Wasm
-    /// functions, and more.
+    /// Extend a pipeline for a command. This covers aliases, built-ins, Wasm functions, and more.
     fn make_cmd<'env>(
         &mut self,
         ast: &Ast,
         cmd: &ast::Command,
         env: &'env [(String, String)],
-    ) -> Result<Either<pipeline::Command<'env, Self>, pipeline::Pipeline<'env, Self>>> {
+        pipeline: &mut pipeline::Pipeline<'env, Self>,
+    ) -> Result<()> {
         let exprs = cmd.exprs.deref(ast);
         let name = self
             .eval_expr(ast, exprs.first(ast).unwrap().deref(ast))?
@@ -405,7 +394,8 @@ impl Shell {
                 .skip(1)
                 .map(|expr| self.eval_expr(ast, expr.deref(ast)))
                 .collect::<Result<Vec<_>>>()?;
-            return Ok(Either::Left(self.make_wasm_func(func, args, env)?));
+            pipeline.pipe(self.make_wasm_func(func, args, env)?);
+            return Ok(());
         }
 
         let mut memfiles = vec![];
@@ -433,42 +423,43 @@ impl Shell {
         // Next, we check if the command is an alias
         if let Some(sub_ast) = self.env.take_alias(&name) {
             let node = sub_ast.first().unwrap();
-            let pipeline = node.kind().as_pipeline();
-            let mut pipeline = self.make_pipeline(&sub_ast, pipeline, env)?;
+            let alias_pipeline = node.kind().as_pipeline();
+            let mut alias_pipeline = self.make_pipeline(&sub_ast, alias_pipeline, env)?;
             // We append this command's args to the end of the aliased pipeline
-            pipeline.append_args(&args);
+            alias_pipeline.append_args(&args);
             self.env.set_alias(name, sub_ast);
-            return Ok(Either::Right(pipeline));
+            pipeline.extend(alias_pipeline);
+            return Ok(());
         }
 
         // We check if the command is a built-in
         if let Some(builtin) = Builtin::from_name(&name) {
             let merge_stderr = cmd.merge_stderr;
-            return Ok(Either::Left(pipeline::Command::from(
-                pipeline::Closure::wrap(
-                    move |shell: &mut Shell,
-                          mut stdio: Stdio,
-                          args: &[String],
-                          env: &[(String, String)]| {
-                        if merge_stderr {
-                            stdio.stderr = match stdio.stdout.try_clone() {
-                                Ok(file) => file,
-                                Err(err) => {
-                                    writeln!(
-                                        stdio.stderr,
-                                        "error cloning stdout to merge with stderr: {err}"
-                                    )
-                                    .expect("write to stderr failed!");
-                                    return 1;
-                                }
-                            };
-                        }
-                        builtin.run(shell, stdio, args, env)
-                    },
-                    args,
-                    env,
-                ),
-            )));
+            let cmd = pipeline::Closure::wrap(
+                move |shell: &mut Shell,
+                      mut stdio: Stdio,
+                      args: &[String],
+                      env: &[(String, String)]| {
+                    if merge_stderr {
+                        stdio.stderr = match stdio.stdout.try_clone() {
+                            Ok(file) => file,
+                            Err(err) => {
+                                writeln!(
+                                    stdio.stderr,
+                                    "error cloning stdout to merge with stderr: {err}"
+                                )
+                                .expect("write to stderr failed!");
+                                return 1;
+                            }
+                        };
+                    }
+                    builtin.run(shell, stdio, args, env)
+                },
+                args,
+                env,
+            );
+            pipeline.pipe(cmd);
+            return Ok(());
         }
 
         // If nothing else, it's a regular command
@@ -477,7 +468,8 @@ impl Shell {
             .args(args)
             .map_memfiles(memfiles)
             .merge_stderr(cmd.merge_stderr);
-        Ok(Either::Left(pipeline::Command::Basic(cmd)))
+        pipeline.pipe(cmd);
+        Ok(())
     }
 
     /// Create a `pipeline::Command` that wraps the calling of a WebAssembly function.

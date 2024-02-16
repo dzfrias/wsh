@@ -7,7 +7,7 @@
 
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
-use std::{fs::File, io, mem, process};
+use std::{fs::File, io, process};
 
 #[cfg(unix)]
 use command_fds::{CommandFdExt, FdMapping};
@@ -23,56 +23,66 @@ use crate::shell_v2::memfile::MemFile;
 /// custom commands), they may take in a mutable reference to `T` for arbitrary data to work with
 /// while executing.
 pub struct Pipeline<'a, T> {
-    inner: Command<'a, T>,
+    inner: Option<Command<'a, T>>,
 }
 
 impl<'a, T> Pipeline<'a, T> {
+    /// Create a pipeline with no commands.
+    pub fn empty() -> Self {
+        Self { inner: None }
+    }
+
     /// Create a new pipeline, starting from a command.
+    #[allow(dead_code)]
     pub fn new(cmd: impl Into<Command<'a, T>>) -> Self {
-        Self { inner: cmd.into() }
+        Self {
+            inner: Some(cmd.into()),
+        }
     }
 
     /// Set up a pipe between the last commmand and the provided one.
     pub fn pipe(&mut self, cmd: impl Into<Command<'a, T>>) {
-        let inner = self.take_inner();
-        self.inner = Command::Pipe(Box::new(Pipe {
-            lhs: inner,
-            rhs: cmd.into(),
-        }));
+        match self.inner.take() {
+            Some(inner) => {
+                self.inner = Some(Command::Pipe(Box::new(Pipe {
+                    lhs: inner,
+                    rhs: cmd.into(),
+                })));
+            }
+            None => self.inner = Some(cmd.into()),
+        }
     }
 
+    /// Extend a pipeline with another pipeline.
     pub fn extend(&mut self, pipeline: Pipeline<'a, T>) {
-        self.pipe(pipeline.inner);
+        if let Some(inner) = pipeline.inner {
+            self.pipe(inner);
+        }
     }
 
+    /// Append args to the last command in the pipeline.
     pub fn append_args(&mut self, args: &[String]) {
         match &mut self.inner {
-            Command::Basic(basic) => basic.args.extend_from_slice(args),
-            Command::Pipe(pipe) => match &mut pipe.rhs {
+            Some(Command::Basic(basic)) => basic.args.extend_from_slice(args),
+            Some(Command::Pipe(pipe)) => match &mut pipe.rhs {
                 Command::Basic(basic) => basic.args.extend_from_slice(args),
                 Command::Closure(c) => c.args.extend_from_slice(args),
                 Command::Pipe(_) => unreachable!(),
             },
-            Command::Closure(c) => c.args.extend_from_slice(args),
+            Some(Command::Closure(c)) => c.args.extend_from_slice(args),
+            None => {}
         }
     }
 
     /// Run the pipeline, returning a handle to the new process.
     pub fn spawn(self, data: &mut T, stdio: Stdio) -> io::Result<Handle<'a, T>> {
-        self.inner.spawn(data, stdio)
-    }
-
-    fn take_inner(&mut self) -> Command<'a, T> {
-        mem::replace(
-            &mut self.inner,
-            Command::Basic(BasicCommand {
-                cmd: String::new(),
-                merge_stderr: false,
-                env: &[],
-                args: vec![],
-                memfiles: vec![],
-            }),
-        )
+        let Some(inner) = self.inner else {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "cannot spawn command with no data",
+            ));
+        };
+        inner.spawn(data, stdio)
     }
 }
 
