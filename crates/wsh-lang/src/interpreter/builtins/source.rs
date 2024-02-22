@@ -1,4 +1,4 @@
-use std::{fs, path::PathBuf};
+use std::{fs, io::Read};
 
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -10,8 +10,10 @@ use crate::{interpreter::builtins::IoStreams, Shell};
 
 #[derive(Debug, Parser)]
 struct Args {
-    file: PathBuf,
+    file: String,
     args: Vec<String>,
+    #[arg(short, long)]
+    url: bool,
 }
 
 pub fn source(
@@ -20,9 +22,15 @@ pub fn source(
     io_streams: &mut IoStreams,
     env: &[(String, String)],
 ) -> Result<()> {
-    let Args { file, args } = Args::try_parse_from(args)?;
-    // TOOD: support passing args to scripts
-    let contents = fs::read(&file).context("error reading file")?;
+    let Args { file, args, url } = Args::try_parse_from(args)?;
+    let contents = if url {
+        let mut buf = vec![];
+        reqwest::blocking::get(&file)?.read_to_end(&mut buf)?;
+        buf
+    } else {
+        // TOOD: support passing args to scripts
+        fs::read(&file).context("error reading file")?
+    };
 
     const MAGIC: &[u8; 4] = b"\0asm";
     // Automatically detect if the file is a wasm file. If it is, we can run it directly. This
@@ -62,7 +70,7 @@ pub fn source(
     // `IntoRawFileDescriptor`. We later close it, so we don't leak it.
     unsafe { shell.stdout(stdout_fd) };
     unsafe { shell.stderr(stderr_fd) };
-    let _ = shell.run(&contents, &file.to_string_lossy());
+    let _ = shell.run(&contents, &file);
     // We need to be careful that the file descriptor is closed, so we don't leak it. This can
     // cause hangs in the shell if used `source` is used with a pipe. This is because the shell
     // will never close the `stdout` it's given, so we must manually close it here.
