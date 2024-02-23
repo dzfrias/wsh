@@ -28,7 +28,7 @@ where
 
     fn into_host_func(mut self) -> HostFunc {
         HostFunc {
-            ty: FuncType(Arc::new([]), Arc::new([])),
+            ty: FuncType(Arc::new([]), R::valtypes().collect()),
             code: Box::new(move |vm| {
                 let res = self(vm.get_module(), vm.get_store());
                 res.into_values()
