@@ -47,7 +47,7 @@ pub struct Vm<'s> {
 }
 
 /// The maximum number of nested levels we can have on the frame stack.
-const STACK_BUDGET: usize = 300;
+const STACK_BUDGET: usize = 4096;
 
 /// A WebAssembly stack frame.
 ///
