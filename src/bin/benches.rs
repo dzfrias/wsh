@@ -39,7 +39,10 @@ fn main() -> Result<()> {
         }),
     );
     let dir = cap_std::fs::Dir::open_ambient_dir(".", cap_std::ambient_authority())?;
-    let mut ctx = WasiCtxBuilder::new().preopened_dir(dir, ".")?.build();
+    let mut ctx = WasiCtxBuilder::new()
+        .inherit_stdio()
+        .preopened_dir(dir, ".")?
+        .build();
     wsh_wasi::sync::snapshots::preview_1::link(&mut store, &mut ctx);
 
     let binary = fs::read(args.file)?;
