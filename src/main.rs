@@ -51,6 +51,9 @@ fn main() -> Result<()> {
         run_file(input, &mut shell)?;
         return Ok(());
     }
+    // Setting this signal handler will make sure that any time we CTRL-C a subprocess, we run
+    // in the shell, it'll only quit that subprocess (not this one)
+    ctrlc::set_handler(|| {}).context("problem setting ctrl-c signal handler")?;
     run_repl()?;
 
     Ok(())

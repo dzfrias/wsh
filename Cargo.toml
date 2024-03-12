@@ -22,6 +22,7 @@ wsh-cmp = { path = "crates/wsh-cmp" }
 dirs = "5.0.1"
 reedline.workspace = true
 path-absolutize = "3.1.1"
+ctrlc = "3.4.4"
 
 [features]
 dhat-heap = ["dhat"]
