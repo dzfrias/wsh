@@ -25,12 +25,16 @@ where
     I: IntoIterator<Item = S>,
     S: Into<OsString> + Clone,
 {
-    let args = Args::try_parse_from(args)?;
+    let mut args = Args::try_parse_from(args)?;
     let contents = fs::read(&args.file).context("error reading file")?;
 
     const MAGIC: &[u8; 4] = b"\0asm";
     // This will detect if the file is a WebAssembly file
     if contents.len() >= 4 && &contents[0..4] == MAGIC {
+        // Yes, this is shifting the whole array, but they're CLI arguments. Performance cost
+        // should be negligible here.
+        args.args
+            .insert(0, args.file.to_string_lossy().into_owned());
         shell
             .env
             .prepare_wasi(

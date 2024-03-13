@@ -551,7 +551,7 @@ impl Shell {
                 }
                 0
             },
-            vec![],
+            vec!["<wasm_func>".to_owned()],
             env,
         )))
     }

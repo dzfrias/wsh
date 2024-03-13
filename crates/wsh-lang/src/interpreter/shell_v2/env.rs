@@ -84,6 +84,8 @@ impl Env {
         let mut builder = WasiCtxBuilder::new();
         if let Some(stdin) = ctx.stdin {
             builder.stdin(Box::new(to_wasi_file(stdin)));
+        } else {
+            builder.inherit_stdin();
         }
         let mut ctx = builder
             .stdout(Box::new(to_wasi_file(ctx.stdout)))
