@@ -7,7 +7,7 @@ mod source;
 mod unload;
 mod which;
 
-use std::{io::Write, iter};
+use std::iter;
 
 use crate::shell_v2::{pipeline::Stdio, Shell};
 
@@ -24,6 +24,7 @@ macro_rules! force_write {
         write!($f, $($arg)*).expect("error writing to stdio stream!")
     };
 }
+use anyhow::Context;
 use force_write;
 use force_writeln;
 
@@ -70,19 +71,12 @@ impl Builtin {
     pub fn run(
         self,
         shell: &mut Shell,
-        mut stdio: Stdio,
+        stdio: Stdio,
         args: &[String],
         env: &[(String, String)],
-    ) -> i32 {
-        let mut stderr = match stdio.stderr.try_clone() {
-            Ok(stderr) => stderr,
-            Err(err) => {
-                force_writeln!(stdio.stderr, "wsh: could not clone stderr: {err:#}");
-                return 1;
-            }
-        };
+    ) -> anyhow::Result<()> {
         let args = iter::once(self.name()).chain(args.iter().map(|s| s.as_str()));
-        if let Err(err) = match self {
+        match self {
             Builtin::Cd => cd::cd(shell, stdio, args, env),
             Builtin::Which => which::which(shell, stdio, args, env),
             Builtin::Source => source::source(shell, stdio, args, env),
@@ -91,11 +85,7 @@ impl Builtin {
             Builtin::Unload => unload::unload(shell, stdio, args, env),
             Builtin::MemFs => memfs::memfs(shell, stdio, args, env),
             Builtin::Error => error::error(shell, stdio, args, env),
-        } {
-            force_writeln!(stderr, "{}: {err:#}", self.name());
-            1
-        } else {
-            0
         }
+        .context(self.name())
     }
 }

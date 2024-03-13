@@ -11,6 +11,7 @@ use std::{
     io::{self, Read, Write},
 };
 
+use anyhow::Context;
 use filedescriptor::{AsRawFileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor};
 
 use self::error::Result;
@@ -441,17 +442,10 @@ impl Shell {
                       args: &[String],
                       env: &[(String, String)]| {
                     if merge_stderr {
-                        stdio.stderr = match stdio.stdout.try_clone() {
-                            Ok(file) => file,
-                            Err(err) => {
-                                writeln!(
-                                    stdio.stderr,
-                                    "error cloning stdout to merge with stderr: {err}"
-                                )
-                                .expect("write to stderr failed!");
-                                return 1;
-                            }
-                        };
+                        stdio.stderr = stdio
+                            .stdout
+                            .try_clone()
+                            .context("error cloning stdout to merge with stderr")?;
                     }
                     builtin.run(shell, stdio, args, env)
                 },
@@ -531,25 +525,20 @@ impl Shell {
                   mut stdio: Stdio,
                   _args: &[String],
                   env: &[(String, String)]| {
-                if let Err(err) = shell.env.prepare_wasi(
-                    WasiContext::new(&stdio.stdout, &stdio.stderr, stdio.stdin.as_ref()).env(env),
-                ) {
-                    writeln!(stdio.stderr, "error preparing WASI: {err}")
-                        .expect("write to stderr failed");
-                    return 1;
-                }
-                let ret_vals = match func.call(shell.env.store_mut(), &wasm_args) {
-                    Ok(vals) => vals,
-                    Err(err) => {
-                        writeln!(stdio.stderr, "Wasm function failed: {err}")
-                            .expect("write to stderr failed");
-                        return 1;
-                    }
-                };
+                shell
+                    .env
+                    .prepare_wasi(
+                        WasiContext::new(&stdio.stdout, &stdio.stderr, stdio.stdin.as_ref())
+                            .env(env),
+                    )
+                    .context("error preparing WASI")?;
+                let ret_vals = func
+                    .call(shell.env.store_mut(), &wasm_args)
+                    .context("Wasm function failed")?;
                 for ret_val in ret_vals {
                     writeln!(stdio.stdout, "{ret_val}").expect("write to stdout failed");
                 }
-                0
+                Ok(())
             },
             vec!["<wasm_func>".to_owned()],
             env,
