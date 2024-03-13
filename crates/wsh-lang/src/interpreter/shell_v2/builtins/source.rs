@@ -33,8 +33,14 @@ where
     if contents.len() >= 4 && &contents[0..4] == MAGIC {
         // Yes, this is shifting the whole array, but they're CLI arguments. Performance cost
         // should be negligible here.
-        args.args
-            .insert(0, args.file.to_string_lossy().into_owned());
+        args.args.insert(
+            0,
+            args.file
+                .file_name()
+                .expect("file stem should exist")
+                .to_string_lossy()
+                .into_owned(),
+        );
         shell
             .env
             .prepare_wasi(

@@ -435,22 +435,16 @@ impl Shell {
 
         // We check if the command is a built-in
         if let Some(builtin) = Builtin::from_name(&name) {
-            let merge_stderr = cmd.merge_stderr;
             let cmd = pipeline::Closure::wrap(
                 move |shell: &mut Shell,
-                      mut stdio: Stdio,
+                      stdio: Stdio,
                       args: &[String],
                       env: &[(String, String)]| {
-                    if merge_stderr {
-                        stdio.stderr = stdio
-                            .stdout
-                            .try_clone()
-                            .context("error cloning stdout to merge with stderr")?;
-                    }
                     builtin.run(shell, stdio, args, env)
                 },
                 args,
                 env,
+                cmd.merge_stderr,
             );
             pipeline.pipe(cmd);
             return Ok(());
@@ -542,6 +536,7 @@ impl Shell {
             },
             vec!["<wasm_func>".to_owned()],
             env,
+            false,
         )))
     }
 

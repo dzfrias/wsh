@@ -1,5 +1,6 @@
 ---
 stdout: |
+  args.wasm
   hello
   world
 ---

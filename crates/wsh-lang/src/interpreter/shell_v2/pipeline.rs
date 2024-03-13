@@ -94,10 +94,11 @@ pub struct Closure<'a, T> {
     inner: PipelineClosure<T>,
     args: Vec<String>,
     env: &'a [(String, String)],
+    merge_stderr: bool,
 }
 
 impl<'a, T> Closure<'a, T> {
-    pub fn wrap<F>(f: F, args: Vec<String>, env: &'a [(String, String)]) -> Self
+    pub fn wrap<F>(f: F, args: Vec<String>, env: &'a [(String, String)], merge_stderr: bool) -> Self
     where
         F: FnOnce(&mut T, Stdio, &[String], &[(String, String)]) -> anyhow::Result<()> + 'static,
     {
@@ -105,6 +106,7 @@ impl<'a, T> Closure<'a, T> {
             inner: Box::new(f),
             args,
             env,
+            merge_stderr,
         }
     }
 
@@ -115,6 +117,7 @@ impl<'a, T> Closure<'a, T> {
             env: self.env,
             stdio: Some(stdio),
             killed: false,
+            merge_stderr: self.merge_stderr,
         }
     }
 }
@@ -358,6 +361,7 @@ pub struct ClosureHandle<'a, T> {
     env: &'a [(String, String)],
     stdio: Option<Stdio>,
     killed: bool,
+    merge_stderr: bool,
 }
 
 impl<T> ClosureHandle<'_, T> {
@@ -367,10 +371,13 @@ impl<T> ClosureHandle<'_, T> {
             return Ok(ExitStatus(0));
         }
         // Avoiding a deadlock! We need `stdio` to be dropped in case it's a pipe end
-        let stdio = self
+        let mut stdio = self
             .stdio
             .take()
             .expect("cannot wait on closure more than once!");
+        if self.merge_stderr {
+            stdio.stderr = stdio.stdout.try_clone()?;
+        }
         let mut stderr_clone = stdio.stderr.try_clone()?;
         let result = (self
             .closure
@@ -481,6 +488,7 @@ mod tests {
             },
             vec![],
             &[],
+            false,
         ));
         let (stdio, mut read) = piped_stdio();
         let mut handle = pipeline.spawn(&mut (), stdio).unwrap();
