@@ -2,6 +2,6 @@
 stdout: hello
 ---
 
-_error hello %> merge_file.txt
-.x = `cat merge_file.txt`
-echo .x
+_error hello &> merge_file.txt
+%x = `cat merge_file.txt`
+echo %x

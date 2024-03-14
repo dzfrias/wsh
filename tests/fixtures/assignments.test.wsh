@@ -4,9 +4,9 @@ stdout: |
   hello world
 ---
 
-.x = 10 + 10
-echo .x
+%x = 10 + 10
+echo %x
 
-.x = "hello"
-.y = "world"
-echo .x .(y)
+%x = "hello"
+%y = "world"
+echo %x %(y)

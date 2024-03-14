@@ -5,7 +5,7 @@ stdout: |
 ---
 
 # This is a comment
-.x = "hello"
-echo .x
+%x = "hello"
+echo %x
 
 echo nice  # Inline

@@ -8,4 +8,4 @@ stdout: |
 echo -n hello | source $WASM_PATH/stdin.wasm
 echo -n world | source $WASM_PATH/stdin.wasm
 # Merge stderr to stdin
-_error error! %| source $WASM_PATH/stdin.wasm
+_error error! &| source $WASM_PATH/stdin.wasm

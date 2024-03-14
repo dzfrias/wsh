@@ -6,8 +6,8 @@ stdout: |
 ---
 
 false
-echo .?
+echo %?
 true
-echo .?
+echo %?
 # TODO: this should yield a 1
-false | echo .?
+false | echo %?

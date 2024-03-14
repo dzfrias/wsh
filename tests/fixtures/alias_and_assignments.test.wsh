@@ -3,5 +3,5 @@ stdout: hi
 ---
 
 alias foo = echo hi
-.x = `foo`
-echo .x
+%x = `foo`
+echo %x

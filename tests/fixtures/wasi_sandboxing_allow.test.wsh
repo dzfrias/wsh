@@ -12,7 +12,7 @@ cat hello.txt | xargs echo
 # Permissions only go to one directory
 mkdir dir
 cd dir
-source $WASM_PATH/new_file.wasm %| wc -l | xargs
+source $WASM_PATH/new_file.wasm &| wc -l | xargs
 allow .
 source $WASM_PATH/new_file.wasm
 cat hello.txt | xargs echo

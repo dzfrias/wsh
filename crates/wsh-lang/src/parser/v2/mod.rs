@@ -109,7 +109,7 @@ impl<'src> Parser<'src> {
 
         let offset = self.current.start() as u32;
         let mut cmds = vec![self.parse_cmd(ast)?];
-        while matches!(self.peek().kind(), TokenKind::Pipe | TokenKind::PercentPipe) {
+        while matches!(self.peek().kind(), TokenKind::Pipe | TokenKind::UnifyPipe) {
             self.next_token();
             self.next_token();
             cmds.push(self.parse_cmd(ast)?);
@@ -117,12 +117,12 @@ impl<'src> Parser<'src> {
         let (kind, p2) = match self.peek().kind() {
             TokenKind::Append
             | TokenKind::Write
-            | TokenKind::PercentWrite
-            | TokenKind::PercentAppend => {
+            | TokenKind::UnifyWrite
+            | TokenKind::UnifyAppend => {
                 self.next_token();
                 let kind = match self.current.kind() {
-                    TokenKind::Write | TokenKind::PercentWrite => PipelineEndKind::Write,
-                    TokenKind::Append | TokenKind::PercentAppend => PipelineEndKind::Append,
+                    TokenKind::Write | TokenKind::UnifyWrite => PipelineEndKind::Write,
+                    TokenKind::Append | TokenKind::UnifyAppend => PipelineEndKind::Append,
                     _ => unreachable!(),
                 };
                 self.next_token();
@@ -388,9 +388,9 @@ impl<'src> Parser<'src> {
                 | TokenKind::Pipe
                 | TokenKind::Write
                 | TokenKind::Append
-                | TokenKind::PercentPipe
-                | TokenKind::PercentWrite
-                | TokenKind::PercentAppend
+                | TokenKind::UnifyPipe
+                | TokenKind::UnifyWrite
+                | TokenKind::UnifyAppend
                 | TokenKind::End
                 | TokenKind::Else
         ) {
@@ -401,10 +401,10 @@ impl<'src> Parser<'src> {
             let expr = self.parse_expr(ast, Precedence::Lowest)?;
             exprs.push(expr);
         }
-        // Merge stderr with stdout of a `%` redirect or pipeline operator was used
+        // Merge stderr with stdout of a `&` redirect or pipeline operator was used
         let merge_stderr = matches!(
             self.peek().kind(),
-            TokenKind::PercentAppend | TokenKind::PercentPipe | TokenKind::PercentWrite
+            TokenKind::UnifyAppend | TokenKind::UnifyPipe | TokenKind::UnifyWrite
         );
         debug!(
             "successfully parsed command, got {} exprs and merge_stderr={merge_stderr}",
@@ -836,19 +836,19 @@ mod tests {
     }
 
     parser_test!(basic_commands, "echo hello world\n");
-    parser_test!(basic_arithmetic, "echo .(2 * 1 + 1) hello");
-    parser_test!(idents, "echo .hello .(hi + 10)");
-    parser_test!(prefix_exprs, "echo .(-10 + !29 * 10)");
+    parser_test!(basic_arithmetic, "echo %(2 * 1 + 1) hello");
+    parser_test!(idents, "echo %hello %(hi + 10)");
+    parser_test!(prefix_exprs, "echo %(-10 + !29 * 10)");
     parser_test!(pipelines, "echo hello | wc -l | xargs\n");
     parser_test!(pipelines_multiline, "echo hello\n  | wc -l\n  | xargs\n");
     parser_test!(pipeline_with_end, "echo hi | wc -l > hello.txt\n");
-    parser_test!(pipelines_with_merge_stderr, "echo hi %| cat %> hello.txt\n");
-    parser_test!(booleans, "echo .(true + false) true");
-    parser_test!(bool_infix, "echo .(1 + 1 <= 2)");
-    parser_test!(last_status, "echo .? .(? + 10)");
-    parser_test!(env_vars, "echo $HELLO .($HOME + \"hello\")");
-    parser_test!(assignments, ".x = 1 + 1");
-    parser_test!(implicit_concat, "echo .hi/$HELLO/world");
+    parser_test!(pipelines_with_merge_stderr, "echo hi &| cat &> hello.txt\n");
+    parser_test!(booleans, "echo %(true + false) true");
+    parser_test!(bool_infix, "echo %(1 + 1 <= 2)");
+    parser_test!(last_status, "echo %? %(? + 10)");
+    parser_test!(env_vars, "echo $HELLO %($HOME + \"hello\")");
+    parser_test!(assignments, "%x = 1 + 1");
+    parser_test!(implicit_concat, "echo %hi/$HELLO/world");
     parser_test!(home_dir, "echo ~/code");
     parser_test!(export, "export HELLO = 1 + 1\necho hi");
     parser_test!(if_, "if x == 3 then echo hi\necho hi end");
@@ -858,12 +858,12 @@ mod tests {
     parser_test!(captures, "echo `echo hi | wc -l`");
     parser_test!(env_set, "$RUST_LOG=trace $RUST_BACKTRACE=1 cargo test");
     parser_test!(break_and_continue, "while x == 3 do break\ncontinue end");
-    parser_test!(backticks_go_to_normal, "echo .(`echo hi`) hello");
+    parser_test!(backticks_go_to_normal, "echo %(`echo hi`) hello");
     parser_test!(alias, "alias foo = echo hello world");
 
     parser_test!(@fail export_no_assign, "export HELLO == 1 + 1");
     parser_test!(@fail export_not_ident, "export $HELLO = 1 + 1");
-    parser_test!(@fail unclosed_group, "echo .(2 + 10");
+    parser_test!(@fail unclosed_group, "echo %(2 + 10");
     parser_test!(@fail no_end_for_if, "if x == 3 then echo hi");
     parser_test!(@fail no_then_for_if, "if x == 3 echo hi");
     parser_test!(@fail break_outside_loop, "break");

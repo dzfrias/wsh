@@ -29,13 +29,13 @@ if 40 > 2 then
   echo conditions
 end
 
-.x = ""
+%x = ""
 if x then
   echo bad!
 else
   echo empty string
 end
-.x = "stuff"
+%x = "stuff"
 if x then
   echo non-empty string
 end

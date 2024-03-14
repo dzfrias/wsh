@@ -56,11 +56,11 @@ pub enum TokenKind<'src> {
     Backtick,
     Assign,
     Pipe,
-    PercentPipe,
+    UnifyPipe,
     Write,
-    PercentWrite,
+    UnifyWrite,
     Append,
-    PercentAppend,
+    UnifyAppend,
     Semicolon,
     Space,
     QuestionMark,
@@ -145,9 +145,9 @@ impl TokenKind<'_> {
             | TokenKind::Le
             | TokenKind::Ge
             | TokenKind::Append
-            | TokenKind::PercentPipe
-            | TokenKind::PercentWrite
-            | TokenKind::PercentAppend
+            | TokenKind::UnifyPipe
+            | TokenKind::UnifyWrite
+            | TokenKind::UnifyAppend
             | TokenKind::Do
             | TokenKind::ColonAssign => 2,
             TokenKind::End | TokenKind::Def => 3,
@@ -245,8 +245,8 @@ impl<'src> Lexer<'src> {
             self.consume_while(|c| c != '\n');
             self.consume();
         }
-        // Dots will force us into strict mode
-        if self.current == '.' && !matches!(self.peek(), '.' | ' ' | '\0' | '\t') {
+        // '%' will force us into strict mode
+        if self.current == '%' && !matches!(self.peek(), '%' | ' ' | '\0' | '\t') {
             self.consume();
             mode = LexMode::Strict;
         }
@@ -311,14 +311,14 @@ impl<'src> Lexer<'src> {
 
             // --Normal--
             '|' => TokenKind::Pipe,
-            '%' if self.peek() == '|' => consume_and!(PercentPipe),
-            '%' if self.peek() == '>' => {
+            '&' if self.peek() == '|' => consume_and!(UnifyPipe),
+            '&' if self.peek() == '>' => {
                 self.consume();
                 if self.peek() == '>' {
                     self.consume();
-                    TokenKind::PercentAppend
+                    TokenKind::UnifyAppend
                 } else {
-                    TokenKind::PercentWrite
+                    TokenKind::UnifyWrite
                 }
             }
             '>' if self.peek() == '>' => consume_and!(Append),
@@ -326,10 +326,10 @@ impl<'src> Lexer<'src> {
             '`' => TokenKind::Backtick,
             ';' => TokenKind::Semicolon,
             // This is a special edge case. If this was not here, we would go to the default case
-            // (`consume_unquoted_str`), which would see the '%' and not move any further, causing
-            // the lexer to get stuck. This makes sure that a single (unaccompanied) '%' will make
+            // (`consume_unquoted_str`), which would see the '&' and not move any further, causing
+            // the lexer to get stuck. This makes sure that a single (unaccompanied) '&' will make
             // progress in the lexer.
-            '%' => TokenKind::Invalid,
+            '&' => TokenKind::Invalid,
             '~' if mode.is_normal() => TokenKind::Tilde,
             '@' if mode.is_normal() && !matches!(self.peek(), ' ' | '\t' | '\n' | '\0') => {
                 TokenKind::At
@@ -466,7 +466,7 @@ impl<'src> Lexer<'src> {
     }
 
     fn consume_unquoted_str(&mut self) -> &'src str {
-        self.consume_while(|c| !matches!(c, ';' | '|' | '%' | '>' | '`' | '$' | ' ' | '\t' | '\n'))
+        self.consume_while(|c| !matches!(c, ';' | '|' | '&' | '>' | '`' | '$' | ' ' | '\t' | '\n'))
     }
 
     fn consume_quoted_str(&mut self) -> (&'src str, bool) {
@@ -506,7 +506,7 @@ impl<'src> Lexer<'src> {
         }
 
         match mode {
-            LexMode::Normal => !matches!(current, '|' | '%' | '>'),
+            LexMode::Normal => !matches!(current, '|' | '&' | '>'),
             LexMode::Strict => !matches!(current, '+' | '-' | '/' | '*' | '>' | '<' | '!' | '='),
         }
     }
@@ -561,7 +561,7 @@ mod tests {
 
     lexer_test!(
         semicolon_insertion_after_rparen,
-        ".)\n",
+        "%)\n",
         [
             Normal RParen,
             Normal Semicolon,
@@ -644,7 +644,7 @@ mod tests {
 
     lexer_test!(
         dot_into_strict,
-        ".hello.break.(",
+        "%hello%break%(",
         [
             Normal Ident("hello"),
             Normal Break,
@@ -662,7 +662,7 @@ mod tests {
 
     lexer_test!(
         invalid_numbers,
-        ".101ls",
+        "%101ls",
         [
             Normal BadNumber("101ls"),
         ]

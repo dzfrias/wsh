@@ -5,6 +5,6 @@ stdout: |
 ---
 
 echo hello world
-touch .(1 + 1)
+touch %(1 + 1)
 echo nice > 2
 cat 2
