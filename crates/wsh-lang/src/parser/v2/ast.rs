@@ -38,7 +38,9 @@ pub enum NodeKind {
     While(While),
     Break(Break),
     Continue(Continue),
+    Return(Return),
     Alias(Alias),
+    FnDecl(FnDecl),
 
     // Expressions
     String(StringHandle),
@@ -173,6 +175,37 @@ pub struct If {
     pub else_body: Option<DataHandle<DataArray<NodeHandle>>>,
 }
 
+#[derive(Debug)]
+pub struct FnDecl {
+    pub proto: FnProto,
+    pub body: DataHandle<DataArray<NodeHandle>>,
+}
+
+#[derive(Debug)]
+pub struct FnProto {
+    pub name: IdentHandle,
+    pub params: DataHandle<DataArray<IdentHandle>>,
+}
+
+impl Deserialize for FnProto {
+    fn deserialize(ast: &Ast, index: DataHandle<Self>) -> Self {
+        let name = ast.extra_data[index.raw() as usize];
+        let params = ast.extra_data[index.raw() as usize + 1];
+        Self {
+            name: IdentHandle(name),
+            params: DataHandle::new(params),
+        }
+    }
+}
+
+impl Serialize for FnProto {
+    fn serialize(&self, ast: &mut Ast) -> DataHandle<Self> {
+        let i = ast.alloc_data(self.name.raw());
+        ast.alloc_data(self.params.raw());
+        DataHandle::new(i)
+    }
+}
+
 /// A `while` statement.
 #[derive(Debug)]
 pub struct While {
@@ -261,6 +294,10 @@ pub struct Break;
 /// A continue statement.
 #[derive(Debug)]
 pub struct Continue;
+
+/// A return statement.
+#[derive(Debug)]
+pub struct Return;
 
 /// A floating-point number.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -450,6 +487,13 @@ impl Ast {
                 condition: NodeHandle(p1),
                 body: DataHandle::new(p2),
             }),
+            NodeInfoKind::FnDecl => {
+                let proto = DataHandle::new(p1).deref(self);
+                NodeKind::FnDecl(FnDecl {
+                    proto,
+                    body: DataHandle::new(p2),
+                })
+            }
             NodeInfoKind::IfElse => {
                 let (body, else_body) = DataHandle::<(
                     DataHandle<DataArray<NodeHandle>>,
@@ -464,6 +508,7 @@ impl Ast {
             }
             NodeInfoKind::Break => NodeKind::Break(Break),
             NodeInfoKind::Continue => NodeKind::Continue(Continue),
+            NodeInfoKind::Return => NodeKind::Return(Return),
             NodeInfoKind::Alias => NodeKind::Alias(Alias {
                 name: IdentHandle(p1),
                 pipeline: SubtreeHandle(p2),
@@ -618,7 +663,7 @@ impl<T> DataHandle<T> {
     {
         T::deserialize(ast, self)
     }
-    fn add(self, amount: u32) -> DataHandle<T> {
+    fn add<U>(self, amount: u32) -> DataHandle<U> {
         DataHandle(self.0 + amount, PhantomData)
     }
 }
@@ -631,6 +676,25 @@ impl IdentHandle {
         let s = &ast.strings[self.raw() as usize];
         // SAFETY: the internal structure of an Ident is the same as an AstString
         unsafe { std::mem::transmute(s) }
+    }
+}
+
+impl Deserialize for IdentHandle {
+    fn deserialize(ast: &Ast, index: DataHandle<Self>) -> Self {
+        let i = ast.extra_data[index.raw() as usize];
+        IdentHandle(i)
+    }
+}
+
+impl ExactSizeDeserialize for IdentHandle {
+    fn size() -> usize {
+        1
+    }
+}
+
+impl Serialize for IdentHandle {
+    fn serialize(&self, ast: &mut Ast) -> DataHandle<Self> {
+        DataHandle::new(ast.alloc_data(self.raw()))
     }
 }
 
@@ -721,6 +785,13 @@ impl<T: ExactSizeDeserialize> DataArray<T> {
             ast.serialize(t);
         }
         DataHandle::new(i)
+    }
+
+    pub(super) fn empty(ast: &mut Ast) -> DataHandle<Self>
+    where
+        T: Serialize,
+    {
+        Self::from_iter(ast, None)
     }
 }
 
@@ -905,8 +976,12 @@ pub(super) enum NodeInfoKind {
     Break,
     /// `continue`
     Continue,
+    /// `return`
+    Return,
     /// `alias p1 = p2`
     Alias,
+    /// `def a do b end`
+    FnDecl,
 
     /// `a`. `a = String[p1]`
     String,
@@ -1021,7 +1096,8 @@ impl AstDisplay for Node {
         }
         fmt!(
             Root, Command, Number, Binop, String, Ident, Unop, Pipeline, Boolean, LastStatus,
-            EnvVar, Assignment, HomeDir, Export, If, While, Break, Continue, Capture, Alias
+            EnvVar, Assignment, HomeDir, Export, If, While, Break, Continue, Capture, Alias,
+            FnDecl, Return
         )
     }
 }
@@ -1278,6 +1354,12 @@ impl AstDisplay for Continue {
     }
 }
 
+impl AstDisplay for Return {
+    fn ast_fmt(&self, _ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        f.writeln("RETURN")
+    }
+}
+
 impl AstDisplay for Capture {
     fn ast_fmt(&self, ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
         f.writeln("CAPTURE")?;
@@ -1295,6 +1377,34 @@ impl AstDisplay for Alias {
         self.name.ast_fmt(ast, f)?;
         let subtree = self.pipeline.deref(ast);
         subtree.first().unwrap().ast_fmt(subtree, f)?;
+        f.unindent();
+        Ok(())
+    }
+}
+
+impl AstDisplay for FnDecl {
+    fn ast_fmt(&self, ast: &Ast, f: &mut AstFormatter) -> fmt::Result {
+        f.writeln("FN_DECL")?;
+        f.indent();
+        f.writeln("PROTO")?;
+        f.indent();
+        f.writeln("NAME")?;
+        f.indent();
+        self.proto.name.ast_fmt(ast, f)?;
+        f.unindent();
+        f.writeln("PARAMS")?;
+        f.indent();
+        for param in self.proto.params.deref(ast).iter(ast) {
+            param.ast_fmt(ast, f)?;
+        }
+        f.unindent();
+        f.unindent();
+        f.writeln("BODY")?;
+        f.indent();
+        for node in self.body.deref(ast).iter(ast) {
+            node.deref(ast).ast_fmt(ast, f)?;
+        }
+        f.unindent();
         f.unindent();
         Ok(())
     }

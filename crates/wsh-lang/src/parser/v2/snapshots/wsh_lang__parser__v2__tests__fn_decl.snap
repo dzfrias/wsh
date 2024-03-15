@@ -1,0 +1,16 @@
+---
+source: crates/wsh-lang/src/parser/v2/mod.rs
+expression: ast
+---
+ROOT
+  FN_DECL
+    PROTO
+      NAME
+        IDENT `x`
+      PARAMS
+    BODY
+      PIPELINE
+        COMMAND
+          STRING `echo`
+          STRING `hi`
+

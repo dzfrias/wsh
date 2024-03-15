@@ -10,8 +10,8 @@ use self::error::*;
 use crate::{
     parser::lexer::v2::{LexMode, Lexer, Token, TokenKind},
     v2::ast::{
-        Ast, DataArray, DataHandle, EnvSet, NodeHandle, NodeInfo, NodeInfoKind, PipelineEnd,
-        PipelineEndKind,
+        Ast, DataArray, DataHandle, EnvSet, FnProto, IdentHandle, NodeHandle, NodeInfo,
+        NodeInfoKind, PipelineEnd, PipelineEndKind,
     },
 };
 pub use source::*;
@@ -80,8 +80,10 @@ impl<'src> Parser<'src> {
             }
             TokenKind::While => self.parse_while(ast)?,
             TokenKind::If => self.parse_if(ast)?,
+            TokenKind::Def => self.parse_fn_decl(ast)?,
             TokenKind::Break => self.parse_break(ast)?,
             TokenKind::Continue => self.parse_continue(ast)?,
+            TokenKind::Return => self.parse_return(ast)?,
             _ => self.parse_pipeline(ast)?,
         };
         debug!("successfully parsed statement");
@@ -310,6 +312,79 @@ impl<'src> Parser<'src> {
         };
         debug!("sucessfully parsed if statement");
         Ok(node)
+    }
+
+    fn parse_fn_decl(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
+        debug_assert!(matches!(self.current.kind(), TokenKind::Def));
+        debug!("began parsing fn decl");
+
+        let start = self.current.start();
+        self.mode = LexMode::Strict;
+        self.next_token();
+        let TokenKind::Ident(name) = self.current.kind() else {
+            return Err(Error::new(
+                self.current.start(),
+                "expected name for function",
+            ))
+            .attach(Label::new(self.current.range(), "expected right here"));
+        };
+        let name = ast.alloc_ident(name);
+        self.next_token();
+        let params = match self.current.kind() {
+            TokenKind::Do => DataArray::empty(ast),
+            TokenKind::Colon => {
+                let indicator_pos = self.current.range();
+                self.expect_next(TokenKind::LParen, "expected paren after args indicator")
+                    .attach(Label::new(indicator_pos, "after this indicator"))?;
+                self.next_token();
+                let mut args = vec![];
+                while self.current.kind() != TokenKind::RParen {
+                    let arg = self.parse_arg(ast)?;
+                    args.push(arg);
+                    self.next_token();
+                }
+                self.next_token();
+                DataArray::from_iter(ast, args)
+            }
+            _ => {
+                return Err(Error::new(
+                    self.current.start(),
+                    "expected `do` after function declaration",
+                ))
+                .attach(Label::new(self.current.range(), "right here"))
+            }
+        };
+        self.mode = LexMode::Normal;
+        self.next_token();
+        self.enter_scope(Scope::Function);
+        let body = self.parse_block(ast, false)?;
+        self.pop_scope();
+        let node = unsafe {
+            let proto = FnProto { name, params };
+            let handle = ast.serialize(proto);
+            // SAEFTY: FnProto has been serialized. FnDecl also takes the body of the function,
+            // which has been provided.
+            ast.add(NodeInfo {
+                kind: NodeInfoKind::FnDecl,
+                offset: start as u32,
+                p1: handle.raw(),
+                p2: body.raw(),
+            })
+        };
+        debug!("successfully parsed fn decl");
+        Ok(node)
+    }
+
+    fn parse_arg(&mut self, ast: &mut Ast) -> Result<IdentHandle> {
+        let TokenKind::Ident(arg) = self.current.kind() else {
+            return Err(Error::new(
+                self.current.start(),
+                "expected identifier for argument",
+            ))
+            .attach(Label::new(self.current.range(), "expected right here"));
+        };
+        debug!("got arg: {arg}");
+        Ok(ast.alloc_ident(arg))
     }
 
     fn parse_while(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
@@ -652,6 +727,31 @@ impl<'src> Parser<'src> {
         Ok(node)
     }
 
+    fn parse_return(&mut self, ast: &mut Ast) -> Result<NodeHandle> {
+        debug_assert!(matches!(self.current.kind(), TokenKind::Return));
+        if !self.in_scope(Scope::Function) {
+            return Err(Error::new(
+                self.current.start(),
+                "cannot return outside of function",
+            ))
+            .attach(Label::new(
+                self.current.range(),
+                "invalid when not in a function",
+            ));
+        }
+        debug!("got return statement");
+        // SAFETY: Return takes nothing
+        let node = unsafe {
+            ast.add(NodeInfo {
+                kind: NodeInfoKind::Return,
+                offset: self.current.start() as u32,
+                p1: 0,
+                p2: 0,
+            })
+        };
+        Ok(node)
+    }
+
     fn parse_string_like(&mut self, ast: &mut Ast, kind: NodeInfoKind) -> NodeHandle {
         let (TokenKind::Ident(s) | TokenKind::EnvVar(s) | TokenKind::String(s)) =
             self.current.kind()
@@ -783,6 +883,7 @@ impl<'src> Parser<'src> {
 enum Scope {
     Loop,
     Capture,
+    Function,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -860,6 +961,13 @@ mod tests {
     parser_test!(break_and_continue, "while x == 3 do break\ncontinue end");
     parser_test!(backticks_go_to_normal, "echo %(`echo hi`) hello");
     parser_test!(alias, "alias foo = echo hello world");
+    parser_test!(fn_decl, "def x do echo hi end");
+    parser_test!(
+        fn_decl_with_basic_params,
+        "def x : (arg1 arg2) do echo hi end"
+    );
+    parser_test!(fn_with_return, "def x do echo hi\nreturn\n end");
+    parser_test!(fn_decl_with_no_params, "def x : () do echo hi end");
 
     parser_test!(@fail export_no_assign, "export HELLO == 1 + 1");
     parser_test!(@fail export_not_ident, "export $HELLO = 1 + 1");
@@ -868,5 +976,7 @@ mod tests {
     parser_test!(@fail no_then_for_if, "if x == 3 echo hi");
     parser_test!(@fail break_outside_loop, "break");
     parser_test!(@fail continue_outside_loop, "continue");
+    parser_test!(@fail return_outside_fn, "return");
     parser_test!(@fail alias_no_assign, "alias foo + echo hello world");
+    parser_test!(@fail fn_decl_no_paren_after_colon, "def x : do echo hi end");
 }
