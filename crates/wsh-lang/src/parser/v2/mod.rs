@@ -357,7 +357,17 @@ impl<'src> Parser<'src> {
         self.mode = LexMode::Normal;
         self.next_token();
         self.enter_scope(Scope::Function);
-        let body = self.parse_block(ast, false)?;
+        let mut sub_ast = Ast::new();
+        let body = self.parse_block(&mut sub_ast, false)?;
+        unsafe {
+            sub_ast.add(NodeInfo {
+                kind: NodeInfoKind::Root,
+                offset: 0,
+                p1: body.raw(),
+                p2: 0,
+            })
+        };
+        let body = ast.alloc_subtree(sub_ast);
         self.pop_scope();
         let node = unsafe {
             let proto = FnProto { name, params };

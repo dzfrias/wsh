@@ -178,7 +178,7 @@ pub struct If {
 #[derive(Debug)]
 pub struct FnDecl {
     pub proto: FnProto,
-    pub body: DataHandle<DataArray<NodeHandle>>,
+    pub body: SubtreeHandle,
 }
 
 #[derive(Debug)]
@@ -491,7 +491,7 @@ impl Ast {
                 let proto = DataHandle::new(p1).deref(self);
                 NodeKind::FnDecl(FnDecl {
                     proto,
-                    body: DataHandle::new(p2),
+                    body: SubtreeHandle(p2),
                 })
             }
             NodeInfoKind::IfElse => {
@@ -1401,8 +1401,9 @@ impl AstDisplay for FnDecl {
         f.unindent();
         f.writeln("BODY")?;
         f.indent();
-        for node in self.body.deref(ast).iter(ast) {
-            node.deref(ast).ast_fmt(ast, f)?;
+        let subtree = self.body.deref(ast);
+        for stmt in subtree.root().stmts.deref(subtree).iter(subtree) {
+            stmt.deref(subtree).ast_fmt(subtree, f)?;
         }
         f.unindent();
         f.unindent();
