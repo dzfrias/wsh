@@ -181,7 +181,10 @@ impl<'src> Parser<'src> {
         let name = ast.alloc_string(name);
         self.mode = LexMode::Strict;
         self.next_token();
-        debug_assert!(matches!(self.current.kind(), TokenKind::Assign));
+        debug_assert!(
+            matches!(self.current.kind(), TokenKind::Assign),
+            "should only be called with an `=` look-ahead"
+        );
         self.next_token();
         let value = self.parse_expr(ast, Precedence::Lowest)?;
         self.mode = LexMode::Normal;
@@ -290,11 +293,11 @@ impl<'src> Parser<'src> {
             .attach(Label::new(cond_start..cond_end, "after this expression"))?;
         self.mode = LexMode::Normal;
         self.next_token();
-        let body = self.parse_block(ast, true)?;
+        let body = self.parse_block(ast, AllowElse::Yes)?;
         let (kind, p2) = if self.current.kind() == TokenKind::Else {
             debug!("got `else` in if statement");
             self.next_token();
-            let else_body = self.parse_block(ast, false)?;
+            let else_body = self.parse_block(ast, AllowElse::No)?;
             let data = ast.serialize((body, else_body));
             (NodeInfoKind::IfElse, data.raw())
         } else {
@@ -358,7 +361,7 @@ impl<'src> Parser<'src> {
         self.next_token();
         self.enter_scope(Scope::Function);
         let mut sub_ast = Ast::new();
-        let body = self.parse_block(&mut sub_ast, false)?;
+        let body = self.parse_block(&mut sub_ast, AllowElse::No)?;
         unsafe {
             sub_ast.add(NodeInfo {
                 kind: NodeInfoKind::Root,
@@ -411,7 +414,7 @@ impl<'src> Parser<'src> {
         self.mode = LexMode::Normal;
         self.next_token();
         self.enter_scope(Scope::Loop);
-        let body = self.parse_block(ast, false)?;
+        let body = self.parse_block(ast, AllowElse::No)?;
         self.pop_scope();
         // SAFETY: While takes a node handle and a pointer to an array of body statements, which
         // are provided.
@@ -431,7 +434,7 @@ impl<'src> Parser<'src> {
     fn parse_block(
         &mut self,
         ast: &mut Ast,
-        allow_else: bool,
+        allow_else: AllowElse,
     ) -> Result<DataHandle<DataArray<NodeHandle>>> {
         debug!("began parsing body");
         let mut body = vec![];
@@ -451,7 +454,7 @@ impl<'src> Parser<'src> {
             self.next_token();
         }
         if self.current.kind() != TokenKind::End
-            && !(allow_else && self.current.kind() == TokenKind::Else)
+            && !(allow_else.yes() && self.current.kind() == TokenKind::Else)
         {
             return Err(Error::new(
                 self.current.start(),
@@ -886,6 +889,18 @@ impl<'src> Parser<'src> {
 
     fn pop_scope(&mut self) -> Scope {
         self.scope.pop().expect("should always pop a scope!")
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum AllowElse {
+    Yes,
+    No,
+}
+
+impl AllowElse {
+    pub fn yes(self) -> bool {
+        matches!(self, Self::Yes)
     }
 }
 
