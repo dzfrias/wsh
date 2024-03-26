@@ -230,7 +230,7 @@ shell_test!(
 shell_test!(
     wasi_sandboxing_args,
     "source .($WASM_PATH + \"/args.wasm\") hello world",
-    "hello\nworld"
+    "args.wasm\nhello\nworld"
 );
 shell_test!(
     wasi_stdin,
