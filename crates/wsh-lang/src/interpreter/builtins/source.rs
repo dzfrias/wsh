@@ -1,4 +1,4 @@
-use std::{fs, io::Read};
+use std::{fs, io::Read, path::Path};
 
 use anyhow::{Context, Result};
 use clap::Parser;
@@ -22,7 +22,11 @@ pub fn source(
     io_streams: &mut IoStreams,
     env: &[(String, String)],
 ) -> Result<()> {
-    let Args { file, args, url } = Args::try_parse_from(args)?;
+    let Args {
+        file,
+        mut args,
+        url,
+    } = Args::try_parse_from(args)?;
     let contents = if url {
         let mut buf = vec![];
         reqwest::blocking::get(&file)?.read_to_end(&mut buf)?;
@@ -36,6 +40,12 @@ pub fn source(
     // Automatically detect if the file is a wasm file. If it is, we can run it directly. This
     // check involves reading the first 4 bytes of the file for the special wasm magic number.
     if contents.len() >= 4 && &contents[0..4] == MAGIC {
+        let name = Path::new(&file)
+            .file_name()
+            .expect("should have file name")
+            .to_string_lossy()
+            .into_owned();
+        args.insert(0, name);
         // SAFETY: `stdin` is a valid raw fd because it came from a File
         unsafe {
             shell.env.prepare_wasi(

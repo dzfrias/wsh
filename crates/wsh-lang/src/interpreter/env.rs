@@ -169,6 +169,8 @@ impl Env {
             let file = unsafe { cap_std::fs::File::from_raw_file_descriptor(stdin) };
             let stdin = File::from_cap_std(file);
             builder.stdin(Box::new(stdin));
+        } else {
+            builder.inherit_stdin();
         }
         let env = self
             .env_vars
