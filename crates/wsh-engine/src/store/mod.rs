@@ -312,7 +312,7 @@ pub struct Data(pub Vec<u8>);
 
 impl Data {
     pub fn data_drop(&mut self) {
-        self.0.clear();
+        self.0 = vec![];
     }
 }
 
