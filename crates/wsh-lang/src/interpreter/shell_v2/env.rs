@@ -60,7 +60,7 @@ impl Env {
         self.aliases.remove(ident)
     }
 
-    pub fn get_alias(&mut self, ident: &str) -> Option<&Ast> {
+    pub fn get_alias(&self, ident: &str) -> Option<&Ast> {
         self.aliases.get(ident)
     }
 

@@ -13,6 +13,7 @@ use std::{
 
 use anyhow::Context;
 use filedescriptor::{AsRawFileDescriptor, FromRawFileDescriptor, IntoRawFileDescriptor};
+use wsh_engine::WasmFuncUntyped;
 
 use self::error::Result;
 use crate::{
@@ -386,19 +387,6 @@ impl Shell {
         let name = self
             .eval_expr(ast, exprs.first(ast).unwrap().deref(ast))?
             .to_string();
-
-        // First, we check if the function was loaded from Wasm
-        if let Some(func) = self.env.get_module_func(&name) {
-            // Note that these args have **not** been converted to strings yet
-            let args = exprs
-                .iter(ast)
-                .skip(1)
-                .map(|expr| self.eval_expr(ast, expr.deref(ast)))
-                .collect::<Result<Vec<_>>>()?;
-            pipeline.pipe(self.make_wasm_func(func, args, env)?);
-            return Ok(());
-        }
-
         let mut memfiles = vec![];
         // This will be a vector of strings for the arguments of the command
         let args = exprs
@@ -421,42 +409,51 @@ impl Shell {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        // Next, we check if the command is an alias
-        if let Some(sub_ast) = self.env.take_alias(&name) {
-            let node = sub_ast.first().unwrap();
-            let alias_pipeline = node.kind().as_pipeline();
-            let mut alias_pipeline = self.make_pipeline(&sub_ast, alias_pipeline, env)?;
-            // We append this command's args to the end of the aliased pipeline
-            alias_pipeline.append_args(&args);
-            self.env.set_alias(name, sub_ast);
-            pipeline.extend(alias_pipeline);
-            return Ok(());
+        // We use the name of the command to tell if it's an alias, Wasm func, builtin, or just
+        // normal
+        match CommandKind::from_env(&name, &mut self.env) {
+            CommandKind::Normal => {
+                let cmd = pipeline::BasicCommand::new(&name)
+                    .env(env)
+                    .args(args)
+                    .map_memfiles(memfiles)
+                    .merge_stderr(cmd.merge_stderr);
+                pipeline.pipe(cmd);
+            }
+            CommandKind::WasmFunc(func) => {
+                // Note that these args have **not** been converted to strings yet
+                let args = exprs
+                    .iter(ast)
+                    .skip(1)
+                    .map(|expr| self.eval_expr(ast, expr.deref(ast)))
+                    .collect::<Result<Vec<_>>>()?;
+                pipeline.pipe(self.make_wasm_func(func, args, env)?);
+            }
+            CommandKind::Alias(sub_ast) => {
+                let node = sub_ast.first().unwrap();
+                let alias_pipeline = node.kind().as_pipeline();
+                let mut alias_pipeline = self.make_pipeline(&sub_ast, alias_pipeline, env)?;
+                // We append this command's args to the end of the aliased pipeline
+                alias_pipeline.append_args(&args);
+                self.env.set_alias(name, sub_ast);
+                pipeline.extend(alias_pipeline);
+            }
+            CommandKind::Builtin(builtin) => {
+                let cmd = pipeline::Closure::wrap(
+                    move |shell: &mut Shell,
+                          stdio: Stdio,
+                          args: &[String],
+                          env: &[(String, String)]| {
+                        builtin.run(shell, stdio, args, env)
+                    },
+                    args,
+                    env,
+                    cmd.merge_stderr,
+                );
+                pipeline.pipe(cmd);
+            }
         }
 
-        // We check if the command is a built-in
-        if let Some(builtin) = Builtin::from_name(&name) {
-            let cmd = pipeline::Closure::wrap(
-                move |shell: &mut Shell,
-                      stdio: Stdio,
-                      args: &[String],
-                      env: &[(String, String)]| {
-                    builtin.run(shell, stdio, args, env)
-                },
-                args,
-                env,
-                cmd.merge_stderr,
-            );
-            pipeline.pipe(cmd);
-            return Ok(());
-        }
-
-        // If nothing else, it's a regular command
-        let cmd = pipeline::BasicCommand::new(&name)
-            .env(env)
-            .args(args)
-            .map_memfiles(memfiles)
-            .merge_stderr(cmd.merge_stderr);
-        pipeline.pipe(cmd);
         Ok(())
     }
 
@@ -551,4 +548,28 @@ pub enum ControlFlow {
     Normal,
     Continue,
     Break,
+}
+
+#[derive(Debug)]
+pub enum CommandKind {
+    WasmFunc(WasmFuncUntyped),
+    Alias(Ast),
+    Normal,
+    Builtin(Builtin),
+}
+
+impl CommandKind {
+    pub fn from_env(name: &str, env: &mut Env) -> Self {
+        if let Some(wasm_func) = env.get_module_func(name) {
+            return Self::WasmFunc(wasm_func);
+        }
+        if let Some(alias) = env.take_alias(name) {
+            return Self::Alias(alias);
+        }
+        if let Some(builtin) = Builtin::from_name(name) {
+            return Self::Builtin(builtin);
+        }
+
+        Self::Normal
+    }
 }
