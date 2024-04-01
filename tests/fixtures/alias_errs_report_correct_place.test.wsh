@@ -1,0 +1,8 @@
+---
+stderr: |
+  wsh error: error evaluating alias: type error: invalid `!` on `number`
+  3| foo
+---
+
+alias foo = echo %(!1)
+foo

@@ -384,9 +384,9 @@ impl Shell {
         pipeline: &mut pipeline::Pipeline<'env, Self>,
     ) -> Result<()> {
         let exprs = cmd.exprs.deref(ast);
-        let name = self
-            .eval_expr(ast, exprs.first(ast).unwrap().deref(ast))?
-            .to_string();
+        let name = exprs.first(ast).unwrap().deref(ast);
+        let cmd_offset = name.offset();
+        let name = self.eval_expr(ast, name)?.to_string();
         let mut memfiles = vec![];
         // This will be a vector of strings for the arguments of the command
         let args = exprs
@@ -432,7 +432,10 @@ impl Shell {
             CommandKind::Alias(sub_ast) => {
                 let node = sub_ast.first().unwrap();
                 let alias_pipeline = node.kind().as_pipeline();
-                let mut alias_pipeline = self.make_pipeline(&sub_ast, alias_pipeline, env)?;
+                // Note the `in_alias` to notify the user that the error occurred in an alias
+                let mut alias_pipeline = self
+                    .make_pipeline(&sub_ast, alias_pipeline, env)
+                    .map_err(|err| err.in_alias(cmd_offset))?;
                 // We append this command's args to the end of the aliased pipeline
                 alias_pipeline.append_args(&args);
                 self.env.set_alias(name, sub_ast);

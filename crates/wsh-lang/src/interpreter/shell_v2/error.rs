@@ -33,6 +33,14 @@ impl Error {
     pub fn offset(&self) -> usize {
         self.offset
     }
+
+    /// Wrap the error in an `ErrorKind::InAlias`, with a new position.
+    pub fn in_alias(self, new_pos: usize) -> Self {
+        Self {
+            kind: ErrorKind::InAlias(Box::new(self.kind)),
+            offset: new_pos,
+        }
+    }
 }
 
 impl SourceError for Error {
@@ -116,6 +124,8 @@ pub enum ErrorKind {
     BadWasmArg { idx: usize, reason: &'static str },
     #[error("error opening memfile: {0}")]
     MemFileError(io::Error),
+    #[error("error evaluating alias: {0}")]
+    InAlias(Box<ErrorKind>),
 }
 
 pub trait WithPosition<T> {
