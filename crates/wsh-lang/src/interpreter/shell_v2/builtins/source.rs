@@ -1,17 +1,23 @@
-use std::{ffi::OsString, fs, io::IsTerminal, path::PathBuf};
+use std::{
+    ffi::OsString,
+    fs,
+    io::IsTerminal,
+    path::{Path, PathBuf},
+};
 
+use anyhow::{ensure, Context, Result};
 use clap::Parser;
-
-use anyhow::{Context, Result};
 
 use crate::{
     shell_v2::{env::WasiContext, pipeline::Stdio, Shell},
     v2::{Source, SourceError},
 };
 
+const WASM_MAGIC: &[u8; 4] = b"\0asm";
+
 #[derive(Debug, Parser)]
 struct Args {
-    file: PathBuf,
+    file: String,
     args: Vec<String>,
 }
 
@@ -26,17 +32,30 @@ where
     S: Into<OsString> + Clone,
 {
     let mut args = Args::try_parse_from(args)?;
-    let contents = fs::read(&args.file).context("error reading file")?;
+    // We recognize these schemas for url sources
+    let contents = if args.file.starts_with("https://") || args.file.starts_with("http://") {
+        let bytes = reqwest::blocking::get(&args.file)
+            .context("error requesting provided URL")?
+            .bytes()
+            .context("error reading URL request response")?;
+        // We need to make sure we're not running a wsh script. That could be dangerous...
+        ensure!(
+            bytes.starts_with(WASM_MAGIC),
+            "URL source is not a Wasm binary"
+        );
+        bytes.into()
+    } else {
+        fs::read(&args.file).context("error reading file")?
+    };
 
-    const MAGIC: &[u8; 4] = b"\0asm";
     // This will detect if the file is a WebAssembly file
-    if contents.len() >= 4 && &contents[0..4] == MAGIC {
+    if contents.starts_with(WASM_MAGIC) {
+        let file = PathBuf::from(args.file);
         // Yes, this is shifting the whole array, but they're CLI arguments. Performance cost
         // should be negligible here.
         args.args.insert(
             0,
-            args.file
-                .file_name()
+            file.file_name()
                 .expect("file stem should exist")
                 .to_string_lossy()
                 .into_owned(),
@@ -77,7 +96,8 @@ where
     let old_stdout = shell.set_stdout(stdio.stdout);
     let old_stderr = shell.set_stderr(stdio.stderr);
 
-    let name = args.file.file_stem().unwrap().to_string_lossy();
+    let file = Path::new(&args.file);
+    let name = file.file_stem().unwrap().to_string_lossy();
     let source = Source::new(&name, contents);
     let result = shell.run(&source);
     shell.set_stdout(old_stdout);

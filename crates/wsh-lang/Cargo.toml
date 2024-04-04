@@ -29,6 +29,7 @@ diffy = "0.3.0"
 atty = "0.2.14"
 path-absolutize = "3.1.1"
 rand = "0.8.5"
+reqwest = { version = "0.12.2", features = ["blocking"] }
 
 [target.'cfg(unix)'.dependencies]
 rustix = "0.38.28"

@@ -1,0 +1,6 @@
+---
+stderr: |
+  source: URL source is not a Wasm binary
+---
+
+source https://github.com/dzfrias/wsh
