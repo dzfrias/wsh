@@ -18,17 +18,10 @@ struct Metadata {
     disable_windows: bool,
 }
 
-// TODO: eventually replace when PR lands to allow for return types in `dir_test` annotated
-// functions.
-// Related PR here: https://github.com/fe-lang/dir-test/pull/4
 #[dir_test(
     dir: "$CARGO_MANIFEST_DIR/tests/fixtures",
     glob: "**/*.test.wsh",
 )]
-fn test(fixture: Fixture<&str>) {
-    run_test(fixture).expect("test failed");
-}
-
 fn run_test(fixture: Fixture<&str>) -> Result<()> {
     let name = Path::new(fixture.path())
         .file_stem()
